@@ -103,6 +103,7 @@ def get_preset_config(preset_id: str) -> dict | None:
 
 _simulations: dict[str, dict] = {}
 _processes: dict[str, subprocess.Popen] = {}
+_pushed_action_counts: dict[str, int] = {}  # tracks how many actions have been pushed to Zep
 
 
 def launch_simulation(config: dict) -> str:
@@ -117,12 +118,25 @@ def launch_simulation(config: dict) -> str:
     with open(config_path, "w") as f:
         json.dump(config, f, indent=2)
 
+    # Try to find the project's Zep graph ID for live graph updates
+    graph_id = None
+    if sim_id.startswith("proj_"):
+        project_id = sim_id.replace("_sim", "")
+        try:
+            from . import project_manager
+            proj = project_manager.get_project(project_id)
+            if proj:
+                graph_id = proj.get("graph_id")
+        except Exception:
+            pass
+
     _simulations[sim_id] = {
         "sim_id": sim_id,
         "status": "starting",
         "current_round": 0,
         "total_rounds": config.get("total_rounds", 5),
         "action_count": 0,
+        "graph_id": graph_id,
     }
 
     script_path = SCRIPTS_DIR / "run_crucible_simulation.py"
@@ -156,9 +170,55 @@ def get_simulation_status(sim_id: str) -> dict | None:
         state["action_count"] = len(actions)
         state["current_round"] = max(a.get("round", 0) for a in actions)
 
+        # Push new actions to Zep for graph growth (if graph exists)
+        graph_id = state.get("graph_id")
+        if graph_id:
+            _push_new_actions_to_zep(sim_id, graph_id, actions)
+
     state["pressures"] = []
     state["recent_actions"] = actions[-10:] if actions else []
     return state
+
+
+def _push_new_actions_to_zep(sim_id: str, graph_id: str, actions: list[dict]) -> None:
+    """Push any new actions to Zep to grow the knowledge graph during simulation."""
+    already_pushed = _pushed_action_counts.get(sim_id, 0)
+    new_actions = actions[already_pushed:]
+    if not new_actions:
+        return
+
+    try:
+        from zep_cloud.client import Zep
+        from ..config import Config
+        client = Zep(api_key=Config.ZEP_API_KEY)
+
+        for action in new_actions:
+            agent = action.get("agent", "Unknown")
+            role = action.get("role", "")
+            world = action.get("world", "")
+            action_type = action.get("action", "")
+            args = action.get("args", {})
+
+            # Build a text summary of the action for Zep
+            if action_type in ("send_message", "reply_in_thread"):
+                content = args.get("content", "")[:500]
+                text = f"{agent} ({role}) said in {world}: {content}"
+            elif action_type in ("send_email", "reply_email"):
+                subject = args.get("subject", "")
+                body = args.get("body", "")[:300]
+                to = args.get("to", "")
+                text = f"{agent} ({role}) emailed {to} about '{subject}': {body}"
+            else:
+                text = f"{agent} ({role}) performed {action_type} in {world}."
+
+            try:
+                client.graph.add(graph_id=graph_id, data=text, type="text")
+            except Exception:
+                pass  # Don't fail status polling if Zep push fails
+
+        _pushed_action_counts[sim_id] = len(actions)
+    except Exception:
+        pass  # Zep integration is best-effort
 
 
 def get_simulation_actions(sim_id: str, world: str | None = None, from_round: int | None = None) -> list[dict]:

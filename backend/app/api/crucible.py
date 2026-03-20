@@ -83,11 +83,20 @@ def simulation_stop(sim_id):
 
 @crucible_bp.route("/simulations/<sim_id>/graph", methods=["GET"])
 def simulation_graph(sim_id):
-    """Build graph data from simulation config (agents, org, pressures)."""
+    """Build graph data — from Zep if project graph exists, else from config."""
     status = get_simulation_status(sim_id)
     if not status:
         return jsonify({"error": f"Simulation '{sim_id}' not found"}), 404
 
+    # If this simulation has a Zep graph (from research pipeline), use it
+    graph_id = status.get("graph_id")
+    if graph_id:
+        from ..services import zep_manager
+        data = zep_manager.get_graph_data(graph_id)
+        if data.get("nodes"):
+            return jsonify({"data": data})
+
+    # Fallback: build static graph from config
     config_path = Path(__file__).parent.parent.parent / "uploads" / "simulations" / sim_id / "config.json"
     if not config_path.exists():
         return jsonify({"data": {"nodes": [], "edges": []}})

@@ -145,10 +145,10 @@ export default function SimulationPage({
       </div>
 
       {/* Split panels */}
-      <div className="flex-1 flex overflow-hidden px-4 pb-4 gap-3">
+      <div className="flex-1 flex min-h-0 px-4 pb-4 gap-3">
         {/* Graph panel */}
         <div
-          className="overflow-hidden transition-all duration-300"
+          className="min-h-0 transition-all duration-300"
           style={{ width: graphWidth, opacity: viewMode === "focus" ? 0 : 1 }}
         >
           <div className="h-full border border-border rounded-lg bg-card overflow-hidden">
@@ -157,10 +157,10 @@ export default function SimulationPage({
         </div>
         {/* World tabs */}
         <div
-          className="overflow-hidden transition-all duration-300"
+          className="min-h-0 transition-all duration-300"
           style={{ width: tabsWidth, opacity: viewMode === "graph" ? 0 : 1 }}
         >
-          <div className="h-full border border-border rounded-lg bg-card overflow-hidden">
+          <div className="h-full border border-border rounded-lg bg-card flex flex-col" style={{ minHeight: 0 }}>
             <WorldTabs actions={actions} scheduledEvents={scheduledEvents} />
           </div>
         </div>
