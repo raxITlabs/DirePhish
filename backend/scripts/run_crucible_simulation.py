@@ -21,6 +21,13 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load .env from project root
+_env_path = Path(__file__).parent.parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path, override=True)
+
 from openai import OpenAI
 
 import crucible
