@@ -36,9 +36,9 @@ def _get_graphiti(project_id: str):
 
     from graphiti_core import Graphiti
     from graphiti_core.driver.kuzu_driver import KuzuDriver
-    from graphiti_core.llm_client import OpenAIClient, LLMConfig
-    from graphiti_core.embedder import OpenAIEmbedder
-    from graphiti_core.embedder.openai import OpenAIEmbedderConfig
+    from graphiti_core.llm_client.gemini_client import GeminiClient
+    from graphiti_core.llm_client.config import LLMConfig
+    from graphiti_core.embedder.gemini import GeminiEmbedder, GeminiEmbedderConfig
 
     # Create project-specific Kuzu DB file path (Kuzu creates the file itself)
     os.makedirs(Config.GRAPHITI_DB_PATH, exist_ok=True)
@@ -46,16 +46,19 @@ def _get_graphiti(project_id: str):
 
     driver = KuzuDriver(db=db_path)
 
-    llm_client = OpenAIClient(LLMConfig(
-        api_key=Config.LLM_API_KEY,
-        base_url=Config.LLM_BASE_URL,
-        model=Config.LLM_MODEL_NAME,
-    ))
+    llm_client = GeminiClient(
+        config=LLMConfig(
+            api_key=Config.LLM_API_KEY,
+            model=Config.LLM_MODEL_NAME,
+        )
+    )
 
-    embedder = OpenAIEmbedder(OpenAIEmbedderConfig(
-        api_key=Config.LLM_API_KEY,
-        base_url=Config.LLM_BASE_URL,
-    ))
+    embedder = GeminiEmbedder(
+        config=GeminiEmbedderConfig(
+            api_key=Config.LLM_API_KEY,
+            embedding_model="embedding-001",
+        )
+    )
 
     graphiti = Graphiti(
         graph_driver=driver,

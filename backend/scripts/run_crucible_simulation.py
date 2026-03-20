@@ -34,9 +34,9 @@ from openai import OpenAI
 try:
     from graphiti_core import Graphiti
     from graphiti_core.driver.kuzu_driver import KuzuDriver
-    from graphiti_core.llm_client import OpenAIClient, LLMConfig
-    from graphiti_core.embedder import OpenAIEmbedder
-    from graphiti_core.embedder.openai import OpenAIEmbedderConfig
+    from graphiti_core.llm_client.gemini_client import GeminiClient
+    from graphiti_core.llm_client.config import LLMConfig
+    from graphiti_core.embedder.gemini import GeminiEmbedder, GeminiEmbedderConfig
     from graphiti_core.nodes import EpisodeType
     HAS_GRAPHITI = True
 except ImportError:
@@ -225,15 +225,18 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
         if Path(graphiti_db).exists():
             try:
                 kuzu_driver = KuzuDriver(db=graphiti_db)
-                llm_client_g = OpenAIClient(LLMConfig(
-                    api_key=os.environ.get("LLM_API_KEY", ""),
-                    base_url=os.environ.get("LLM_BASE_URL"),
-                    model=os.environ.get("LLM_MODEL_NAME", "gpt-4o-mini"),
-                ))
-                embedder_g = OpenAIEmbedder(OpenAIEmbedderConfig(
-                    api_key=os.environ.get("LLM_API_KEY", ""),
-                    base_url=os.environ.get("LLM_BASE_URL"),
-                ))
+                llm_client_g = GeminiClient(
+                    config=LLMConfig(
+                        api_key=os.environ.get("LLM_API_KEY", ""),
+                        model=os.environ.get("LLM_MODEL_NAME", "gemini-2.0-flash"),
+                    )
+                )
+                embedder_g = GeminiEmbedder(
+                    config=GeminiEmbedderConfig(
+                        api_key=os.environ.get("LLM_API_KEY", ""),
+                        embedding_model="embedding-001",
+                    )
+                )
                 graphiti = Graphiti(graph_driver=kuzu_driver, llm_client=llm_client_g, embedder=embedder_g)
                 await graphiti.build_indices_and_constraints()
                 print(f"  Graphiti memory enabled (project: {project_id})")
