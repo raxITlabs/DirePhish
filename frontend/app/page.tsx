@@ -2,6 +2,7 @@
 import Header from "@/app/components/layout/Header";
 import PresetGrid from "@/app/components/home/PresetGrid";
 import UploadZone from "@/app/components/home/UploadZone";
+import ResearchForm from "@/app/components/home/ResearchForm";
 import { getPresets } from "@/app/actions/presets";
 
 export default async function Home() {
@@ -25,6 +26,11 @@ export default async function Home() {
             {error}
           </div>
         )}
+
+        <section className="mb-10">
+          <h2 className="text-lg font-semibold mb-4">Research Your Company</h2>
+          <ResearchForm />
+        </section>
 
         <section className="mb-10">
           <h2 className="text-lg font-semibold mb-4">Presets</h2>

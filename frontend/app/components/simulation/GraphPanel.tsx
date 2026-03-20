@@ -15,7 +15,7 @@ const NODE_COLORS: Record<string, string> = {
 
 interface Props {
   data: GraphData;
-  isSimulating: boolean;
+  isLive: boolean;
   onRefresh: () => void;
 }
 
@@ -31,7 +31,7 @@ interface SimLink extends d3.SimulationLinkDatum<SimNode> {
   type: string;
 }
 
-export default function GraphPanel({ data, isSimulating, onRefresh }: Props) {
+export default function GraphPanel({ data, isLive, onRefresh }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
 
@@ -138,7 +138,7 @@ export default function GraphPanel({ data, isSimulating, onRefresh }: Props) {
       <div className="flex items-center justify-between px-3 py-2">
         <span className="text-xs font-semibold text-text-secondary">Knowledge Graph</span>
         <div className="flex items-center gap-2">
-          {isSimulating && <span className="text-xs text-severity-high-text">● Updating</span>}
+          {isLive && <span className="text-xs text-severity-high-text">● Updating</span>}
           <button
             onClick={onRefresh}
             className="text-xs px-2 py-0.5 border border-border rounded hover:bg-background"

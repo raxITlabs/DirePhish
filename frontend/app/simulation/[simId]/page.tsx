@@ -152,7 +152,7 @@ export default function SimulationPage({
           style={{ width: graphWidth, opacity: viewMode === "focus" ? 0 : 1 }}
         >
           <div className="h-full border border-border rounded-lg bg-card overflow-hidden">
-            <GraphPanel data={graphData} isSimulating={isRunning} onRefresh={pollGraph} />
+            <GraphPanel data={graphData} isLive={isRunning} onRefresh={pollGraph} />
           </div>
         </div>
         {/* World tabs */}
