@@ -40,14 +40,14 @@ Server Actions act as the bridge layer: they run server-side, call Flask, and re
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/api/crucible/presets` | GET | List builtin presets |
-| `/api/crucible/presets/:id` | GET | Load preset config |
+| `/api/crucible/presets/<id>` | GET | Load preset config |
 | `/api/crucible/simulations` | POST | Launch simulation (subprocess) |
-| `/api/crucible/simulations/:id/status` | GET | Poll round progress |
-| `/api/crucible/simulations/:id/actions` | GET | Get actions (paginated, filterable by world) |
-| `/api/crucible/simulations/:id/stop` | POST | Stop running simulation |
-| `/api/crucible/simulations/:id/report` | POST | Generate after-action report |
-| `/api/crucible/simulations/:id/report` | GET | Get generated report |
-| `/api/crucible/simulations/:id/graph` | GET | Get graph data for visualization |
+| `/api/crucible/simulations/<id>/status` | GET | Poll round progress |
+| `/api/crucible/simulations/<id>/actions` | GET | Get actions (paginated, filterable by world) |
+| `/api/crucible/simulations/<id>/stop` | POST | Stop running simulation |
+| `/api/crucible/simulations/<id>/report` | POST | Generate after-action report |
+| `/api/crucible/simulations/<id>/report` | GET | Get generated report |
+| `/api/crucible/simulations/<id>/graph` | GET | Get graph data for visualization |
 
 ---
 
@@ -99,7 +99,7 @@ interface Preset {
   description: string;      // from metadata registry
   industry: string;         // from EnterpriseConfig.industry
   size: string;             // from EnterpriseConfig.size ("small" | "medium" | "large")
-  worldTypes: string[];     // derived from worlds[].type
+  worldTypes: string[];     // derived from worlds[].name (NOT type — preset YAML uses type:"channel" for all)
   pressureCount: number;    // derived from pressures.length
 }
 
@@ -107,7 +107,7 @@ interface Preset {
 // Maps to the JSON config format used by run_crucible_simulation.py
 // (see backend/uploads/test_crucible_config.json for reference)
 interface SimulationConfig {
-  simulationId?: string;
+  simulationId?: string;     // optional — Flask backend generates if not provided
   companyName: string;       // "company_name" in JSON
   scenario: string;
   totalRounds: number;       // "total_rounds" in JSON
@@ -168,22 +168,18 @@ interface AgentAction {
   agent: string;             // agent name
   role: string;              // agent role
   world: string;             // world name (e.g., "IR War Room")
-  action: string;            // "send_message" | "send_email"
-  args: SlackActionArgs | EmailActionArgs;  // structured, varies by action type
+  action: string;            // "send_message", "send_email", "reply_in_thread", "reply_email", etc.
+  args: Record<string, unknown>;  // varies by action type — see common shapes below
   result: { success: boolean; action: string; agentId: string } | null;
 }
 
-interface SlackActionArgs {
-  content: string;
-  channel: string;
-}
-
-interface EmailActionArgs {
-  to: string;
-  subject: string;
-  body: string;
-  cc?: string;
-}
+// Common args shapes (not exhaustive — channels are extensible via YAML):
+// send_message:     { content: string, channel: string }
+// reply_in_thread:  { content: string, channel: string, thread_id: string }
+// send_email:       { to: string, subject: string, body: string, cc?: string }
+// reply_email:      { email_id: string, body: string }
+// react:            { message_id: string, emoji: string }
+// do_nothing:       {}
 
 // Matches Crucible's ActivePressure dataclass (pressure/types.py)
 interface ActivePressureState {
@@ -223,6 +219,7 @@ interface GraphEdge {
 // app/types/report.ts
 interface Report {
   simId: string;
+  status: "generating" | "complete" | "failed";
   companyName: string;
   scenarioName: string;
   completedAt: string;
@@ -279,7 +276,7 @@ For `/configure/custom`, the uploaded JSON file is stored temporarily via a Serv
 **Layout:**
 - Top: Crucible branding + tagline
 - Middle: Grid of preset cards (2-3 columns)
-  - Each card: industry icon, name, description, agent/world/round badges
+  - Each card: industry icon, name, description, world types + pressure count badges
   - Click → navigates to `/configure/:presetId`
 - Bottom: Upload section
   - Drop zone for JSON config file
@@ -364,7 +361,7 @@ Tabs: **Slack** | **Email** | **Timeline**
 
 ### 4. After-Action Report (`/report/:simId`)
 
-**Server component.** Calls `getReport(simId)` at render time.
+**Client component.** Calls `getReport(simId)` on mount. If `status === "generating"`, polls every 5 seconds until complete. Shows a loading state with "Generating report..." during generation.
 
 **Layout:** Single-column reading layout, max-width constrained.
 
