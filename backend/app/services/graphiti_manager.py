@@ -5,7 +5,8 @@ Replaces zep_manager.py. Handles episode pushing, graph reading, and dossier syn
 """
 import asyncio
 import os
-from datetime import datetime
+import threading
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -16,14 +17,16 @@ logger = get_logger("graphiti_manager")
 
 # Module-level event loop for running async Graphiti calls from sync Flask
 _loop = asyncio.new_event_loop()
+_lock = threading.Lock()
 
 # Cached Graphiti instances per project
 _instances: dict[str, Any] = {}
 
 
 def _run_async(coro):
-    """Run an async coroutine in the module-level event loop."""
-    return _loop.run_until_complete(coro)
+    """Run an async coroutine in the module-level event loop. Thread-safe."""
+    with _lock:
+        return _loop.run_until_complete(coro)
 
 
 def _get_graphiti(project_id: str):
@@ -82,7 +85,7 @@ def push_episode(project_id: str, name: str, body: str, source_desc: str,
             episode_body=body,
             source=source,
             source_description=source_desc,
-            reference_time=ref_time or datetime.utcnow(),
+            reference_time=ref_time or datetime.now(timezone.utc),
             group_id=project_id,
         ))
     except Exception as e:
@@ -95,7 +98,7 @@ def push_dossier(project_id: str, dossier: dict) -> None:
     from graphiti_core.utils.bulk_utils import RawEpisode
 
     graphiti = _get_graphiti(project_id)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     company = dossier.get("company", {})
     episodes = []
@@ -196,9 +199,9 @@ def push_action(project_id: str, action: dict) -> None:
         body = f"{agent} ({role}) performed {action_type} in {world}."
 
     try:
-        ref_time = datetime.fromisoformat(timestamp) if timestamp else datetime.utcnow()
+        ref_time = datetime.fromisoformat(timestamp) if timestamp else datetime.now(timezone.utc)
     except (ValueError, TypeError):
-        ref_time = datetime.utcnow()
+        ref_time = datetime.now(timezone.utc)
 
     push_episode(
         project_id,
@@ -239,9 +242,9 @@ def push_actions_bulk(project_id: str, actions: list[dict]) -> None:
             body = f"{agent} ({role}) performed {action_type} in {world}."
 
         try:
-            ref_time = datetime.fromisoformat(timestamp) if timestamp else datetime.utcnow()
+            ref_time = datetime.fromisoformat(timestamp) if timestamp else datetime.now(timezone.utc)
         except (ValueError, TypeError):
-            ref_time = datetime.utcnow()
+            ref_time = datetime.now(timezone.utc)
 
         episodes.append(RawEpisode(
             name=f"{agent.replace(' ', '_')}_r{round_num}_{action_type}",
