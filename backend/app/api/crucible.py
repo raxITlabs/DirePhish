@@ -164,3 +164,130 @@ def get_report(sim_id):
     report["simId"] = sim_id
     report["status"] = "complete"
     return jsonify({"data": report})
+
+
+# --- Project endpoints (generative pipeline) ---
+
+from ..services import project_manager
+from ..services.research_agent import run_research
+from ..services.config_generator import run_config_generation
+from ..services import zep_manager
+
+
+@crucible_bp.route("/projects", methods=["POST"])
+def create_project():
+    """Create project, save uploaded files, start research."""
+    company_url = request.form.get("company_url")
+    if not company_url:
+        return jsonify({"error": "company_url is required"}), 400
+
+    user_context = request.form.get("user_context", "")
+
+    # Collect files first, then create project with filenames, then save files, then start research
+    files = request.files.getlist("files")
+    uploaded_files = [f.filename for f in files if f.filename]
+
+    project = project_manager.create_project(company_url, user_context, uploaded_files)
+    project_dir = project_manager.get_project_dir(project["project_id"])
+
+    for f in files:
+        if f.filename:
+            f.save(str(project_dir / "files" / f.filename))
+
+    # Start research AFTER files are saved and project metadata is complete
+    run_research(project["project_id"])
+
+    return jsonify({"data": {"projectId": project["project_id"]}}), 201
+
+
+@crucible_bp.route("/projects/<project_id>/status", methods=["GET"])
+def project_status(project_id):
+    """Poll project research/config-gen progress."""
+    project = project_manager.get_project(project_id)
+    if not project:
+        return jsonify({"error": f"Project '{project_id}' not found"}), 404
+    return jsonify({"data": project})
+
+
+@crucible_bp.route("/projects/<project_id>/dossier", methods=["GET"])
+def get_dossier(project_id):
+    """Get company dossier."""
+    dossier = project_manager.get_dossier(project_id)
+    if not dossier:
+        return jsonify({"error": "Dossier not found"}), 404
+    return jsonify({"data": dossier})
+
+
+@crucible_bp.route("/projects/<project_id>/dossier", methods=["PUT"])
+def update_dossier(project_id):
+    """Update dossier and sync to Zep."""
+    dossier = request.get_json()
+    if not dossier:
+        return jsonify({"error": "No dossier provided"}), 400
+
+    project = project_manager.get_project(project_id)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    project_manager.save_dossier(project_id, dossier)
+
+    # Sync to Zep if graph exists
+    graph_id = project.get("graph_id")
+    if graph_id:
+        try:
+            zep_manager.sync_dossier_to_zep(graph_id, dossier)
+        except Exception as e:
+            return jsonify({"error": f"Zep sync failed: {e}"}), 500
+
+    return jsonify({"data": {"status": "updated"}})
+
+
+@crucible_bp.route("/projects/<project_id>/graph", methods=["GET"])
+def project_graph(project_id):
+    """Get Zep graph data for D3 visualization."""
+    project = project_manager.get_project(project_id)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    graph_id = project.get("graph_id")
+    if not graph_id:
+        return jsonify({"data": {"nodes": [], "edges": []}})
+
+    data = zep_manager.get_graph_data(graph_id)
+    return jsonify({"data": data})
+
+
+@crucible_bp.route("/projects/<project_id>/generate-config", methods=["POST"])
+def generate_config(project_id):
+    """Trigger config generation from dossier."""
+    project = project_manager.get_project(project_id)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    run_config_generation(project_id)
+    return jsonify({"data": {"status": "generating"}}), 202
+
+
+@crucible_bp.route("/projects/<project_id>/config", methods=["GET"])
+def get_project_config(project_id):
+    """Get generated SimulationConfig."""
+    config = project_manager.get_config(project_id)
+    if not config:
+        # Check if still generating
+        project = project_manager.get_project(project_id)
+        if project and project.get("status") == "generating_config":
+            return jsonify({"data": None, "status": "generating"}), 202
+        return jsonify({"error": "Config not found"}), 404
+    return jsonify({"data": config})
+
+
+@crucible_bp.route("/projects/<project_id>", methods=["PATCH"])
+def patch_project(project_id):
+    """Update project fields (e.g., link simId after launch)."""
+    updates = request.get_json()
+    if not updates:
+        return jsonify({"error": "No updates provided"}), 400
+    project = project_manager.update_project(project_id, **updates)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+    return jsonify({"data": {"status": "updated"}})
