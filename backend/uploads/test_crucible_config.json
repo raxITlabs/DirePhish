@@ -1,7 +1,7 @@
 {
   "simulation_id": "novapay_ir_001",
   "company_name": "NovaPay Inc.",
-  "total_rounds": 3,
+  "total_rounds": 5,
   "hours_per_round": 1.0,
   "scenario": "At 03:00 UTC, NovaPay's IR team confirmed a data breach. An attacker gained access via a phishing link clicked by a developer, established a Cobalt Strike beacon, moved laterally to the CI/CD build server, extracted production database credentials, and is actively exfiltrating merchant PII (3,200+ records so far) from the PostgreSQL read replica. The attacker is still on the network. Key tension: the security team wants immediate containment (kill DB connections, rotate all secrets), but VP Engineering warns that $4.2M in Saturday payment transactions will fail if the database goes offline. The CEO wants to control the narrative ahead of the Series D roadshow in 10 days. Legal must decide when the GDPR 72-hour notification clock started.",
   "worlds": [
@@ -53,6 +53,21 @@
       "name": "Catherine Park",
       "role": "legal",
       "persona": "Meticulous regulatory expert specializing in data privacy law. Cautious but decisive when deadlines loom. Ensures all communications are legally sound before external disclosure."
+    },
+    {
+      "name": "Jordan Liu",
+      "role": "vp_eng",
+      "persona": "VP Engineering. Protective of uptime SLAs (99.95% target). Will push back hard on containment that takes production systems offline. The $4.2M Saturday payment queue is his primary concern. Pragmatic, data-driven."
+    },
+    {
+      "name": "Diane Okafor",
+      "role": "cto",
+      "persona": "CTO and technical co-founder. Deep knowledge of the infrastructure. Prioritizes system availability but understands security urgency. Has root access to production. Sometimes bypasses change management during crises."
+    },
+    {
+      "name": "Sam Oduya",
+      "role": "soc_analyst",
+      "persona": "Senior SOC analyst, London-based, night shift. Was the first to see the initial alert but didn't escalate immediately because it was medium severity. Feeling guilty about the delay. Experienced but cautious about over-escalating after being criticized at his last job."
     }
   ]
 }
