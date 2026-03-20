@@ -56,7 +56,7 @@ def _get_graphiti(project_id: str):
     embedder = GeminiEmbedder(
         config=GeminiEmbedderConfig(
             api_key=Config.LLM_API_KEY,
-            embedding_model="embedding-001",
+            embedding_model="gemini-embedding-2-preview",
         )
     )
 

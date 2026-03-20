@@ -234,7 +234,7 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                 embedder_g = GeminiEmbedder(
                     config=GeminiEmbedderConfig(
                         api_key=os.environ.get("LLM_API_KEY", ""),
-                        embedding_model="embedding-001",
+                        embedding_model="gemini-embedding-2-preview",
                     )
                 )
                 graphiti = Graphiti(graph_driver=kuzu_driver, llm_client=llm_client_g, embedder=embedder_g)
