@@ -94,6 +94,7 @@ def _scrape_website(url: str) -> str:
             "depth": 2,
             "formats": ["markdown"],
             "render": False,
+            "crawlPurposes": ["search"],
             "rejectResourceTypes": ["image", "media", "font", "stylesheet"],
             "options": {
                 "excludePatterns": ["**/blog/**", "**/news/**", "**/press/**"],
@@ -312,7 +313,7 @@ def _push_to_zep(project_id: str, dossier: dict) -> str:
     for i, text in enumerate(all_texts):
         try:
             client.graph.add(
-                group_id=graph_id,
+                graph_id=graph_id,
                 data=text,
                 type="text",
             )

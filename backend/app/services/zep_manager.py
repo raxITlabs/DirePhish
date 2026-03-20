@@ -15,7 +15,7 @@ def get_graph_data(graph_id: str) -> dict:
         client = Zep(api_key=Config.ZEP_API_KEY)
 
         # Fetch nodes
-        nodes_response = client.graph.node.get_by_group_id(group_id=graph_id)
+        nodes_response = client.graph.node.get_by_graph_id(graph_id=graph_id)
         nodes = []
         for node in (nodes_response or []):
             # Map Zep node labels to our color-map types
@@ -28,7 +28,7 @@ def get_graph_data(graph_id: str) -> dict:
             })
 
         # Fetch edges
-        edges_response = client.graph.edge.get_by_group_id(group_id=graph_id)
+        edges_response = client.graph.edge.get_by_graph_id(graph_id=graph_id)
         edges = []
         for edge in (edges_response or []):
             edges.append({
@@ -76,7 +76,7 @@ def sync_dossier_to_zep(graph_id: str, dossier: dict) -> None:
 
     for text in texts:
         try:
-            client.graph.add(group_id=graph_id, data=text, type="text")
+            client.graph.add(graph_id=graph_id, data=text, type="text")
         except Exception as e:
             logger.warning(f"Failed to sync episode to Zep: {e}")
 
