@@ -34,6 +34,10 @@ class Config:
     
     # Zep configuration
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
+
+    # Cloudflare Browser Rendering (web crawling)
+    CLOUDFLARE_ACCOUNT_ID = os.environ.get('CLOUDFLARE_ACCOUNT_ID')
+    CLOUDFLARE_API_TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN')
     
     # File upload configuration
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
