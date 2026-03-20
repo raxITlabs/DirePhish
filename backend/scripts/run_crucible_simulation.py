@@ -186,6 +186,12 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
     all_actions: list[dict] = []
     summary_actions: list[dict] = []
 
+    # Conversation memory per world — agents see what others have said
+    world_history: dict[str, list[str]] = {wc.name: [] for wc in world_configs}
+
+    # Scenario context from config (if provided)
+    scenario = config.get("scenario", "")
+
     try:
         for round_num in range(1, total_rounds + 1):
             print(f"\n=== Round {round_num}/{total_rounds} ===")
@@ -200,7 +206,7 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                             "agent_name": agent["name"],
                             "role": agent["role"],
                             "personality": agent.get("persona", ""),
-                            "company": "NovaPay",
+                            "company": config.get("company_name", "the company"),
                             "current_time": datetime.now(timezone.utc).isoformat(),
                         },
                         system_prompt_template=templates_per_world[world_name],
@@ -212,10 +218,20 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                     # Render system message
                     system_msg = agent_info.to_system_message(pressures=pressure_text)
 
-                    # User message
+                    # Build user message WITH conversation history
+                    history_text = ""
+                    if world_history[world_name]:
+                        recent = world_history[world_name][-20:]  # Last 20 messages
+                        history_text = "\n\nRecent activity in this channel:\n" + "\n".join(recent)
+
+                    scenario_text = ""
+                    if scenario and round_num == 1:
+                        scenario_text = f"\n\nScenario context:\n{scenario}"
+
                     user_msg = (
-                        f"Round {round_num}. You are in {world_name}. "
-                        f"What action do you take?"
+                        f"Round {round_num}/{total_rounds}. You are in {world_name}.{scenario_text}{history_text}\n\n"
+                        f"Based on the situation and what others have said, what action do you take? "
+                        f"Act in character as {agent['name']} ({agent['role']})."
                     )
 
                     # Call LLM
@@ -234,6 +250,28 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                         action_type=action_name, action_args=action_args
                     )
                     results = await env.step({world_name: action})
+
+                    # Record in conversation history so next agents see this
+                    if action_name == "send_message":
+                        content = action_args.get("content", "")[:200]
+                        world_history[world_name].append(
+                            f"[{agent['name']} ({agent['role']})] {content}"
+                        )
+                    elif action_name == "send_email":
+                        to = action_args.get("to", "?")
+                        subj = action_args.get("subject", "")
+                        world_history[world_name].append(
+                            f"[{agent['name']}] Email to {to}: {subj}"
+                        )
+                    elif action_name == "reply_in_thread":
+                        content = action_args.get("content", "")[:200]
+                        world_history[world_name].append(
+                            f"[{agent['name']}] (thread reply) {content}"
+                        )
+                    elif action_name != "do_nothing":
+                        world_history[world_name].append(
+                            f"[{agent['name']}] {action_name}: {json.dumps(action_args, ensure_ascii=False)[:150]}"
+                        )
 
                     # Log entry
                     entry = {

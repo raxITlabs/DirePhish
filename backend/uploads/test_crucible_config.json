@@ -1,7 +1,9 @@
 {
-  "simulation_id": "test_crucible_001",
-  "total_rounds": 2,
+  "simulation_id": "novapay_ir_001",
+  "company_name": "NovaPay Inc.",
+  "total_rounds": 3,
   "hours_per_round": 1.0,
+  "scenario": "At 03:00 UTC, NovaPay's IR team confirmed a data breach. An attacker gained access via a phishing link clicked by a developer, established a Cobalt Strike beacon, moved laterally to the CI/CD build server, extracted production database credentials, and is actively exfiltrating merchant PII (3,200+ records so far) from the PostgreSQL read replica. The attacker is still on the network. Key tension: the security team wants immediate containment (kill DB connections, rotate all secrets), but VP Engineering warns that $4.2M in Saturday payment transactions will fail if the database goes offline. The CEO wants to control the narrative ahead of the Series D roadshow in 10 days. Legal must decide when the GDPR 72-hour notification clock started.",
   "worlds": [
     {
       "type": "slack",
@@ -16,7 +18,7 @@
     {
       "name": "GDPR 72-hour countdown",
       "type": "countdown",
-      "affects_roles": ["legal", "ciso"],
+      "affects_roles": ["legal", "ciso", "ir_lead"],
       "hours": 72,
       "severity_at_50pct": "high",
       "severity_at_25pct": "critical"
