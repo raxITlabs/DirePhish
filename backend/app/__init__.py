@@ -67,7 +67,10 @@ def create_app(config_class=Config):
     app.register_blueprint(graph_bp, url_prefix='/api/graph')
     app.register_blueprint(simulation_bp, url_prefix='/api/simulation')
     app.register_blueprint(report_bp, url_prefix='/api/report')
-    
+
+    from .api.crucible import crucible_bp
+    app.register_blueprint(crucible_bp, url_prefix='/api/crucible')
+
     # Health check
     @app.route('/health')
     def health():
