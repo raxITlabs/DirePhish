@@ -35,6 +35,9 @@ class Config:
     # Zep configuration
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
 
+    # Graphiti (local knowledge graph)
+    GRAPHITI_DB_PATH = os.environ.get('GRAPHITI_DB_PATH', os.path.join(os.path.dirname(__file__), '../data/graphiti'))
+
     # Cloudflare Browser Rendering (web crawling)
     CLOUDFLARE_ACCOUNT_ID = os.environ.get('CLOUDFLARE_ACCOUNT_ID')
     CLOUDFLARE_API_TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN')
@@ -73,7 +76,6 @@ class Config:
         errors = []
         if not cls.LLM_API_KEY:
             errors.append("LLM_API_KEY is not configured")
-        if not cls.ZEP_API_KEY:
-            errors.append("ZEP_API_KEY is not configured")
+        # ZEP_API_KEY is optional (only needed for OASIS flow, not Crucible)
         return errors
 

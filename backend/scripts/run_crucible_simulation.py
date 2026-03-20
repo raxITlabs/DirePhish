@@ -30,6 +30,18 @@ if _env_path.exists():
 
 from openai import OpenAI
 
+# Graphiti imports for agent memory
+try:
+    from graphiti_core import Graphiti
+    from graphiti_core.driver.kuzu_driver import KuzuDriver
+    from graphiti_core.llm_client import OpenAIClient, LLMConfig
+    from graphiti_core.embedder import OpenAIEmbedder
+    from graphiti_core.embedder.openai import OpenAIEmbedderConfig
+    from graphiti_core.nodes import EpisodeType
+    HAS_GRAPHITI = True
+except ImportError:
+    HAS_GRAPHITI = False
+
 import crucible
 from crucible import (
     AgentInfo,
@@ -125,6 +137,34 @@ def _call_llm(
 
 
 # ---------------------------------------------------------------------------
+# Graphiti helper
+# ---------------------------------------------------------------------------
+
+async def _get_agent_memory(graphiti, agent_name: str, world_name: str, project_id: str) -> str:
+    """Query Graphiti for agent-specific context."""
+    if not graphiti:
+        return ""
+    try:
+        query = f"What has {agent_name} discussed and what decisions have been made in {world_name}?"
+        edges = await graphiti.search(
+            query=query,
+            group_ids=[project_id] if project_id else None,
+            num_results=8,
+        )
+        if not edges:
+            return ""
+        facts = []
+        for edge in edges:
+            if edge.fact:
+                facts.append(f"- {edge.fact}")
+        if not facts:
+            return ""
+        return "From your memory of previous discussions:\n" + "\n".join(facts[:8])
+    except Exception:
+        return ""
+
+
+# ---------------------------------------------------------------------------
 # Main simulation loop
 # ---------------------------------------------------------------------------
 
@@ -170,6 +210,36 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
         base_url=os.environ.get("LLM_BASE_URL"),
     )
     model = os.environ.get("LLM_MODEL_NAME", "gpt-4o-mini")
+
+    # Initialize Graphiti for agent memory (if project has a graph)
+    graphiti = None
+    project_id = None
+    if HAS_GRAPHITI and sim_id.startswith("proj_"):
+        project_id = sim_id.replace("_sim", "")
+        # DB path relative to backend dir
+        _backend_dir = Path(__file__).parent.parent
+        graphiti_db = str(_backend_dir / "data" / "graphiti" / project_id)
+        # Also check relative to cwd
+        if not Path(graphiti_db).exists():
+            graphiti_db = str(Path("data") / "graphiti" / project_id)
+        if Path(graphiti_db).exists():
+            try:
+                kuzu_driver = KuzuDriver(db=graphiti_db)
+                llm_client_g = OpenAIClient(LLMConfig(
+                    api_key=os.environ.get("LLM_API_KEY", ""),
+                    base_url=os.environ.get("LLM_BASE_URL"),
+                    model=os.environ.get("LLM_MODEL_NAME", "gpt-4o-mini"),
+                ))
+                embedder_g = OpenAIEmbedder(OpenAIEmbedderConfig(
+                    api_key=os.environ.get("LLM_API_KEY", ""),
+                    base_url=os.environ.get("LLM_BASE_URL"),
+                ))
+                graphiti = Graphiti(graph_driver=kuzu_driver, llm_client=llm_client_g, embedder=embedder_g)
+                await graphiti.build_indices_and_constraints()
+                print(f"  Graphiti memory enabled (project: {project_id})")
+            except Exception as e:
+                print(f"  Graphiti memory unavailable: {e}")
+                graphiti = None
 
     # Pre-build tools per world
     tools_per_world: dict[str, list[dict]] = {}
@@ -263,6 +333,12 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                         f"Act in character as {agent['name']} ({agent['role']})."
                     )
 
+                    # Query Graphiti for agent memory context
+                    if graphiti and project_id:
+                        memory_text = await _get_agent_memory(graphiti, agent["name"], world_name, project_id)
+                        if memory_text:
+                            user_msg = user_msg + f"\n\n{memory_text}"
+
                     # Call LLM (run in executor to avoid blocking the async event loop)
                     tools = tools_per_world[world_name]
                     loop = asyncio.get_event_loop()
@@ -333,6 +409,29 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                     # Append to JSONL
                     with open(actions_log, "a") as f:
                         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+                    # Push action to Graphiti as temporal episode
+                    if graphiti and project_id:
+                        try:
+                            episode_body = ""
+                            if action_name in ("send_message", "reply_in_thread"):
+                                content = action_args.get("content", "")[:500]
+                                episode_body = f"{agent['name']} ({agent['role']}) said in {world_name}: {content}"
+                            elif action_name in ("send_email", "reply_email"):
+                                subj = action_args.get("subject", "")
+                                body_text = action_args.get("body", "")[:300]
+                                episode_body = f"{agent['name']} ({agent['role']}) emailed about '{subj}': {body_text}"
+                            if episode_body:
+                                await graphiti.add_episode(
+                                    name=f"{agent['name'].replace(' ', '_')}_r{round_num}_{action_name}",
+                                    episode_body=episode_body,
+                                    source=EpisodeType.message,
+                                    source_description=f"Round {round_num} — {world_name}",
+                                    reference_time=datetime.now(timezone.utc),
+                                    group_id=project_id,
+                                )
+                        except Exception as e:
+                            print(f"  (Graphiti push failed: {e})")
 
     finally:
         await env.stop()

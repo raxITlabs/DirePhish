@@ -18,6 +18,10 @@ dependencies = [
     
     # Zep Cloud
     "zep-cloud==3.13.0",
+
+    # Graphiti (local knowledge graph — replaces Zep Cloud)
+    "graphiti-core==0.28.2",
+    "kuzu>=0.11.0",
     
     # OASIS 社交媒体模拟
     "camel-oasis==0.2.5",
@@ -50,6 +54,12 @@ build-backend = "hatchling.build"
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
+]
+
+[tool.uv]
+# graphiti-core requires neo4j>=5.26.0; override camel-oasis's strict neo4j==5.23.0 pin
+override-dependencies = [
+    "neo4j>=5.26.0",
 ]
 
 [tool.hatch.metadata]
