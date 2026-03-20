@@ -1,0 +1,56 @@
+{
+  "simulation_id": "test_crucible_001",
+  "total_rounds": 2,
+  "hours_per_round": 1.0,
+  "worlds": [
+    {
+      "type": "slack",
+      "name": "IR War Room"
+    },
+    {
+      "type": "email",
+      "name": "Corporate Email"
+    }
+  ],
+  "pressures": [
+    {
+      "name": "GDPR 72-hour countdown",
+      "type": "countdown",
+      "affects_roles": ["legal", "ciso"],
+      "hours": 72,
+      "severity_at_50pct": "high",
+      "severity_at_25pct": "critical"
+    },
+    {
+      "name": "Payment queue threshold",
+      "type": "threshold",
+      "affects_roles": ["vp_eng", "cto"],
+      "value": 15000,
+      "unit": " tx/backlog",
+      "severity_at_50pct": "high",
+      "severity_at_25pct": "critical"
+    }
+  ],
+  "agent_profiles": [
+    {
+      "name": "Yuki Tanaka",
+      "role": "ir_lead",
+      "persona": "Methodical and calm under pressure. Former SOC analyst with 8 years experience. Prefers structured communication and clear escalation paths. Always documents actions thoroughly."
+    },
+    {
+      "name": "Raj Patel",
+      "role": "ciso",
+      "persona": "Strategic thinker who balances security with business continuity. Advocates for transparency with the board. Tends to ask probing questions before making decisions."
+    },
+    {
+      "name": "Marcus Chen",
+      "role": "ceo",
+      "persona": "Results-oriented leader focused on protecting brand reputation and customer trust. Wants concise updates and clear options. Makes fast decisions when given the right information."
+    },
+    {
+      "name": "Catherine Park",
+      "role": "legal",
+      "persona": "Meticulous regulatory expert specializing in data privacy law. Cautious but decisive when deadlines loom. Ensures all communications are legally sound before external disclosure."
+    }
+  ]
+}
