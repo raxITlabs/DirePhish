@@ -1,0 +1,174 @@
+// frontend/app/configure/project/[projectId]/page.tsx
+"use client";
+
+import { useEffect, useState, use } from "react";
+import { useRouter } from "next/navigation";
+import Header from "@/app/components/layout/Header";
+import AgentCards from "@/app/components/configure/AgentCards";
+import WorldList from "@/app/components/configure/WorldList";
+import PressureCards from "@/app/components/configure/PressureCards";
+import EventTimeline from "@/app/components/configure/EventTimeline";
+import { getProjectStatus, getProjectConfig, linkSimToProject } from "@/app/actions/project";
+import { launchSimulation } from "@/app/actions/simulation";
+import type { SimulationConfig, Project } from "@/app/types";
+
+export default function ConfigureProjectPage({
+  params,
+}: {
+  params: Promise<{ projectId: string }>;
+}) {
+  const { projectId } = use(params);
+  const router = useRouter();
+  const [config, setConfig] = useState<SimulationConfig | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [launching, setLaunching] = useState(false);
+
+  const handleLaunch = async () => {
+    if (!config) return;
+    setLaunching(true);
+    const result = await launchSimulation(config);
+    if ("error" in result) {
+      setError(result.error);
+      setLaunching(false);
+      return;
+    }
+    // Link the simulation to this project so Zep graph carries through
+    await linkSimToProject(projectId, result.data.simId);
+    router.push(`/simulation/${result.data.simId}`);
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      // Poll status until config is ready
+      const statusResult = await getProjectStatus(projectId);
+      if ("error" in statusResult) {
+        setError(statusResult.error);
+        return;
+      }
+      setProject(statusResult.data);
+
+      if (statusResult.data.status === "config_ready") {
+        const configResult = await getProjectConfig(projectId);
+        if ("error" in configResult) {
+          setError(configResult.error);
+          return;
+        }
+        setConfig(configResult.data);
+      }
+    };
+    load();
+  }, [projectId]);
+
+  // Poll while generating config
+  useEffect(() => {
+    if (!project || project.status !== "generating_config") return;
+    const interval = setInterval(async () => {
+      const result = await getProjectStatus(projectId);
+      if ("data" in result) {
+        setProject(result.data);
+        if (result.data.status === "config_ready") {
+          const configResult = await getProjectConfig(projectId);
+          if ("data" in configResult) setConfig(configResult.data);
+        }
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [project?.status, projectId]);
+
+  if (error) {
+    return (
+      <>
+        <Header />
+        <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10">
+          <div className="p-4 rounded-lg bg-severity-critical-bg border border-severity-critical-border text-severity-critical-text">
+            {error}
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (!config) {
+    return (
+      <>
+        <Header />
+        <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10">
+          <div className="text-center py-20">
+            <div className="text-lg font-medium mb-2">Generating simulation config...</div>
+            <div className="text-sm text-text-secondary">
+              {project?.progressMessage || "The AI is building agents, scenarios, and pressures from your company data."}
+            </div>
+            <div className="mt-4 w-48 mx-auto h-1.5 bg-gray-100 rounded-full">
+              <div
+                className="h-full rounded-full bg-accent transition-all duration-500"
+                style={{ width: `${project?.progress || 0}%` }}
+              />
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header />
+      <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10 pb-24">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold mb-1">{config.companyName}</h1>
+          {config.scenario && (
+            <p className="text-sm text-text-secondary mt-2">{config.scenario}</p>
+          )}
+        </div>
+
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">Agents</h2>
+          <AgentCards agents={config.agents} />
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">Worlds</h2>
+          <WorldList worlds={config.worlds} />
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">Pressures</h2>
+          <PressureCards pressures={config.pressures} />
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">Scheduled Events</h2>
+          <EventTimeline events={config.scheduledEvents} />
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">Settings</h2>
+          <div className="flex gap-6 text-sm">
+            <div>
+              <span className="text-text-secondary">Rounds:</span>{" "}
+              <span className="font-medium">{config.totalRounds}</span>
+            </div>
+            <div>
+              <span className="text-text-secondary">Hours per round:</span>{" "}
+              <span className="font-medium">{config.hoursPerRound}</span>
+            </div>
+          </div>
+        </section>
+
+        <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card px-6 py-3 flex items-center justify-between z-50">
+          <div className="text-sm text-text-secondary">
+            {config.agents.length} agents · {config.worlds.length} worlds · {config.totalRounds} rounds
+          </div>
+          <button
+            onClick={handleLaunch}
+            disabled={launching || config.agents.length === 0}
+            className="px-6 py-2 rounded-lg bg-accent text-white font-medium text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+          >
+            {launching ? "Launching..." : "Launch Simulation"}
+          </button>
+        </div>
+      </main>
+    </>
+  );
+}
