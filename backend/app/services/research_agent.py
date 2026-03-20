@@ -268,6 +268,18 @@ def _push_to_zep(project_id: str, dossier: dict) -> str:
     client = Zep(api_key=Config.ZEP_API_KEY)
     graph_id = f"crucible_{project_id}"
 
+    # Create the graph first
+    try:
+        company = dossier.get("company", {})
+        client.graph.create(
+            graph_id=graph_id,
+            name=company.get("name", project_id),
+            description=f"Knowledge graph for {company.get('name', 'company')} research project",
+        )
+        logger.info(f"Created Zep graph: {graph_id}")
+    except Exception as e:
+        logger.warning(f"Failed to create Zep graph (may already exist): {e}")
+
     # Push company info as an episode
     company = dossier.get("company", {})
     company_text = (
