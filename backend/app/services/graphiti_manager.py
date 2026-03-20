@@ -45,6 +45,9 @@ def _get_graphiti(project_id: str):
     db_path = os.path.join(Config.GRAPHITI_DB_PATH, f"{project_id}.kuzu")
 
     driver = KuzuDriver(db=db_path)
+    # Workaround: Graphiti 0.28.2 accesses driver._database but KuzuDriver doesn't have it
+    if not hasattr(driver, '_database'):
+        driver._database = db_path
 
     llm_client = GeminiClient(
         config=LLMConfig(
@@ -77,6 +80,26 @@ def _get_graphiti(project_id: str):
 
     # Build indices on first use
     _run_async(graphiti.build_indices_and_constraints())
+
+    # Kuzu needs FTS extension + index manually (not done by graphiti-core 0.28.2)
+    try:
+        _run_async(driver.execute_query("INSTALL fts"))
+        _run_async(driver.execute_query("LOAD EXTENSION fts"))
+        _run_async(driver.execute_query(
+            "CALL CREATE_FTS_INDEX('Entity', 'node_name_and_summary', ['name', 'summary'])"
+        ))
+        # Edge FTS index too
+        try:
+            _run_async(driver.execute_query(
+                "CALL CREATE_FTS_INDEX('RelatesToNode_', 'edge_name_and_fact', ['name', 'fact'])"
+            ))
+        except Exception:
+            pass  # Table may not exist yet on first run
+        logger.info(f"Created FTS indices for {project_id}")
+    except Exception as e:
+        # Index may already exist or FTS not available
+        if "already exists" not in str(e).lower():
+            logger.warning(f"FTS index creation note for {project_id}: {e}")
 
     _instances[project_id] = graphiti
     logger.info(f"Created Graphiti instance for project {project_id} at {db_path}")
@@ -278,7 +301,7 @@ def get_graph_data(project_id: str) -> dict:
     """Get all nodes and edges for D3 visualization via raw Cypher."""
     try:
         graphiti = _get_graphiti(project_id)
-        driver = graphiti.graph_driver
+        driver = graphiti.driver
 
         # Get all entity nodes
         node_results = _run_async(driver.execute_query(
@@ -296,10 +319,10 @@ def get_graph_data(project_id: str) -> dict:
                 "attributes": {"summary": row.get("summary", "")},
             })
 
-        # Get all edges
+        # Get all edges (Kuzu models edges via RelatesToNode_ intermediary)
         edge_results = _run_async(driver.execute_query(
-            "MATCH (n:Entity)-[r:RELATES_TO]->(m:Entity) "
-            "RETURN n.uuid AS source, m.uuid AS target, r.name AS name, r.fact AS fact"
+            "MATCH (n:Entity)-[:RELATES_TO]->(e:RelatesToNode_)-[:RELATES_TO]->(m:Entity) "
+            "RETURN n.uuid AS source, m.uuid AS target, e.name AS name, e.fact AS fact"
         ))
         raw_edges = edge_results[0] if edge_results and edge_results[0] else []
 
