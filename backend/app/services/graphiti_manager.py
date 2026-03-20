@@ -40,9 +40,9 @@ def _get_graphiti(project_id: str):
     from graphiti_core.embedder import OpenAIEmbedder
     from graphiti_core.embedder.openai import OpenAIEmbedderConfig
 
-    # Create project-specific Kuzu DB directory
-    db_path = os.path.join(Config.GRAPHITI_DB_PATH, project_id)
-    os.makedirs(db_path, exist_ok=True)
+    # Create project-specific Kuzu DB file path (Kuzu creates the file itself)
+    os.makedirs(Config.GRAPHITI_DB_PATH, exist_ok=True)
+    db_path = os.path.join(Config.GRAPHITI_DB_PATH, f"{project_id}.kuzu")
 
     driver = KuzuDriver(db=db_path)
 

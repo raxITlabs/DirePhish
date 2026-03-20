@@ -218,10 +218,10 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
         project_id = sim_id.replace("_sim", "")
         # DB path relative to backend dir
         _backend_dir = Path(__file__).parent.parent
-        graphiti_db = str(_backend_dir / "data" / "graphiti" / project_id)
+        graphiti_db = str(_backend_dir / "data" / "graphiti" / f"{project_id}.kuzu")
         # Also check relative to cwd
         if not Path(graphiti_db).exists():
-            graphiti_db = str(Path("data") / "graphiti" / project_id)
+            graphiti_db = str(Path("data") / "graphiti" / f"{project_id}.kuzu")
         if Path(graphiti_db).exists():
             try:
                 kuzu_driver = KuzuDriver(db=graphiti_db)
