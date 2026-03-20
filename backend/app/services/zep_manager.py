@@ -18,10 +18,9 @@ def get_graph_data(graph_id: str) -> dict:
         nodes_response = client.graph.node.get_by_graph_id(graph_id=graph_id)
         nodes = []
         for node in (nodes_response or []):
-            # Map Zep node labels to our color-map types
             node_type = _classify_node(node)
             nodes.append({
-                "id": node.uuid or str(len(nodes)),
+                "id": node.uuid_ or str(len(nodes)),
                 "name": node.name or "Unknown",
                 "type": node_type,
                 "attributes": node.attributes or {},
@@ -35,7 +34,7 @@ def get_graph_data(graph_id: str) -> dict:
                 "source": edge.source_node_uuid or "",
                 "target": edge.target_node_uuid or "",
                 "label": edge.name or "",
-                "type": edge.fact_type or "related",
+                "type": (edge.attributes or {}).get("edge_type", "related"),
             })
 
         return {"nodes": nodes, "edges": edges}
