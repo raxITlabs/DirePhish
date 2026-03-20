@@ -3,8 +3,6 @@ Flask blueprint for Crucible simulation API.
 All endpoints under /api/crucible/*
 """
 import json
-import subprocess
-import threading
 import uuid
 from pathlib import Path
 
@@ -137,87 +135,20 @@ def simulation_graph(sim_id):
 
 @crucible_bp.route("/simulations/<sim_id>/report", methods=["POST"])
 def generate_report(sim_id):
-    """Trigger after-action report generation via subprocess."""
+    """Trigger after-action report generation using the report agent."""
     sim_dir = Path(__file__).parent.parent.parent / "uploads" / "simulations" / sim_id
     config_path = sim_dir / "config.json"
     actions_path = sim_dir / "actions.jsonl"
-    report_md_path = sim_dir / "after_action_report.md"
-    report_json_path = sim_dir / "report.json"
+    report_path = sim_dir / "report.json"
 
     if not config_path.exists() or not actions_path.exists():
         return jsonify({"error": "Simulation data not found"}), 404
 
-    if report_json_path.exists():
+    if report_path.exists():
         return jsonify({"data": {"status": "complete"}}), 200
 
-    script_path = Path(__file__).parent.parent.parent / "scripts" / "generate_after_action_report.py"
-
-    def _run():
-        # Run the script with correct flags
-        result = subprocess.run(
-            ["uv", "run", "python", str(script_path),
-             "--config", str(config_path),
-             "--actions", str(actions_path),
-             "--output", str(report_md_path)],
-            cwd=str(Path(__file__).parent.parent.parent),
-            capture_output=True, text=True,
-        )
-
-        # Convert markdown report to JSON for the frontend
-        if report_md_path.exists():
-            md_content = report_md_path.read_text()
-            # Parse the markdown into a structured report
-            # Read config for company name
-            with open(config_path) as f:
-                config = json.load(f)
-            report = {
-                "simId": sim_id,
-                "status": "complete",
-                "companyName": config.get("company_name", ""),
-                "scenarioName": config.get("scenario", "")[:100],
-                "completedAt": __import__("datetime").datetime.utcnow().isoformat(),
-                "duration": f"{config.get('total_rounds', 5)} rounds",
-                "executiveSummary": md_content[:2000],
-                "timeline": [],
-                "communicationAnalysis": "",
-                "tensions": "",
-                "agentScores": [],
-                "recommendations": [],
-            }
-            # Try to extract sections from markdown
-            sections = md_content.split("\n## ")
-            for section in sections[1:]:  # skip the title
-                title_end = section.find("\n")
-                title = section[:title_end].strip().lower()
-                body = section[title_end:].strip()
-                if "summary" in title or "executive" in title:
-                    report["executiveSummary"] = body
-                elif "timeline" in title:
-                    report["timeline"] = [{"round": 0, "timestamp": "", "description": body[:500], "significance": "normal"}]
-                elif "communication" in title:
-                    report["communicationAnalysis"] = body
-                elif "tension" in title or "conflict" in title:
-                    report["tensions"] = body
-                elif "recommendation" in title:
-                    report["recommendations"] = [line.strip("- ").strip() for line in body.split("\n") if line.strip().startswith("-")]
-                elif "score" in title or "participant" in title:
-                    # Try to parse agent scores
-                    for line in body.split("\n"):
-                        if line.strip().startswith("-") or line.strip().startswith("*"):
-                            report["agentScores"].append({
-                                "name": line.strip("- *").split(":")[0].strip()[:30],
-                                "role": "",
-                                "score": 7,
-                                "strengths": [],
-                                "weaknesses": [],
-                                "actionCount": 0,
-                                "worldBreakdown": {},
-                            })
-
-            with open(report_json_path, "w") as f:
-                json.dump(report, f, indent=2)
-
-    threading.Thread(target=_run, daemon=True).start()
+    from ..services.crucible_report_agent import run_report_generation
+    run_report_generation(sim_id)
     return jsonify({"data": {"status": "generating"}}), 202
 
 
