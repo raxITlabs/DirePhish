@@ -60,10 +60,19 @@ def _get_graphiti(project_id: str):
         )
     )
 
+    from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
+    cross_encoder = GeminiRerankerClient(
+        config=LLMConfig(
+            api_key=Config.LLM_API_KEY,
+            model="gemini-2.0-flash",
+        )
+    )
+
     graphiti = Graphiti(
         graph_driver=driver,
         llm_client=llm_client,
         embedder=embedder,
+        cross_encoder=cross_encoder,
     )
 
     # Build indices on first use

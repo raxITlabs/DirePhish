@@ -237,7 +237,14 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                         embedding_model="gemini-embedding-2-preview",
                     )
                 )
-                graphiti = Graphiti(graph_driver=kuzu_driver, llm_client=llm_client_g, embedder=embedder_g)
+                from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
+                cross_encoder_g = GeminiRerankerClient(
+                    config=LLMConfig(
+                        api_key=os.environ.get("LLM_API_KEY", ""),
+                        model="gemini-2.0-flash",
+                    )
+                )
+                graphiti = Graphiti(graph_driver=kuzu_driver, llm_client=llm_client_g, embedder=embedder_g, cross_encoder=cross_encoder_g)
                 await graphiti.build_indices_and_constraints()
                 print(f"  Graphiti memory enabled (project: {project_id})")
             except Exception as e:
