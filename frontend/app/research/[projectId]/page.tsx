@@ -173,22 +173,24 @@ export default function ResearchPage({
 
           {/* Dossier editor panel */}
           <div
-            className="overflow-hidden transition-all duration-300"
+            className="transition-all duration-300 min-h-0"
             style={{
               width: editorWidth,
               opacity: viewMode === "graph" ? 0 : 1,
             }}
           >
-            <div className="h-full border border-border rounded-lg bg-card overflow-hidden flex flex-col">
-              <div className="px-4 py-2 border-b border-border">
+            <div className="h-full border border-border rounded-lg bg-card flex flex-col" style={{ minHeight: 0 }}>
+              <div className="px-4 py-2 border-b border-border shrink-0">
                 <span className="text-xs font-semibold text-text-secondary">
                   Company Intelligence
                 </span>
               </div>
-              <DossierEditor
-                projectId={projectId}
-                initialDossier={dossier}
-              />
+              <div className="flex-1 min-h-0 flex flex-col">
+                <DossierEditor
+                  projectId={projectId}
+                  initialDossier={dossier}
+                />
+              </div>
             </div>
           </div>
         </div>
