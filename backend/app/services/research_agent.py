@@ -2,7 +2,7 @@
 """
 Research Agent — gathers company intelligence from Cloudflare /crawl API, web search,
 uploaded documents, and LLM synthesis. Produces a structured Company Dossier
-and pushes it to Zep as a knowledge graph.
+and pushes it to Graphiti as a knowledge graph.
 """
 import json
 import re
@@ -52,9 +52,11 @@ def _research_pipeline(project_id: str) -> None:
         dossier = _synthesize_dossier(scraped_text, search_results, doc_text, user_context)
         project_manager.save_dossier(project_id, dossier)
 
-        # Step 5: Push to Zep
+        # Step 5: Push to Graphiti
         project_manager.update_project(project_id, progress=85, progress_message="Building knowledge graph...")
-        graph_id = _push_to_zep(project_id, dossier)
+        from . import graphiti_manager
+        graphiti_manager.push_dossier(project_id, dossier)
+        graph_id = project_id  # Graphiti uses project_id as the graph identifier
 
         project_manager.update_project(
             project_id,
@@ -260,76 +262,3 @@ Be thorough but realistic. If information is not available, make reasonable infe
     return dossier
 
 
-def _push_to_zep(project_id: str, dossier: dict) -> str:
-    """Push the dossier to Zep as a knowledge graph. Returns the graph ID."""
-    from zep_cloud.client import Zep
-    from zep_cloud.types import EpisodeData
-
-    client = Zep(api_key=Config.ZEP_API_KEY)
-    graph_id = f"crucible_{project_id}"
-
-    # Create the graph first
-    try:
-        company = dossier.get("company", {})
-        client.graph.create(
-            graph_id=graph_id,
-            name=company.get("name", project_id),
-            description=f"Knowledge graph for {company.get('name', 'company')} research project",
-        )
-        logger.info(f"Created Zep graph: {graph_id}")
-    except Exception as e:
-        logger.warning(f"Failed to create Zep graph (may already exist): {e}")
-
-    # Push company info as an episode
-    company = dossier.get("company", {})
-    company_text = (
-        f"Company: {company.get('name', 'Unknown')}. "
-        f"Industry: {company.get('industry', 'Unknown')}. "
-        f"Size: {company.get('size', 'Unknown')}. "
-        f"Products: {', '.join(company.get('products', []))}. "
-        f"Geography: {company.get('geography', 'Unknown')}."
-    )
-
-    # Push org structure as episodes
-    org_texts = []
-    for role in dossier.get("org", {}).get("roles", []):
-        org_texts.append(
-            f"{role['title']} works in {role['department']} department and reports to {role['reportsTo']}."
-        )
-
-    # Push systems
-    system_texts = []
-    for sys in dossier.get("systems", []):
-        system_texts.append(
-            f"System: {sys['name']} ({sys['category']}, criticality: {sys['criticality']})."
-        )
-
-    # Push compliance
-    compliance_text = f"Compliance requirements: {', '.join(dossier.get('compliance', []))}."
-
-    # Push risks
-    risk_texts = []
-    for risk in dossier.get("risks", []):
-        risk_texts.append(
-            f"Risk: {risk['name']} (likelihood: {risk['likelihood']}, impact: {risk['impact']})."
-        )
-
-    # Push recent events
-    event_texts = []
-    for event in dossier.get("recentEvents", []):
-        event_texts.append(f"Event ({event['date']}): {event['description']} [source: {event['source']}].")
-
-    # Combine all into episodes and push
-    all_texts = [company_text] + org_texts + system_texts + [compliance_text] + risk_texts + event_texts
-
-    for i, text in enumerate(all_texts):
-        try:
-            client.graph.add(
-                graph_id=graph_id,
-                data=text,
-                type="text",
-            )
-        except Exception as e:
-            logger.warning(f"Failed to push episode {i} to Zep: {e}")
-
-    return graph_id
