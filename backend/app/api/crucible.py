@@ -83,16 +83,15 @@ def simulation_stop(sim_id):
 
 @crucible_bp.route("/simulations/<sim_id>/graph", methods=["GET"])
 def simulation_graph(sim_id):
-    """Build graph data — from Zep if project graph exists, else from config."""
+    """Build graph data — from Graphiti if project graph exists, else from config."""
     status = get_simulation_status(sim_id)
     if not status:
         return jsonify({"error": f"Simulation '{sim_id}' not found"}), 404
 
-    # If this simulation has a Zep graph (from research pipeline), use it
+    # If this simulation has a Graphiti graph (from research pipeline), use it
     graph_id = status.get("graph_id")
     if graph_id:
-        from ..services import zep_manager
-        data = zep_manager.get_graph_data(graph_id)
+        data = graphiti_manager.get_graph_data(graph_id)
         if data.get("nodes"):
             return jsonify({"data": data})
 
@@ -240,7 +239,7 @@ def get_report(sim_id):
 from ..services import project_manager
 from ..services.research_agent import run_research
 from ..services.config_generator import run_config_generation
-from ..services import zep_manager
+from ..services import graphiti_manager
 
 
 @crucible_bp.route("/projects", methods=["POST"])
@@ -289,7 +288,7 @@ def get_dossier(project_id):
 
 @crucible_bp.route("/projects/<project_id>/dossier", methods=["PUT"])
 def update_dossier(project_id):
-    """Update dossier and sync to Zep."""
+    """Update dossier and sync to Graphiti."""
     dossier = request.get_json()
     if not dossier:
         return jsonify({"error": "No dossier provided"}), 400
@@ -300,20 +299,18 @@ def update_dossier(project_id):
 
     project_manager.save_dossier(project_id, dossier)
 
-    # Sync to Zep if graph exists
-    graph_id = project.get("graph_id")
-    if graph_id:
-        try:
-            zep_manager.sync_dossier_to_zep(graph_id, dossier)
-        except Exception as e:
-            return jsonify({"error": f"Zep sync failed: {e}"}), 500
+    # Sync to Graphiti
+    try:
+        graphiti_manager.sync_dossier(project_id, dossier)
+    except Exception as e:
+        return jsonify({"error": f"Graphiti sync failed: {e}"}), 500
 
     return jsonify({"data": {"status": "updated"}})
 
 
 @crucible_bp.route("/projects/<project_id>/graph", methods=["GET"])
 def project_graph(project_id):
-    """Get Zep graph data for D3 visualization."""
+    """Get Graphiti graph data for D3 visualization."""
     project = project_manager.get_project(project_id)
     if not project:
         return jsonify({"error": "Project not found"}), 404
@@ -322,7 +319,7 @@ def project_graph(project_id):
     if not graph_id:
         return jsonify({"data": {"nodes": [], "edges": []}})
 
-    data = zep_manager.get_graph_data(graph_id)
+    data = graphiti_manager.get_graph_data(graph_id)
     return jsonify({"data": data})
 
 
