@@ -75,6 +75,20 @@ export default function ResearchPage({
     if ("data" in result) setGraphData(result.data);
   }, [projectId]);
 
+  // Poll graph until nodes appear (Zep processes episodes async)
+  useEffect(() => {
+    if (!project || project.status !== "research_complete") return;
+    if (graphData.nodes.length > 0) return;
+    const interval = setInterval(async () => {
+      const result = await getProjectGraph(projectId);
+      if ("data" in result && result.data.nodes.length > 0) {
+        setGraphData(result.data);
+        clearInterval(interval);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [project?.status, graphData.nodes.length, projectId]);
+
   // Panel widths based on view mode
   const graphWidth =
     viewMode === "graph" ? "100%" : viewMode === "split" ? "50%" : "0%";
