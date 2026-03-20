@@ -32,6 +32,7 @@ dependencies = [
     # 工具库
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",
+    "crucible-sim @ file:///Users/adeshgairola/Documents/raxIT/code/testing-folder/crucible",
 ]
 
 [project.optional-dependencies]
@@ -50,6 +51,9 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
 ]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
