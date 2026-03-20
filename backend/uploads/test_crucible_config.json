@@ -14,6 +14,16 @@
       "name": "Corporate Email"
     }
   ],
+  "scheduled_events": [
+    {
+      "round": 3,
+      "description": "CRITICAL: The attacker has detected containment actions and is now deploying ransomware on the build server cluster. Multiple build-runner hosts showing encryption activity. The attacker appears to be trying to destroy forensic evidence."
+    },
+    {
+      "round": 4,
+      "description": "EXTERNAL: Security researcher @h4ckwatch has tweeted: 'Hearing from multiple sources that @NovaPay has been breached. Merchant data reportedly exposed. Anyone else seeing this?' — 89 retweets, 234 likes and growing."
+    }
+  ],
   "pressures": [
     {
       "name": "GDPR 72-hour countdown",

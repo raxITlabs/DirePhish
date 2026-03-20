@@ -192,8 +192,31 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
     # Scenario context from config (if provided)
     scenario = config.get("scenario", "")
 
+    # Scheduled events (injects that fire at specific rounds)
+    scheduled_events: dict[int, list[str]] = {}
+    for event in config.get("scheduled_events", []):
+        r = event["round"]
+        scheduled_events.setdefault(r, []).append(event["description"])
+
+    # Track active events for context
+    active_events: list[str] = []
+
     try:
         for round_num in range(1, total_rounds + 1):
+            # Check for scheduled injects this round
+            if round_num in scheduled_events:
+                for event_desc in scheduled_events[round_num]:
+                    active_events.append(event_desc)
+                    # Add to all world histories so agents see it
+                    for wn in world_history:
+                        world_history[wn].append(
+                            f"🚨 [SYSTEM ALERT] {event_desc}"
+                        )
+                    print(f"\n🚨 INJECT: {event_desc}")
+
+            # Tick pressure engine each round
+            env.pressure_engine.tick()
+
             print(f"\n=== Round {round_num}/{total_rounds} ===")
 
             for agent in agent_profiles:
@@ -228,16 +251,23 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                     if scenario and round_num == 1:
                         scenario_text = f"\n\nScenario context:\n{scenario}"
 
+                    events_text = ""
+                    if active_events:
+                        events_text = "\n\n🚨 ACTIVE SITUATION UPDATES:\n" + "\n".join(
+                            f"- {e}" for e in active_events
+                        )
+
                     user_msg = (
-                        f"Round {round_num}/{total_rounds}. You are in {world_name}.{scenario_text}{history_text}\n\n"
+                        f"Round {round_num}/{total_rounds}. You are in {world_name}.{scenario_text}{events_text}{history_text}\n\n"
                         f"Based on the situation and what others have said, what action do you take? "
                         f"Act in character as {agent['name']} ({agent['role']})."
                     )
 
-                    # Call LLM
+                    # Call LLM (run in executor to avoid blocking the async event loop)
                     tools = tools_per_world[world_name]
-                    action_name, action_args = _call_llm(
-                        client, model, system_msg, user_msg, tools
+                    loop = asyncio.get_event_loop()
+                    action_name, action_args = await loop.run_in_executor(
+                        None, _call_llm, client, model, system_msg, user_msg, tools
                     )
 
                     print(
@@ -245,11 +275,16 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                         f"{action_name}({json.dumps(action_args, ensure_ascii=False)[:120]})"
                     )
 
-                    # Send action through the platform channel
-                    action = ManualAction(
-                        action_type=action_name, action_args=action_args
-                    )
-                    results = await env.step({world_name: action})
+                    # Send action directly through the world's channel
+                    channel = env.worlds[world_name]["channel"]
+                    action_payload = {
+                        "action": action_name,
+                        "agent_id": agent["name"],
+                        **action_args,
+                    }
+                    msg_id = await channel.write_to_receive_queue(action_payload)
+                    response = await channel.read_from_send_queue(msg_id)
+                    result = response[1] if isinstance(response, tuple) else response
 
                     # Record in conversation history so next agents see this
                     if action_name == "send_message":
@@ -283,7 +318,7 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                         "world": world_name,
                         "action": action_name,
                         "args": action_args,
-                        "result": results.get(world_name),
+                        "result": result,
                     }
                     all_actions.append(entry)
                     summary_actions.append(
