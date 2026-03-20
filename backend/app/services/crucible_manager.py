@@ -127,7 +127,7 @@ def launch_simulation(config: dict) -> str:
 
     script_path = SCRIPTS_DIR / "run_crucible_simulation.py"
     proc = subprocess.Popen(
-        ["uv", "run", "python", str(script_path), str(config_path)],
+        ["uv", "run", "python", str(script_path), "--config", str(config_path), "--output", str(sim_dir)],
         cwd=str(Path(__file__).parent.parent.parent),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
