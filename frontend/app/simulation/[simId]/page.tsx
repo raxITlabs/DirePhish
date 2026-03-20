@@ -8,7 +8,9 @@ import ViewToggle, { type ViewMode } from "@/app/components/simulation/ViewToggl
 import WorldTabs from "@/app/components/simulation/WorldTabs";
 import { getSimulationStatus, getSimulationActions, stopSimulation } from "@/app/actions/simulation";
 import { generateReport } from "@/app/actions/report";
-import type { SimulationStatus, AgentAction, ScheduledEvent } from "@/app/types";
+import { getGraphData } from "@/app/actions/graph";
+import GraphPanel from "@/app/components/simulation/GraphPanel";
+import type { SimulationStatus, AgentAction, ScheduledEvent, GraphData } from "@/app/types";
 
 export default function SimulationPage({
   params,
@@ -22,6 +24,7 @@ export default function SimulationPage({
   const [actions, setActions] = useState<AgentAction[]>([]);
   const [scheduledEvents] = useState<ScheduledEvent[]>([]); // loaded from config
   const [error, setError] = useState<string | null>(null);
+  const [graphData, setGraphData] = useState<GraphData>({ nodes: [], edges: [] });
 
   const pollStatus = useCallback(async () => {
     const result = await getSimulationStatus(simId);
@@ -39,11 +42,17 @@ export default function SimulationPage({
     }
   }, [simId]);
 
+  const pollGraph = useCallback(async () => {
+    const result = await getGraphData(simId);
+    if ("data" in result) setGraphData(result.data);
+  }, [simId]);
+
   // Initial load
   useEffect(() => {
     pollStatus();
     pollActions();
-  }, [pollStatus, pollActions]);
+    pollGraph();
+  }, [pollStatus, pollActions, pollGraph]);
 
   // Polling
   useEffect(() => {
@@ -56,6 +65,13 @@ export default function SimulationPage({
     };
   }, [status?.status, pollStatus, pollActions]);
 
+  // Graph polling (30s when running/starting)
+  useEffect(() => {
+    if (!status || (status.status !== "running" && status.status !== "starting")) return;
+    const graphInterval = setInterval(pollGraph, 30000);
+    return () => clearInterval(graphInterval);
+  }, [status?.status, pollGraph]);
+
   const handleStop = async () => {
     await stopSimulation(simId);
     pollStatus();
@@ -66,7 +82,7 @@ export default function SimulationPage({
     router.push(`/report/${simId}`);
   };
 
-  const isRunning = status?.status === "running";
+  const isRunning = status?.status === "running" || status?.status === "starting";
   const isDone = status?.status === "completed" || status?.status === "stopped";
 
   const statusColor = {
@@ -130,13 +146,13 @@ export default function SimulationPage({
 
       {/* Split panels */}
       <div className="flex-1 flex overflow-hidden px-4 pb-4 gap-3">
-        {/* Graph panel placeholder */}
+        {/* Graph panel */}
         <div
           className="overflow-hidden transition-all duration-300"
           style={{ width: graphWidth, opacity: viewMode === "focus" ? 0 : 1 }}
         >
-          <div className="h-full border border-border rounded-lg bg-card flex items-center justify-center text-text-secondary text-sm">
-            Graph Panel (Task 8)
+          <div className="h-full border border-border rounded-lg bg-card overflow-hidden">
+            <GraphPanel data={graphData} isSimulating={isRunning} onRefresh={pollGraph} />
           </div>
         </div>
         {/* World tabs */}
