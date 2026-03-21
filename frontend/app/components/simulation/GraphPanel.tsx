@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import type { GraphData, GraphNode, GraphEdge } from "@/app/types";
+import { Button } from "@/app/components/ui/button";
 import GraphNodeDetail from "./GraphNodeDetail";
 
 const NODE_COLORS: Record<string, string> = {
@@ -136,20 +137,17 @@ export default function GraphPanel({ data, isLive, onRefresh }: Props) {
   return (
     <div className="h-full relative">
       <div className="flex items-center justify-between px-3 py-2">
-        <span className="text-xs font-semibold text-text-secondary">Knowledge Graph</span>
+        <span className="text-xs font-semibold text-muted-foreground">Knowledge Graph</span>
         <div className="flex items-center gap-2">
-          {isLive && <span className="text-xs text-severity-high-text">● Updating</span>}
-          <button
-            onClick={onRefresh}
-            className="text-xs px-2 py-0.5 border border-border rounded hover:bg-background"
-          >
+          {isLive && <span className="text-xs text-severity-high">● Updating</span>}
+          <Button variant="outline" size="sm" onClick={onRefresh} className="h-6 text-xs">
             Refresh
-          </button>
+          </Button>
         </div>
       </div>
       <svg ref={svgRef} className="w-full" style={{ height: "calc(100% - 70px)" }} />
       {/* Legend */}
-      <div className="flex gap-3 px-3 py-1.5 text-[10px] text-text-secondary">
+      <div className="flex gap-3 px-3 py-1.5 text-[10px] text-muted-foreground">
         {Object.entries(NODE_COLORS).map(([type, color]) => (
           <span key={type} className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full inline-block" style={{ background: color }} />

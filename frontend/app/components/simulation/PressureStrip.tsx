@@ -9,10 +9,10 @@ function formatHours(hours: number): string {
 
 function severityClasses(severity: string) {
   if (severity === "critical")
-    return "border-severity-critical-border bg-severity-critical-bg text-severity-critical-text";
+    return "border-severity-critical-border bg-severity-critical-bg text-severity-critical";
   if (severity === "high")
-    return "border-severity-high-border bg-severity-high-bg text-severity-high-text";
-  return "border-severity-normal-border bg-severity-normal-bg text-severity-normal-text";
+    return "border-severity-high-border bg-severity-high-bg text-severity-high";
+  return "border-severity-normal-border bg-severity-normal-bg text-severity-normal";
 }
 
 export default function PressureStrip({ pressures }: { pressures: ActivePressureState[] }) {
@@ -23,7 +23,7 @@ export default function PressureStrip({ pressures }: { pressures: ActivePressure
       {pressures.map((p, i) => (
         <div key={i} className={`flex-1 border rounded-lg px-3 py-2 ${severityClasses(p.severity)}`}>
           <div className="text-[10px] font-semibold uppercase tracking-wide">{p.name}</div>
-          <div className="text-lg font-bold mt-0.5">
+          <div className="text-lg font-bold font-mono mt-0.5">
             {p.remainingHours != null ? formatHours(p.remainingHours) : ""}
             {p.value != null ? `${p.value}${p.unit || ""}` : ""}
           </div>

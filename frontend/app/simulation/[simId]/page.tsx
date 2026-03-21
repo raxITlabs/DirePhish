@@ -10,6 +10,10 @@ import { getSimulationStatus, getSimulationActions, stopSimulation } from "@/app
 import { generateReport } from "@/app/actions/report";
 import { getGraphData } from "@/app/actions/graph";
 import GraphPanel from "@/app/components/simulation/GraphPanel";
+import SplitPanel from "@/app/components/shared/SplitPanel";
+import { Button } from "@/app/components/ui/button";
+import { Badge } from "@/app/components/ui/badge";
+import { Alert, AlertDescription } from "@/app/components/ui/alert";
 import type { SimulationStatus, AgentAction, ScheduledEvent, GraphData } from "@/app/types";
 
 export default function SimulationPage({
@@ -85,17 +89,11 @@ export default function SimulationPage({
   const isRunning = status?.status === "running" || status?.status === "starting";
   const isDone = status?.status === "completed" || status?.status === "stopped";
 
-  const statusColor = {
-    starting: "bg-yellow-100 text-yellow-700",
-    running: "bg-green-100 text-green-700",
-    completed: "bg-blue-100 text-blue-700",
-    stopped: "bg-gray-100 text-gray-600",
-    failed: "bg-red-100 text-red-700",
-  }[status?.status || "starting"];
-
-  // Panel widths based on view mode
-  const graphWidth = viewMode === "graph" ? "100%" : viewMode === "split" ? "50%" : "0%";
-  const tabsWidth = viewMode === "focus" ? "100%" : viewMode === "split" ? "50%" : "0%";
+  const statusVariant = (status?.status === "failed" ? "destructive" : "secondary") as
+    | "destructive"
+    | "secondary"
+    | "default"
+    | "outline";
 
   return (
     <div className="h-screen flex flex-col">
@@ -104,39 +102,33 @@ export default function SimulationPage({
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
         <div className="flex items-center gap-3">
           <span className="font-semibold">Crucible</span>
-          <span className="text-sm text-text-secondary">{simId}</span>
+          <span className="text-sm text-muted-foreground">{simId}</span>
         </div>
         <div className="flex items-center gap-3">
           <ViewToggle mode={viewMode} onChange={setViewMode} />
           <span className="text-sm font-medium">
             Round <strong>{status?.currentRound || 0}</strong>/{status?.totalRounds || "?"}
           </span>
-          <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColor}`}>
+          <Badge variant={statusVariant}>
             {status?.status || "loading"}
-          </span>
+          </Badge>
           {isRunning && (
-            <button
-              onClick={handleStop}
-              className="px-3 py-1 text-xs rounded-md bg-red-500 text-white hover:bg-red-600"
-            >
+            <Button variant="destructive" size="sm" onClick={handleStop}>
               Stop
-            </button>
+            </Button>
           )}
           {isDone && (
-            <button
-              onClick={handleViewReport}
-              className="px-3 py-1 text-xs rounded-md bg-accent text-white hover:opacity-90"
-            >
+            <Button size="sm" onClick={handleViewReport}>
               View Report
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {error && (
-        <div className="px-4 py-2 bg-severity-critical-bg text-severity-critical-text text-sm">
-          {error}
-        </div>
+        <Alert variant="destructive" className="mx-4 mt-2">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {/* Pressure strip */}
@@ -145,26 +137,11 @@ export default function SimulationPage({
       </div>
 
       {/* Split panels */}
-      <div className="flex-1 flex min-h-0 px-4 pb-4 gap-3">
-        {/* Graph panel */}
-        <div
-          className="min-h-0 transition-all duration-300"
-          style={{ width: graphWidth, opacity: viewMode === "focus" ? 0 : 1 }}
-        >
-          <div className="h-full border border-border rounded-lg bg-card overflow-hidden">
-            <GraphPanel data={graphData} isLive={isRunning} onRefresh={pollGraph} />
-          </div>
-        </div>
-        {/* World tabs */}
-        <div
-          className="min-h-0 transition-all duration-300"
-          style={{ width: tabsWidth, opacity: viewMode === "graph" ? 0 : 1 }}
-        >
-          <div className="h-full border border-border rounded-lg bg-card flex flex-col" style={{ minHeight: 0 }}>
-            <WorldTabs actions={actions} scheduledEvents={scheduledEvents} />
-          </div>
-        </div>
-      </div>
+      <SplitPanel
+        viewMode={viewMode}
+        leftPanel={<GraphPanel data={graphData} isLive={isRunning} onRefresh={pollGraph} />}
+        rightPanel={<WorldTabs actions={actions} scheduledEvents={scheduledEvents} />}
+      />
     </div>
   );
 }

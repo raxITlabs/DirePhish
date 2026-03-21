@@ -1,29 +1,27 @@
 "use client";
 
-export type ViewMode = "graph" | "split" | "focus";
+import { Button } from "@/app/components/ui/button";
+
+export type ViewMode = "split" | "graph" | "focus";
 
 interface Props {
   mode: ViewMode;
-  onChange: (mode: ViewMode) => void;
+  onChange: (m: ViewMode) => void;
 }
-
-const MODES: ViewMode[] = ["graph", "split", "focus"];
 
 export default function ViewToggle({ mode, onChange }: Props) {
   return (
-    <div className="flex bg-background rounded-md overflow-hidden border border-border text-xs">
-      {MODES.map((m) => (
-        <button
+    <div className="flex gap-1 rounded-lg border border-border p-0.5">
+      {(["graph", "split", "focus"] as const).map((m) => (
+        <Button
           key={m}
+          variant={mode === m ? "default" : "ghost"}
+          size="sm"
           onClick={() => onChange(m)}
-          className={`px-3 py-1.5 capitalize transition-colors ${
-            mode === m
-              ? "bg-card font-semibold shadow-sm"
-              : "text-text-secondary hover:text-foreground"
-          }`}
+          className="h-7 px-3 text-xs capitalize"
         >
-          {m === "graph" ? "Graph" : m === "split" ? "Split" : "Focus"}
-        </button>
+          {m}
+        </Button>
       ))}
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { AgentAction, ScheduledEvent } from "@/app/types";
+import { Badge } from "@/app/components/ui/badge";
 import RoundDivider from "./RoundDivider";
 import EventInjectBanner from "./EventInjectBanner";
 
@@ -40,7 +41,7 @@ export default function SlackWorld({ actions, scheduledEvents }: Props) {
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-1">
       {slackActions.length === 0 && (
-        <p className="text-text-secondary text-sm text-center py-8">
+        <p className="text-muted-foreground text-sm text-center py-8">
           Waiting for messages...
         </p>
       )}
@@ -70,12 +71,10 @@ export default function SlackWorld({ actions, scheduledEvents }: Props) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold">{action.agent}</span>
-                  <span
-                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${getRoleColor(action.role)}`}
-                  >
+                  <Badge variant="secondary" className={`text-[10px] font-mono ${getRoleColor(action.role)}`}>
                     {action.role}
-                  </span>
-                  <span className="text-xs text-text-tertiary">
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
                     {new Date(action.timestamp).toLocaleTimeString()}
                   </span>
                 </div>

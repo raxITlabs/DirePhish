@@ -13,7 +13,7 @@ export default function TimelineView({ actions, scheduledEvents }: Props) {
   return (
     <div className="flex-1 overflow-y-auto p-4">
       {actions.length === 0 && (
-        <p className="text-text-secondary text-sm text-center py-8">
+        <p className="text-muted-foreground text-sm text-center py-8">
           Waiting for actions...
         </p>
       )}
@@ -35,14 +35,14 @@ export default function TimelineView({ actions, scheduledEvents }: Props) {
             {showRoundDivider && <RoundDivider round={action.round} timestamp={action.timestamp} />}
             {roundEvent && <EventInjectBanner event={roundEvent} />}
             <div className="flex items-start gap-3 py-2">
-              <span className="text-xs text-text-tertiary w-16 flex-shrink-0 pt-0.5">
+              <span className="text-xs text-muted-foreground w-16 flex-shrink-0 pt-0.5">
                 {new Date(action.timestamp).toLocaleTimeString()}
               </span>
               <span className="text-sm w-4 flex-shrink-0">{worldIcon}</span>
               <div className="min-w-0">
                 <span className="text-sm font-medium">{action.agent}</span>
-                <span className="text-xs text-text-secondary ml-2">{action.action}</span>
-                <div className="text-xs text-text-secondary mt-0.5 truncate">{summary}</div>
+                <span className="text-xs text-muted-foreground ml-2">{action.action}</span>
+                <div className="text-xs text-muted-foreground mt-0.5 truncate">{summary}</div>
               </div>
             </div>
           </div>
