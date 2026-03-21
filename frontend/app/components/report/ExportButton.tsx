@@ -1,6 +1,7 @@
 "use client";
 
 import type { Report } from "@/app/types";
+import { Button } from "@/app/components/ui/button";
 
 export default function ExportButton({ report }: { report: Report }) {
   const handleExport = () => {
@@ -39,11 +40,8 @@ export default function ExportButton({ report }: { report: Report }) {
   };
 
   return (
-    <button
-      onClick={handleExport}
-      className="px-4 py-1.5 text-xs border border-border rounded-md hover:bg-background transition-colors"
-    >
+    <Button variant="outline" size="sm" onClick={handleExport}>
       Export Markdown
-    </button>
+    </Button>
   );
 }

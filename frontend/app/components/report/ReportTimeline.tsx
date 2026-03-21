@@ -1,24 +1,28 @@
 import type { TimelineEntry } from "@/app/types";
+import { Badge } from "@/app/components/ui/badge";
+import { Separator } from "@/app/components/ui/separator";
 
-const SIG_COLORS = {
-  normal: "bg-gray-300",
-  high: "bg-severity-high-text",
-  critical: "bg-severity-critical-text",
+const SIG_VARIANT: Record<string, "secondary" | "default" | "destructive"> = {
+  normal: "secondary",
+  high: "default",
+  critical: "destructive",
 };
 
 export default function ReportTimeline({ entries }: { entries: TimelineEntry[] }) {
   return (
-    <div className="border-l-2 border-border pl-4 space-y-4">
+    <div className="space-y-4">
       {entries.map((entry, i) => (
-        <div key={i} className="relative">
-          <div
-            className={`absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full ${SIG_COLORS[entry.significance]}`}
-          />
-          <div className="flex items-center gap-2 text-xs text-text-secondary mb-0.5">
-            <span className="font-mono">Round {entry.round}</span>
-            {entry.agent && <span>· {entry.agent}</span>}
+        <div key={i}>
+          <div className="flex items-center gap-2 mb-1">
+            <Badge variant={SIG_VARIANT[entry.significance] ?? "secondary"} className="font-mono text-[10px]">
+              Round {entry.round}
+            </Badge>
+            {entry.agent && (
+              <span className="text-xs text-muted-foreground">{entry.agent}</span>
+            )}
           </div>
           <p className="text-sm">{entry.description}</p>
+          {i < entries.length - 1 && <Separator className="mt-4" />}
         </div>
       ))}
     </div>
