@@ -8,6 +8,7 @@ export interface SimulationSummary {
 
 export interface SimulationConfig {
   simulationId?: string;
+  projectId?: string;
   companyName: string;
   scenario: string;
   totalRounds: number;

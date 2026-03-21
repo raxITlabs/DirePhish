@@ -35,39 +35,52 @@ export default function OrgStructure({ org, onChange }: Props) {
         <p className="text-sm text-muted-foreground">No roles defined.</p>
       )}
       {org.roles.map((role, i) => (
-        <div
-          key={i}
-          className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center"
-        >
+        <div key={i} className="space-y-1">
+          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-center">
+            <Input
+              type="text"
+              value={role.name ?? ""}
+              onChange={(e) => updateRole(i, "name", e.target.value)}
+              placeholder="Name (e.g. Sarah Chen)"
+              className="text-xs"
+            />
+            <Input
+              type="text"
+              value={role.title}
+              onChange={(e) => updateRole(i, "title", e.target.value)}
+              placeholder="Title (e.g. CISO)"
+              className="text-xs"
+            />
+            <Input
+              type="text"
+              value={role.department}
+              onChange={(e) => updateRole(i, "department", e.target.value)}
+              placeholder="Department"
+              className="text-xs"
+            />
+            <Input
+              type="text"
+              value={role.reportsTo}
+              onChange={(e) => updateRole(i, "reportsTo", e.target.value)}
+              placeholder="Reports to"
+              className="text-xs"
+            />
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => removeRole(i)}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              x
+            </Button>
+          </div>
           <Input
             type="text"
-            value={role.title}
-            onChange={(e) => updateRole(i, "title", e.target.value)}
-            placeholder="Title (e.g. CISO)"
-            className="text-xs"
+            value={role.responsibilities ?? ""}
+            onChange={(e) => updateRole(i, "responsibilities", e.target.value)}
+            placeholder="Responsibilities (e.g. manages SOC team, owns incident response)"
+            className="text-xs text-muted-foreground"
           />
-          <Input
-            type="text"
-            value={role.department}
-            onChange={(e) => updateRole(i, "department", e.target.value)}
-            placeholder="Department"
-            className="text-xs"
-          />
-          <Input
-            type="text"
-            value={role.reportsTo}
-            onChange={(e) => updateRole(i, "reportsTo", e.target.value)}
-            placeholder="Reports to"
-            className="text-xs"
-          />
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => removeRole(i)}
-            className="text-muted-foreground hover:text-destructive"
-          >
-            x
-          </Button>
         </div>
       ))}
       <Button variant="outline" size="sm" onClick={addRole} className="border-dashed">

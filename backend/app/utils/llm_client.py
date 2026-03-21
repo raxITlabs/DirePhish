@@ -31,6 +31,7 @@ class LLMClient:
             api_key=self.api_key,
             base_url=self.base_url
         )
+        self.last_usage: Optional[Dict[str, int]] = None
     
     def chat(
         self,
@@ -62,6 +63,14 @@ class LLMClient:
             kwargs["response_format"] = response_format
         
         response = self.client.chat.completions.create(**kwargs)
+        # Capture token usage for cost tracking
+        if response.usage:
+            self.last_usage = {
+                "input_tokens": response.usage.prompt_tokens or 0,
+                "output_tokens": response.usage.completion_tokens or 0,
+            }
+        else:
+            self.last_usage = None
         content = response.choices[0].message.content
         # Some models (e.g., MiniMax M2.5) include <think> content in the response, which needs to be removed
         content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()

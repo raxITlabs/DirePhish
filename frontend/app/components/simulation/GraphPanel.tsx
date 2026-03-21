@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import * as d3 from "d3";
 import type { GraphData, GraphNode, GraphEdge } from "@/app/types";
-import { Button } from "@/app/components/ui/button";
 import GraphNodeDetail from "./GraphNodeDetail";
 import GraphLegend, { TYPE_COLORS } from "./GraphLegend";
+import GraphToolbar from "./GraphToolbar";
 
 interface Props {
   data: GraphData;
   isLive: boolean;
+  isPushing?: boolean;
   onRefresh: () => void;
 }
 
@@ -43,18 +44,40 @@ function nodeColor(d: SimNode): string {
   return TYPE_COLORS[d.type] || TYPE_COLORS.default;
 }
 
+function nodeInitials(d: SimNode): string {
+  const words = d.name.trim().split(/\s+/);
+  if (words.length === 1) {
+    return words[0].substring(0, 2).toUpperCase();
+  }
+  return words
+    .slice(0, 3)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
+function truncateName(name: string, maxLen = 14): string {
+  return name.length > maxLen ? name.substring(0, maxLen - 1) + "\u2026" : name;
+}
+
 /** Build edge key for grouping parallel edges */
 function edgePairKey(source: string, target: string): string {
   return [source, target].sort().join("||");
 }
 
-export default function GraphPanel({ data, isLive, onRefresh }: Props) {
+export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);
   const [showLabels, setShowLabels] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
+
+  // Filter state
+  const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set()); // empty = all active
+  const [searchQuery, setSearchQuery] = useState("");
+  const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
+  const [edgeFilter, setEdgeFilter] = useState("all");
 
   // Resize handler
   useEffect(() => {
@@ -71,6 +94,87 @@ export default function GraphPanel({ data, isLive, onRefresh }: Props) {
     return () => window.removeEventListener("resize", updateSize);
   }, []);
 
+  // Initialize activeTypes when data changes
+  useEffect(() => {
+    const types = new Set(data.nodes.map((n) => n.type));
+    setActiveTypes(types);
+  }, [data.nodes.length]);
+
+  // Toggle a node type on/off
+  const handleToggleType = useCallback((type: string) => {
+    setActiveTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }, []);
+
+  // Escape key clears focus mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFocusNodeId(null);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Compute filtered data
+  const filteredData = useMemo(() => {
+    let nodes = data.nodes;
+    let edges = data.edges;
+
+    // Type filter
+    if (activeTypes.size > 0) {
+      const visibleIds = new Set(
+        nodes.filter((n) => activeTypes.has(n.type)).map((n) => n.id)
+      );
+      nodes = nodes.filter((n) => visibleIds.has(n.id));
+      edges = edges.filter(
+        (e) => visibleIds.has(e.source) && visibleIds.has(e.target)
+      );
+    }
+
+    // Focus mode — show only 1-hop neighborhood
+    if (focusNodeId) {
+      const neighborIds = new Set<string>([focusNodeId]);
+      edges.forEach((e) => {
+        if (e.source === focusNodeId) neighborIds.add(e.target);
+        if (e.target === focusNodeId) neighborIds.add(e.source);
+      });
+      nodes = nodes.filter((n) => neighborIds.has(n.id));
+      edges = edges.filter(
+        (e) => neighborIds.has(e.source) && neighborIds.has(e.target)
+      );
+    }
+
+    // Edge type filter
+    if (edgeFilter !== "all") {
+      const patterns: Record<string, RegExp> = {
+        communication:
+          /COMMUNICAT|SENT_EMAIL|ADVISES|DIRECTS|ORDERED|REQUESTED|ACKNOWLEDGED/i,
+        hierarchy:
+          /REPORTS_TO|WORKS_IN|HAS_TITLE|HOLDS_POSITION|HOLDS_TITLE/i,
+        risk: /AFFECTS|POSES_RISK|IMPACTS|MITIGAT|DISRUPTS/i,
+        action:
+          /ISOLATES|MONITORS|CONTAINED|AUTHORIZED|MANAGES|INITIATED/i,
+      };
+      const pattern = patterns[edgeFilter];
+      if (pattern) {
+        edges = edges.filter((e) => pattern.test(e.label));
+        // Keep only nodes that have at least one visible edge
+        const connectedIds = new Set<string>();
+        edges.forEach((e) => {
+          connectedIds.add(e.source);
+          connectedIds.add(e.target);
+        });
+        nodes = nodes.filter((n) => connectedIds.has(n.id));
+      }
+    }
+
+    return { nodes, edges };
+  }, [data, activeTypes, focusNodeId, edgeFilter]);
+
   const connectedEdges = selectedNode
     ? data.edges.filter(
         (e) => e.source === selectedNode.id || e.target === selectedNode.id
@@ -84,7 +188,7 @@ export default function GraphPanel({ data, isLive, onRefresh }: Props) {
 
   // D3 rendering
   useEffect(() => {
-    if (!svgRef.current || data.nodes.length === 0) return;
+    if (!svgRef.current || filteredData.nodes.length === 0) return;
 
     const svg = d3.select(svgRef.current);
     const { width, height } = dimensions;
@@ -110,8 +214,8 @@ export default function GraphPanel({ data, isLive, onRefresh }: Props) {
       }
     });
 
-    const nodes: SimNode[] = data.nodes.map((n) => ({ ...n }));
-    const links: SimLink[] = data.edges.map((e) => ({
+    const nodes: SimNode[] = filteredData.nodes.map((n) => ({ ...n }));
+    const links: SimLink[] = filteredData.edges.map((e) => ({
       source: e.source,
       target: e.target,
       label: e.label,
@@ -175,7 +279,7 @@ export default function GraphPanel({ data, isLive, onRefresh }: Props) {
       )
       .force("charge", d3.forceManyBody().strength(-400))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collide", d3.forceCollide(50))
+      .force("collide", d3.forceCollide(60))
       .force("x", d3.forceX(width / 2).strength(0.04))
       .force("y", d3.forceY(height / 2).strength(0.04));
 
@@ -211,12 +315,14 @@ export default function GraphPanel({ data, isLive, onRefresh }: Props) {
       .selectAll<SVGTextElement, SimLink>("text")
       .data(links)
       .join("text")
-      .text((d) => d.label)
+      .text((d) => truncateName(d.label, 20))
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "central")
       .attr("fill", "#737373")
-      .attr("font-size", 8)
+      .attr("font-size", 10)
       .attr("pointer-events", "none");
+
+    edgeLabelText.append("title").text((d) => d.label);
 
     // Nodes
     const nodeGroup = g.append("g").attr("class", "nodes");
@@ -236,7 +342,26 @@ export default function GraphPanel({ data, isLive, onRefresh }: Props) {
       .on("mouseout", function (_, d) {
         const isSelected = selectedNode && (d as SimNode).id === selectedNode.id;
         d3.select(this).attr("stroke", isSelected ? "#f97316" : "transparent");
+      })
+      .on("dblclick", (event, d) => {
+        event.stopPropagation();
+        setFocusNodeId(d.id);
       });
+
+    // Apply search highlighting
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      nodeCircles
+        .attr("opacity", (d) =>
+          d.name.toLowerCase().includes(q) ? 1 : 0.15
+        )
+        .attr("stroke", (d) =>
+          d.name.toLowerCase().includes(q) ? "#f97316" : "transparent"
+        )
+        .attr("stroke-width", (d) =>
+          d.name.toLowerCase().includes(q) ? 3 : 2
+        );
+    }
 
     // Click vs drag tracking
     let dragMoved = 0;
@@ -276,20 +401,44 @@ export default function GraphPanel({ data, isLive, onRefresh }: Props) {
         })
     );
 
-    // Node labels
-    const nodeLabels = g
+    // In-circle initials — always visible
+    const nodeInitialsText = g
       .append("g")
-      .attr("class", "node-labels")
+      .attr("class", "node-initials")
       .selectAll<SVGTextElement, SimNode>("text")
       .data(nodes)
       .join("text")
-      .text((d) => d.name)
+      .text((d) => nodeInitials(d))
       .attr("text-anchor", "middle")
-      .attr("dy", (d) => (d.type === "org" ? 4 : 3))
+      .attr("dominant-baseline", "central")
       .attr("fill", "white")
-      .attr("font-size", (d) => (d.type === "org" ? 7 : 6))
-      .attr("font-weight", 600)
+      .attr("font-size", (d) => (d.type === "org" ? 9 : 7))
+      .attr("font-weight", 700)
       .attr("pointer-events", "none");
+
+    // External node labels — positioned below circles
+    const nodeLabelGroup = g.append("g").attr("class", "node-labels");
+
+    const nodeLabelBg = nodeLabelGroup
+      .selectAll<SVGRectElement, SimNode>("rect")
+      .data(nodes)
+      .join("rect")
+      .attr("fill", "rgba(0, 0, 0, 0.6)")
+      .attr("rx", 3)
+      .attr("pointer-events", "none");
+
+    const nodeLabels = nodeLabelGroup
+      .selectAll<SVGTextElement, SimNode>("text")
+      .data(nodes)
+      .join("text")
+      .text((d) => truncateName(d.name))
+      .attr("text-anchor", "middle")
+      .attr("fill", "#e5e5e5")
+      .attr("font-size", 10)
+      .attr("font-weight", 500)
+      .attr("pointer-events", "none");
+
+    nodeLabels.append("title").text((d) => d.name);
 
     // Path generator
     function computePath(d: SimLink & { _pairIndex?: number; _pairTotal?: number }): string {
@@ -365,7 +514,21 @@ export default function GraphPanel({ data, isLive, onRefresh }: Props) {
       edgePaths.attr("d", (d) => computePath(d as SimLink & { _pairIndex: number; _pairTotal: number }));
 
       nodeCircles.attr("cx", (d) => d.x!).attr("cy", (d) => d.y!);
-      nodeLabels.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
+      nodeInitialsText.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
+      nodeLabels
+        .attr("x", (d) => d.x!)
+        .attr("y", (d) => d.y! + nodeRadius(d) + 14);
+
+      nodeLabelBg.each(function (d, i) {
+        const textEl = nodeLabels.nodes()[i];
+        if (!textEl) return;
+        const bbox = textEl.getBBox();
+        d3.select(this)
+          .attr("x", bbox.x - 3)
+          .attr("y", bbox.y - 1)
+          .attr("width", bbox.width + 6)
+          .attr("height", bbox.height + 2);
+      });
 
       // Edge labels
       edgeLabelText.each(function (d) {
@@ -378,23 +541,25 @@ export default function GraphPanel({ data, isLive, onRefresh }: Props) {
         if (!textEl) return;
         const bbox = textEl.getBBox();
         d3.select(this)
-          .attr("x", bbox.x - 2)
-          .attr("y", bbox.y - 1)
-          .attr("width", bbox.width + 4)
-          .attr("height", bbox.height + 2);
+          .attr("x", bbox.x - 3)
+          .attr("y", bbox.y - 2)
+          .attr("width", bbox.width + 6)
+          .attr("height", bbox.height + 4);
       });
     });
 
     return () => {
       simulation.stop();
     };
-  }, [data, dimensions, selectedNode]);
+  }, [filteredData, dimensions, selectedNode, searchQuery]);
 
   // Update edge label visibility separately to avoid full re-render
   useEffect(() => {
     if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
-    svg.selectAll(".edge-labels").attr("visibility", showLabels ? "visible" : "hidden");
+    const visibility = showLabels ? "visible" : "hidden";
+    svg.selectAll(".edge-labels").attr("visibility", visibility);
+    svg.selectAll(".node-labels").attr("visibility", visibility);
   }, [showLabels]);
 
   // Update selected edge highlight
@@ -436,32 +601,30 @@ export default function GraphPanel({ data, isLive, onRefresh }: Props) {
 
   return (
     <div className="h-full relative" ref={containerRef}>
-      <div className="flex items-center justify-between px-3 py-2">
-        <span className="text-xs font-semibold text-muted-foreground">
-          Knowledge Graph
-        </span>
-        <div className="flex items-center gap-2">
+      <GraphToolbar
+        nodes={data.nodes}
+        edges={data.edges}
+        activeTypes={activeTypes}
+        onToggleType={handleToggleType}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        focusNodeId={focusNodeId}
+        onClearFocus={() => setFocusNodeId(null)}
+        edgeFilter={edgeFilter}
+        onEdgeFilterChange={setEdgeFilter}
+        showLabels={showLabels}
+        onToggleLabels={() => setShowLabels((v) => !v)}
+      />
+      {(isLive || isPushing) && (
+        <div className="absolute top-10 right-3 flex items-center gap-2 z-10">
           {isLive && (
-            <span className="text-xs text-severity-high">● Updating</span>
+            <span className="text-xs text-severity-high">● Live</span>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowLabels((v) => !v)}
-            className="h-6 text-xs"
-          >
-            {showLabels ? "Hide Labels" : "Show Labels"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRefresh}
-            className="h-6 text-xs"
-          >
-            Refresh
-          </Button>
+          {isPushing && (
+            <span className="text-xs text-muted-foreground animate-pulse">Processing graph...</span>
+          )}
         </div>
-      </div>
+      )}
       <svg
         ref={svgRef}
         className="w-full"

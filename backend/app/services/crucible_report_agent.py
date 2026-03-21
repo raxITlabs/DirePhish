@@ -10,6 +10,7 @@ from pathlib import Path
 
 from ..config import Config
 from ..utils.llm_client import LLMClient
+from ..utils.cost_tracker import CostTracker
 from ..utils.logger import get_logger
 from . import project_manager, graphiti_manager
 
@@ -53,23 +54,42 @@ def _generate_report(sim_id: str) -> None:
         agents = config.get("agent_profiles", [])
         timeline_text = _format_timeline(actions)
 
+        # Load existing cost tracker (with research + simulation costs)
+        cost_tracker = CostTracker(sim_id)
+        existing = CostTracker.load(sim_id)
+        if existing:
+            cost_tracker.entries = existing.get("entries", [])
+
+        def _track(description: str):
+            if llm.last_usage:
+                cost_tracker.track_llm("report_generation", llm.model, llm.last_usage["input_tokens"], llm.last_usage["output_tokens"], description)
+
         # Executive Summary
         summary = _generate_section(llm, "executive_summary", company, scenario, timeline_text, graph_context)
+        _track("executive_summary")
 
         # Timeline entries
         timeline = _generate_timeline_entries(llm, actions, graph_context)
+        _track("timeline")
 
         # Communication Analysis
         comm = _generate_section(llm, "communication", company, scenario, timeline_text, graph_context)
+        _track("communication_analysis")
 
         # Tensions
         tensions = _generate_section(llm, "tensions", company, scenario, timeline_text, graph_context)
+        _track("tensions")
 
         # Agent Scorecards
         agent_scores = _generate_agent_scores(llm, agents, actions, graph_context)
+        _track("agent_scores")
 
         # Recommendations
         recs = _generate_recommendations(llm, company, scenario, timeline_text, graph_context)
+        _track("recommendations")
+
+        # Save updated costs
+        cost_tracker.save(str(sim_dir))
 
         report = {
             "simId": sim_id,

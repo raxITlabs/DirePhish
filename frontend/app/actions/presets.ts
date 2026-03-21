@@ -1,20 +1,7 @@
 "use server";
 
 import { fetchApi } from "@/app/lib/api";
-import type { Preset, SimulationConfig, PressureConfig } from "@/app/types";
-
-export async function getPresets(): Promise<{ data: Preset[] } | { error: string }> {
-  return fetchApi<Preset[]>("/api/crucible/presets");
-}
-
-export async function uploadCustomConfig(
-  jsonText: string
-): Promise<{ data: { configId: string } } | { error: string }> {
-  return fetchApi<{ configId: string }>("/api/crucible/configs/upload", {
-    method: "POST",
-    body: JSON.stringify({ config: jsonText }),
-  });
-}
+import type { SimulationConfig, PressureConfig } from "@/app/types";
 
 export async function getPresetConfig(
   presetId: string

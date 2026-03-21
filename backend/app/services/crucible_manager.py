@@ -10,6 +10,10 @@ from pathlib import Path
 
 import yaml
 
+from ..utils.logger import get_logger
+
+logger = get_logger("crucible_manager")
+
 # Crucible builtins location (from installed package)
 try:
     import crucible
@@ -134,15 +138,18 @@ def launch_simulation(config: dict) -> str:
     with open(config_path, "w") as f:
         json.dump(config, f, indent=2)
 
-    # Try to find the project's graph ID for live graph updates
+    # Find the project's graph ID for live graph updates
     graph_id = None
-    if sim_id.startswith("proj_"):
+    project_id = config.get("project_id")
+    if not project_id and sim_id.startswith("proj_"):
         project_id = sim_id.replace("_sim", "")
+    if project_id:
         try:
             from . import project_manager
             proj = project_manager.get_project(project_id)
             if proj:
                 graph_id = proj.get("graph_id")
+                logger.info(f"Simulation {sim_id} linked to project {project_id}, graph_id={graph_id}")
         except Exception:
             pass
 
@@ -186,19 +193,17 @@ def get_simulation_status(sim_id: str) -> dict | None:
         state["action_count"] = len(actions)
         state["current_round"] = max(a.get("round", 0) for a in actions)
 
-        # Push new actions to Graphiti for graph growth
+        # Queue new actions for batched push to Graphiti
         graph_id = state.get("graph_id")
         if graph_id:
+            from . import graphiti_manager
             already_pushed = _pushed_action_counts.get(sim_id, 0)
             new_actions = actions[already_pushed:]
             if new_actions:
-                from . import graphiti_manager
-                import threading as _threading
-                # Push in background thread to avoid blocking status polling
-                def _push():
-                    graphiti_manager.push_actions_bulk(graph_id, new_actions)
-                _threading.Thread(target=_push, daemon=True).start()
+                graphiti_manager.enqueue_actions(graph_id, new_actions)
                 _pushed_action_counts[sim_id] = len(actions)
+            # Include push status so frontend knows when graph data is ready
+            state["graph_push"] = graphiti_manager.get_push_status(graph_id)
 
     state["pressures"] = []
     state["recent_actions"] = actions[-10:] if actions else []

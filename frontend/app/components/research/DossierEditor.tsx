@@ -13,6 +13,7 @@ import SystemsList from "./SystemsList";
 import ComplianceTags from "./ComplianceTags";
 import RiskProfile from "./RiskProfile";
 import RecentEvents from "./RecentEvents";
+import SecurityPosture from "./SecurityPosture";
 
 interface Props {
   projectId: string;
@@ -98,9 +99,19 @@ export default function DossierEditor({ projectId, initialDossier }: Props) {
           />
         </Section>
 
+        <Section title="Security Posture">
+          <SecurityPosture
+            securityPosture={dossier.securityPosture ?? {}}
+            onChange={(securityPosture) =>
+              setDossier({ ...dossier, securityPosture })
+            }
+          />
+        </Section>
+
         <Section title="Risk Profile">
           <RiskProfile
             risks={dossier.risks}
+            systemNames={dossier.systems.map((s) => s.name).filter(Boolean)}
             onChange={(risks) => setDossier({ ...dossier, risks })}
           />
         </Section>

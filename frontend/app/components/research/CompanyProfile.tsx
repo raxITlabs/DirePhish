@@ -90,6 +90,75 @@ export default function CompanyProfile({ company, onChange }: Props) {
         </div>
       </div>
 
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1">
+            Employees
+          </Label>
+          <Input
+            type="number"
+            value={company.employeeCount ?? ""}
+            onChange={(e) =>
+              update("employeeCount", e.target.value ? Number(e.target.value) : undefined)
+            }
+            placeholder="e.g. 2500"
+            className="text-sm"
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1">
+            Founded
+          </Label>
+          <Input
+            type="number"
+            value={company.foundedYear ?? ""}
+            onChange={(e) =>
+              update("foundedYear", e.target.value ? Number(e.target.value) : undefined)
+            }
+            placeholder="e.g. 2012"
+            className="text-sm"
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1">
+            Revenue
+          </Label>
+          <Input
+            type="text"
+            value={company.revenue ?? ""}
+            onChange={(e) => update("revenue", e.target.value || undefined)}
+            placeholder="e.g. $200M"
+            className="text-sm"
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-xs text-muted-foreground mb-1">
+          Website
+        </Label>
+        <Input
+          type="text"
+          value={company.website ?? ""}
+          onChange={(e) => update("website", e.target.value || undefined)}
+          placeholder="https://..."
+          className="text-sm"
+        />
+      </div>
+
+      <div>
+        <Label className="text-xs text-muted-foreground mb-1">
+          Description
+        </Label>
+        <textarea
+          value={company.description ?? ""}
+          onChange={(e) => update("description", e.target.value || undefined)}
+          placeholder="Brief company description..."
+          rows={2}
+          className="w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-none"
+        />
+      </div>
+
       <div>
         <Label className="text-xs text-muted-foreground mb-1">
           Products / Services

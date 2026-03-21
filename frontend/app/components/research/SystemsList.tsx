@@ -16,13 +16,16 @@ const EMPTY_SYSTEM: SystemInfo = {
   criticality: "medium",
 };
 
-const CATEGORIES = [
+const CATEGORIES: SystemInfo["category"][] = [
   "database",
   "infrastructure",
   "application",
   "security",
   "communication",
-] as const;
+  "cloud",
+  "cicd",
+  "identity",
+];
 
 const CRITICALITIES: SystemInfo["criticality"][] = [
   "low",
@@ -57,47 +60,60 @@ export default function SystemsList({ systems, onChange }: Props) {
         <p className="text-sm text-muted-foreground">No systems defined.</p>
       )}
       {systems.map((sys, i) => (
-        <div
-          key={i}
-          className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center"
-        >
+        <div key={i} className="space-y-1">
+          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 items-center">
+            <Input
+              type="text"
+              value={sys.name}
+              onChange={(e) => updateSystem(i, "name", e.target.value)}
+              placeholder="System name (e.g. PostgreSQL)"
+              className="text-xs"
+            />
+            <Input
+              type="text"
+              value={sys.vendor ?? ""}
+              onChange={(e) => updateSystem(i, "vendor", e.target.value)}
+              placeholder="Vendor"
+              className="text-xs w-24"
+            />
+            <select
+              value={sys.category}
+              onChange={(e) => updateSystem(i, "category", e.target.value)}
+              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <select
+              value={sys.criticality}
+              onChange={(e) => updateSystem(i, "criticality", e.target.value)}
+              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              {CRITICALITIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => removeSystem(i)}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              x
+            </Button>
+          </div>
           <Input
             type="text"
-            value={sys.name}
-            onChange={(e) => updateSystem(i, "name", e.target.value)}
-            placeholder="System name (e.g. PostgreSQL)"
-            className="text-xs"
+            value={sys.description ?? ""}
+            onChange={(e) => updateSystem(i, "description", e.target.value)}
+            placeholder="What it does / what data it holds"
+            className="text-xs text-muted-foreground"
           />
-          <select
-            value={sys.category}
-            onChange={(e) => updateSystem(i, "category", e.target.value)}
-            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <select
-            value={sys.criticality}
-            onChange={(e) => updateSystem(i, "criticality", e.target.value)}
-            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            {CRITICALITIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => removeSystem(i)}
-            className="text-muted-foreground hover:text-destructive"
-          >
-            x
-          </Button>
         </div>
       ))}
       <Button variant="outline" size="sm" onClick={addSystem} className="border-dashed">

@@ -95,6 +95,25 @@ export interface CrucibleReport {
   error?: string;
 }
 
+export interface SimulationCosts {
+  sim_id: string;
+  total_cost_usd: number;
+  phases: Record<string, {
+    llm_input_tokens: number;
+    llm_output_tokens: number;
+    search_queries: number;
+    embedding_tokens: number;
+    cost_usd: number;
+  }>;
+  entries: unknown[];
+}
+
+export async function getSimulationCosts(
+  simId: string
+): Promise<{ data: SimulationCosts } | { error: string }> {
+  return fetchApi<SimulationCosts>(`/api/crucible/simulations/${simId}/costs`);
+}
+
 export async function getGenerateStatus(
   taskId?: string,
   simulationId?: string

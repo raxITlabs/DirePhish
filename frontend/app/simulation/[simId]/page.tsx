@@ -31,6 +31,8 @@ export default function SimulationPage({
   const [scheduledEvents] = useState<ScheduledEvent[]>([]); // loaded from config
   const [error, setError] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], edges: [] });
+  const [graphVersion, setGraphVersion] = useState(0);
+  const [graphPushing, setGraphPushing] = useState(false);
 
   const pollStatus = useCallback(async () => {
     const result = await getSimulationStatus(simId);
@@ -71,12 +73,16 @@ export default function SimulationPage({
     };
   }, [status?.status, pollStatus, pollActions]);
 
-  // Graph polling (30s when running/starting)
+  // Reactive graph polling — fetch when push version increments
   useEffect(() => {
-    if (!status || (status.status !== "running" && status.status !== "starting")) return;
-    const graphInterval = setInterval(pollGraph, 30000);
-    return () => clearInterval(graphInterval);
-  }, [status?.status, pollGraph]);
+    const pushInfo = status?.graphPush;
+    if (!pushInfo) return;
+    setGraphPushing(pushInfo.pushing);
+    if (pushInfo.version > graphVersion) {
+      setGraphVersion(pushInfo.version);
+      pollGraph();
+    }
+  }, [status?.graphPush, graphVersion, pollGraph]);
 
   const handleStop = async () => {
     await stopSimulation(simId);
@@ -148,7 +154,7 @@ export default function SimulationPage({
       {/* Split panels */}
       <SplitPanel
         viewMode={viewMode}
-        leftPanel={<GraphPanel data={graphData} isLive={isRunning} onRefresh={pollGraph} />}
+        leftPanel={<GraphPanel data={graphData} isLive={isRunning} isPushing={graphPushing} onRefresh={pollGraph} />}
         rightPanel={<WorldTabs actions={actions} scheduledEvents={scheduledEvents} />}
       />
     </div>

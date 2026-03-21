@@ -61,32 +61,116 @@ def _generate_config(dossier: dict, user_context: str, project_id: str) -> dict:
 
     company = dossier.get("company", {})
     org = dossier.get("org", {})
-    roles_desc = "\n".join(
-        f"- {r['title']} in {r['department']}, reports to {r['reportsTo']}"
-        for r in org.get("roles", [])
-    )
-    systems_desc = "\n".join(
-        f"- {s['name']} ({s['category']}, criticality: {s['criticality']})"
-        for s in dossier.get("systems", [])
-    )
+
+    # -- Company section with enriched fields --
+    size_parts = [company.get("size", "medium")]
+    if company.get("employeeCount"):
+        size_parts.append(f"~{company['employeeCount']} employees")
+    if company.get("founded"):
+        size_parts.append(f"founded {company['founded']}")
+    if company.get("revenue"):
+        size_parts.append(f"~{company['revenue']} revenue")
+    size_line = " (".join([size_parts[0], ", ".join(size_parts[1:])]) + ")" if len(size_parts) > 1 else size_parts[0]
+
+    company_lines = [
+        f"Name: {company.get('name', 'Unknown')}",
+        f"Industry: {company.get('industry', 'Unknown')}",
+        f"Size: {size_line}",
+        f"Products: {', '.join(company.get('products', []))}",
+        f"Geography: {company.get('geography', 'Unknown')}",
+    ]
+    if company.get("description"):
+        company_lines.append(f"Description: {company['description']}")
+    company_desc = "\n".join(company_lines)
+
+    # -- Org Structure with name and responsibilities --
+    role_lines = []
+    for r in org.get("roles", []):
+        title = r.get("title", "Unknown")
+        dept = r.get("department", "Unknown")
+        reports_to = r.get("reportsTo", "Unknown")
+        name = r.get("name")
+        responsibilities = r.get("responsibilities")
+
+        if name:
+            line = f"- {name} ({title}) in {dept}, reports to {reports_to}"
+        else:
+            line = f"- {title} in {dept}, reports to {reports_to}"
+        if responsibilities:
+            line += f" — {responsibilities}"
+        role_lines.append(line)
+    roles_desc = "\n".join(role_lines)
+
+    # -- Technology Stack with vendor and description --
+    system_lines = []
+    for s in dossier.get("systems", []):
+        line = f"- {s.get('name', 'Unknown')} ({s.get('category', 'unknown')}, criticality: {s.get('criticality', 'unknown')})"
+        vendor = s.get("vendor")
+        if vendor:
+            line += f" [Vendor: {vendor}]"
+        desc = s.get("description")
+        if desc:
+            line += f" — {desc}"
+        system_lines.append(line)
+    systems_desc = "\n".join(system_lines)
+
     compliance_desc = ", ".join(dossier.get("compliance", []))
-    risks_desc = "\n".join(
-        f"- {r['name']} (likelihood: {r['likelihood']}, impact: {r['impact']})"
-        for r in dossier.get("risks", [])
-    )
-    events_desc = "\n".join(
-        f"- [{e['date']}] {e['description']}"
-        for e in dossier.get("recentEvents", [])
-    )
+
+    # -- Security Posture (new section, only if present) --
+    security_posture_section = ""
+    sec = dossier.get("securityPosture")
+    if sec:
+        sp_lines = []
+        if sec.get("certifications"):
+            sp_lines.append(f"Certifications: {', '.join(sec['certifications'])}")
+        if sec.get("securityTeamSize"):
+            sp_lines.append(f"Security Team: {sec['securityTeamSize']} people")
+        if sec.get("tools"):
+            sp_lines.append(f"Tools: {', '.join(sec['tools'])}")
+        if sec.get("irPlan") is not None:
+            sp_lines.append(f"IR Plan: {'Yes' if sec['irPlan'] else 'No'}")
+        if sec.get("bugBounty") is not None:
+            sp_lines.append(f"Bug Bounty: {'Yes' if sec['bugBounty'] else 'No'}")
+        if sp_lines:
+            security_posture_section = "\n\n## Security Posture\n" + "\n".join(sp_lines)
+
+    # -- Risk Profile with description, affected systems, mitigations --
+    risk_lines = []
+    for r in dossier.get("risks", []):
+        line = f"- {r.get('name', 'Unknown')} (likelihood: {r.get('likelihood', 'unknown')}, impact: {r.get('impact', 'unknown')})"
+        desc = r.get("description")
+        if desc:
+            line += f" — {desc}"
+        affected = r.get("affectedSystems")
+        if affected:
+            line += f" Affects: {', '.join(affected)}."
+        mitigations = r.get("mitigations")
+        if mitigations:
+            line += f" Mitigations: {', '.join(mitigations) if isinstance(mitigations, list) else mitigations}"
+        risk_lines.append(line)
+    risks_desc = "\n".join(risk_lines)
+
+    # -- Recent Events with category and impact --
+    event_lines = []
+    for e in dossier.get("recentEvents", []):
+        date = e.get("date", "unknown")
+        description = e.get("description", "")
+        category = e.get("category")
+        impact = e.get("impact")
+
+        line = f"- [{date}]"
+        if category:
+            line += f" [{category}]"
+        line += f" {description}"
+        if impact:
+            line += f" Impact: {impact}"
+        event_lines.append(line)
+    events_desc = "\n".join(event_lines)
 
     prompt = f"""You are a simulation architect. Generate a complete enterprise incident response simulation config for the following company.
 
 ## Company
-Name: {company.get('name', 'Unknown')}
-Industry: {company.get('industry', 'Unknown')}
-Size: {company.get('size', 'medium')}
-Products: {', '.join(company.get('products', []))}
-Geography: {company.get('geography', 'Unknown')}
+{company_desc}
 
 ## Org Structure
 {roles_desc}
@@ -95,7 +179,7 @@ Geography: {company.get('geography', 'Unknown')}
 {systems_desc}
 
 ## Compliance Requirements
-{compliance_desc}
+{compliance_desc}{security_posture_section}
 
 ## Risk Profile
 {risks_desc}

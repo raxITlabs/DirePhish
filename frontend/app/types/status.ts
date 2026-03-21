@@ -6,6 +6,7 @@ export interface SimulationStatus {
   actionCount: number;
   recentActions: AgentAction[];
   pressures: ActivePressureState[];
+  graphPush?: { pushing: boolean; version: number };
 }
 
 export interface AgentAction {

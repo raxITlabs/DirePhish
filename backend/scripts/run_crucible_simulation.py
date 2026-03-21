@@ -106,8 +106,8 @@ def _call_llm(
     system_message: str,
     user_message: str,
     tools: list[dict],
-) -> tuple[str, dict]:
-    """Call the LLM and return (action_name, action_args).
+) -> tuple[str, dict, dict]:
+    """Call the LLM and return (action_name, action_args, usage).
 
     Falls back to 'do_nothing' if the model doesn't produce a tool call.
     """
@@ -121,6 +121,13 @@ def _call_llm(
         tool_choice="auto",
     )
 
+    usage = {}
+    if response.usage:
+        usage = {
+            "input_tokens": response.usage.prompt_tokens or 0,
+            "output_tokens": response.usage.completion_tokens or 0,
+        }
+
     message = response.choices[0].message
 
     if message.tool_calls:
@@ -130,10 +137,10 @@ def _call_llm(
             action_args = json.loads(tc.function.arguments)
         except json.JSONDecodeError:
             action_args = {}
-        return action_name, action_args
+        return action_name, action_args, usage
 
     # No tool call -- treat as do_nothing
-    return "do_nothing", {}
+    return "do_nothing", {}, usage
 
 
 # ---------------------------------------------------------------------------
@@ -211,6 +218,18 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
     )
     model = os.environ.get("LLM_MODEL_NAME", "gpt-4o-mini")
 
+    # Cost tracking
+    from app.utils.cost_tracker import CostTracker
+    cost_tracker = CostTracker(sim_id)
+    # Load existing costs from research phase if available
+    config_project_id = config.get("project_id")
+    if config_project_id:
+        research_costs_path = os.path.join("uploads", "crucible_projects", config_project_id, "costs.json")
+        if os.path.exists(research_costs_path):
+            with open(research_costs_path) as _f:
+                prev = json.load(_f)
+                cost_tracker.entries = prev.get("entries", [])
+
     # Initialize Graphiti for agent memory (if project has a graph)
     graphiti = None
     project_id = None
@@ -241,7 +260,7 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                 cross_encoder_g = GeminiRerankerClient(
                     config=LLMConfig(
                         api_key=os.environ.get("LLM_API_KEY", ""),
-                        model="gemini-2.0-flash",
+                        model=os.environ.get("LLM_MODEL_NAME", "gemini-3.1-flash-lite-preview"),
                     )
                 )
                 graphiti = Graphiti(graph_driver=kuzu_driver, llm_client=llm_client_g, embedder=embedder_g, cross_encoder=cross_encoder_g)
@@ -352,9 +371,11 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                     # Call LLM (run in executor to avoid blocking the async event loop)
                     tools = tools_per_world[world_name]
                     loop = asyncio.get_event_loop()
-                    action_name, action_args = await loop.run_in_executor(
+                    action_name, action_args, llm_usage = await loop.run_in_executor(
                         None, _call_llm, client, model, system_msg, user_msg, tools
                     )
+                    if llm_usage and cost_tracker:
+                        cost_tracker.track_llm("simulation", model, llm_usage.get("input_tokens", 0), llm_usage.get("output_tokens", 0), f"round_{round_num}_{agent['name']}_{world_name}")
 
                     print(
                         f"  [{agent['name']}] {world_name}: "
@@ -460,7 +481,8 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
     }
     summary_path = out / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False))
-    print(f"\nSimulation complete. Summary: {summary_path}")
+    cost_tracker.save(str(out))
+    print(f"\nSimulation complete. Summary: {summary_path} | Cost: ${cost_tracker.total_cost():.4f}")
 
 
 # ---------------------------------------------------------------------------

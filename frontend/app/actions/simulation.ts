@@ -22,6 +22,7 @@ export async function launchSimulation(
 ): Promise<{ data: { simId: string } } | { error: string }> {
   const payload = {
     simulation_id: config.simulationId,
+    project_id: config.projectId,
     company_name: config.companyName,
     scenario: config.scenario,
     total_rounds: config.totalRounds,
@@ -79,6 +80,9 @@ export async function getSimulationStatus(
         severity: (p.severity as string) || "normal",
         triggered: (p.triggered as boolean) || false,
       })),
+      graphPush: d.graph_push
+        ? { pushing: (d.graph_push as Record<string, unknown>).pushing as boolean, version: (d.graph_push as Record<string, unknown>).version as number }
+        : undefined,
     },
   };
 }

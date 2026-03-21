@@ -31,7 +31,7 @@ export default function ConfigureProjectPage({
   const handleLaunch = async () => {
     if (!config) return;
     setLaunching(true);
-    const result = await launchSimulation(config);
+    const result = await launchSimulation({ ...config, projectId });
     if ("error" in result) {
       setError(result.error);
       setLaunching(false);

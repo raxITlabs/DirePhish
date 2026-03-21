@@ -6,6 +6,7 @@ import ReportContent from "@/app/components/report/ReportContent";
 import WorkflowTimeline from "@/app/components/report/WorkflowTimeline";
 import ConsoleLog from "@/app/components/report/ConsoleLog";
 import ReportChat from "@/app/components/report/ReportChat";
+import CrucibleReportView from "@/app/components/report/crucible/CrucibleReportView";
 import SplitPanel from "@/app/components/shared/SplitPanel";
 import ViewToggle, {
   type ViewMode,
@@ -276,46 +277,7 @@ export default function ReportPage({
     return () => clearInterval(interval);
   }, [reportId, status]);
 
-  // Convert crucible report to outline + sections format for ReportContent
-  useEffect(() => {
-    if (!crucibleReport || crucibleReport.status !== "complete") return;
-
-    const sectionEntries: { title: string; content: string }[] = [];
-    if (crucibleReport.executiveSummary) {
-      sectionEntries.push({ title: "Executive Summary", content: crucibleReport.executiveSummary });
-    }
-    if (crucibleReport.communicationAnalysis) {
-      sectionEntries.push({ title: "Communication Analysis", content: crucibleReport.communicationAnalysis });
-    }
-    if (crucibleReport.tensions) {
-      sectionEntries.push({ title: "Tensions & Conflicts", content: crucibleReport.tensions });
-    }
-    if (crucibleReport.agentScores && crucibleReport.agentScores.length > 0) {
-      const scoresContent = crucibleReport.agentScores.map((a) =>
-        `### ${a.name} (${a.role}) — Score: ${a.score}/10\n\n` +
-        `**Strengths:** ${a.strengths.join(", ") || "N/A"}\n\n` +
-        `**Weaknesses:** ${a.weaknesses.join(", ") || "N/A"}\n\n` +
-        `**Actions:** ${a.actionCount}`
-      ).join("\n\n---\n\n");
-      sectionEntries.push({ title: "Agent Scorecards", content: scoresContent });
-    }
-    if (crucibleReport.recommendations && crucibleReport.recommendations.length > 0) {
-      const recsContent = crucibleReport.recommendations.map((r, i) => `${i + 1}. ${r}`).join("\n");
-      sectionEntries.push({ title: "Recommendations", content: recsContent });
-    }
-
-    setOutline({
-      title: `${crucibleReport.companyName || "Simulation"} — ${crucibleReport.scenarioName || "After-Action Report"}`,
-      summary: `Completed ${crucibleReport.completedAt ? new Date(crucibleReport.completedAt).toLocaleDateString() : ""} · ${crucibleReport.duration || ""}`,
-      sections: sectionEntries,
-    });
-
-    setSections(sectionEntries.map((s, i) => ({
-      filename: "",
-      section_index: i + 1,
-      content: s.content,
-    })));
-  }, [crucibleReport]);
+  // Crucible reports now render via CrucibleReportView directly — no conversion needed
 
   const isActive =
     status === "PLANNING" || status === "GENERATING";
@@ -328,7 +290,9 @@ export default function ReportPage({
         ? "default"
         : "secondary";
 
-  const reportName = outline?.title ?? `Report for ${simId}`;
+  const reportName = isCrucible && crucibleReport
+    ? `${crucibleReport.companyName || "Simulation"} — ${crucibleReport.scenarioName || "Report"}`
+    : outline?.title ?? `Report for ${simId}`;
 
   return (
     <div className="h-screen flex flex-col">
@@ -345,7 +309,7 @@ export default function ReportPage({
             </span>
           </div>
           <div className="flex items-center gap-3">
-            {!isPreGeneration && (
+            {!isPreGeneration && !isCrucible && (
               <ViewToggle mode={viewMode} onChange={setViewMode} />
             )}
             <Badge variant={statusVariant}>{status}</Badge>
@@ -388,34 +352,40 @@ export default function ReportPage({
         </div>
       )}
 
-      {/* Main content: split panel */}
+      {/* Main content */}
       {!isPreGeneration && (
         <>
-          <SplitPanel
-            viewMode={viewMode}
-            leftPanel={
-              <div className="h-full overflow-y-auto p-4">
-                <ReportContent
-                  outline={outline}
-                  sections={sections}
-                  progress={progress}
-                  reportId={reportId}
-                />
-              </div>
-            }
-            rightPanel={
-              <div className="flex flex-col h-full">
-                <div className="flex-1 min-h-0">
-                  <WorkflowTimeline
-                    entries={agentLogs}
+          {isCrucible && crucibleReport ? (
+            <div className="flex-1 overflow-y-auto">
+              <CrucibleReportView report={crucibleReport} />
+            </div>
+          ) : (
+            <SplitPanel
+              viewMode={viewMode}
+              leftPanel={
+                <div className="h-full overflow-y-auto p-4">
+                  <ReportContent
+                    outline={outline}
+                    sections={sections}
                     progress={progress}
-                    status={status}
+                    reportId={reportId}
                   />
                 </div>
-                <ConsoleLog lines={consoleLogs} />
-              </div>
-            }
-          />
+              }
+              rightPanel={
+                <div className="flex flex-col h-full">
+                  <div className="flex-1 min-h-0">
+                    <WorkflowTimeline
+                      entries={agentLogs}
+                      progress={progress}
+                      status={status}
+                    />
+                  </div>
+                  <ConsoleLog lines={consoleLogs} />
+                </div>
+              }
+            />
+          )}
 
           {/* Chat at bottom after completion */}
           {status === "COMPLETED" && reportId && (

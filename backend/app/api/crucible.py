@@ -173,6 +173,16 @@ def get_report(sim_id):
     return jsonify({"data": report})
 
 
+@crucible_bp.route("/simulations/<sim_id>/costs", methods=["GET"])
+def get_simulation_costs(sim_id):
+    """Get cost tracking data for a simulation."""
+    from ..utils.cost_tracker import CostTracker
+    costs = CostTracker.load(sim_id)
+    if not costs:
+        return jsonify({"data": {"sim_id": sim_id, "total_cost_usd": 0, "phases": {}, "entries": []}}), 200
+    return jsonify({"data": costs})
+
+
 # --- Project endpoints (generative pipeline) ---
 
 from ..services import project_manager
