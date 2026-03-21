@@ -17,12 +17,19 @@ export interface SimulationConfig {
   worlds: WorldConfig[];
   pressures: PressureConfig[];
   scheduledEvents: ScheduledEvent[];
+  scenarioId?: string;
+  attackPath?: { killChain: KillChainStep[] };
+  cascadingEffects?: { firstOrder: string[]; secondOrder: string[]; thirdOrder: string[] };
+  threatActorProfile?: string;
 }
 
 export interface AgentConfig {
   name: string;
   role: string;
   persona: string;
+  stressProfile?: { baseline: number; escalationRate: string };
+  incidentMemory?: string;
+  decisionBias?: string;
 }
 
 export interface WorldConfig {
@@ -46,4 +53,21 @@ export interface PressureConfig {
 export interface ScheduledEvent {
   round: number;
   description: string;
+  killChainStep?: string;
+  condition?: ConditionalInject;
+}
+
+export interface KillChainStep {
+  step: number;
+  tactic: string;
+  technique: string;
+  target: string;
+  description: string;
+}
+
+export interface ConditionalInject {
+  unless: string;
+  keywords: string[];
+  targetSystems: string[];
+  alternative: string;
 }
