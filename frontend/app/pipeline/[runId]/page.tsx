@@ -5,10 +5,14 @@ import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/layout/Header";
 import Breadcrumbs from "@/app/components/layout/Breadcrumbs";
-import { Button } from "@/app/components/ui/button";
-import DossierEditor from "@/app/components/research/DossierEditor";
-import { getDossier, getProjectGraph } from "@/app/actions/project";
-import type { CompanyDossier, GraphData } from "@/app/types";
+import SplitPanel from "@/app/components/shared/SplitPanel";
+import GraphPanel from "@/app/components/simulation/GraphPanel";
+import PipelineProgressBar from "@/app/components/pipeline/PipelineProgressBar";
+import PipelineGraphPlaceholder from "@/app/components/pipeline/PipelineGraphPlaceholder";
+import PipelineContextPanel from "@/app/components/pipeline/PipelineContextPanel";
+import { useSimulationPolling } from "@/app/hooks/useSimulationPolling";
+import { getDossier } from "@/app/actions/project";
+import type { CompanyDossier } from "@/app/types";
 
 type StepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
 
@@ -41,22 +45,6 @@ const STEP_ORDER = [
   { id: "comparative", label: "Comparative Analysis" },
 ];
 
-const statusIcon: Record<StepStatus, string> = {
-  pending: "○",
-  running: "◉",
-  completed: "✓",
-  failed: "✗",
-  skipped: "—",
-};
-
-const statusColor: Record<StepStatus, string> = {
-  pending: "text-muted-foreground",
-  running: "text-primary",
-  completed: "text-green-600",
-  failed: "text-red-600",
-  skipped: "text-muted-foreground/50",
-};
-
 export default function PipelinePage({
   params,
 }: {
@@ -65,6 +53,7 @@ export default function PipelinePage({
   const { runId } = use(params);
   const router = useRouter();
 
+  // Pipeline state (existing)
   const [steps, setSteps] = useState<Record<string, StepState>>({});
   const [hookData, setHookData] = useState<{ hookToken: string; projectId: string } | null>(null);
   const [dossier, setDossier] = useState<CompanyDossier | null>(null);
@@ -72,6 +61,20 @@ export default function PipelinePage({
   const [pipelineComplete, setPipelineComplete] = useState(false);
   const [projectId, setProjectId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+
+  // New simulation state
+  const [allSimIds, setAllSimIds] = useState<string[]>([]);
+  const [activeSimId, setActiveSimId] = useState<string | null>(null);
+  const [activeSimIndex, setActiveSimIndex] = useState(0);
+
+  // Simulation polling hook
+  const { simStatus, simActions, graphData, graphPushing, error: simError, pollGraph } =
+    useSimulationPolling(activeSimId);
+
+  const isSimRunning = simStatus?.status === "running" || simStatus?.status === "starting";
+
+  // Show GraphPanel as soon as activeSimId is set — GraphPanel handles empty data gracefully
+  const showGraph = !!activeSimId;
 
   // Poll for pipeline updates
   useEffect(() => {
@@ -103,7 +106,7 @@ export default function PipelinePage({
                     setProjectId(parsed.projectId);
                   }
                 } catch {
-                  // detail is not hook JSON, that's fine
+                  // detail is not hook JSON
                 }
               }
 
@@ -112,10 +115,32 @@ export default function PipelinePage({
                 setPipelineComplete(true);
               }
 
-              // Check for project ID in research step
+              // Extract project ID from research step
               if (update.step === "research" && update.detail?.startsWith("Project:")) {
                 const pid = update.detail.replace("Project: ", "");
                 setProjectId(pid);
+              }
+
+              // Extract simIds from simulations step
+              if (update.step === "simulations" && update.status === "running" && update.detail) {
+                const ids = update.detail.split(", ").filter(Boolean);
+                if (ids.length > 1) {
+                  // First "running" update: "simId1, simId2"
+                  setAllSimIds(ids);
+                  setActiveSimId(ids[0]);
+                  setActiveSimIndex(0);
+                } else if (ids.length === 1) {
+                  // Per-sim update: single simId
+                  setActiveSimId(ids[0]);
+                }
+              }
+
+              // Track sim index from message pattern "Simulation N/M running..."
+              if (update.step === "simulations" && update.message) {
+                const simMatch = update.message.match(/Simulation (\d+)\/(\d+)/);
+                if (simMatch) {
+                  setActiveSimIndex(parseInt(simMatch[1], 10) - 1);
+                }
               }
             }
             return newSteps;
@@ -132,7 +157,7 @@ export default function PipelinePage({
   // Load dossier when hook fires
   useEffect(() => {
     if (!hookData?.projectId) return;
-    getDossier(hookData.projectId).then(result => {
+    getDossier(hookData.projectId).then((result) => {
       if ("data" in result) setDossier(result.data);
     });
   }, [hookData?.projectId]);
@@ -152,7 +177,7 @@ export default function PipelinePage({
       if (!res.ok) {
         setError("Failed to confirm dossier");
       }
-      setHookData(null); // clear the review state
+      setHookData(null);
     } catch {
       setError("Failed to confirm dossier");
     } finally {
@@ -160,132 +185,67 @@ export default function PipelinePage({
     }
   }, [hookData]);
 
-  const formatDuration = (ms?: number) => {
-    if (!ms) return "";
-    if (ms < 1000) return `${ms}ms`;
-    return `${(ms / 1000).toFixed(1)}s`;
-  };
-
   return (
-    <>
+    <div className="h-screen flex flex-col">
       <Header />
-      <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10">
-        <Breadcrumbs items={[
-          { label: "Home", href: "/" },
-          { label: "Pipeline" },
-        ]} />
 
-        <h1 className="text-2xl font-bold mb-2">Crucible Pipeline</h1>
-        <p className="text-sm text-muted-foreground mb-8">
-          Autonomous predictive simulation pipeline
-        </p>
+      {/* Breadcrumbs bar */}
+      <div className="px-4 py-2 border-b border-border">
+        <Breadcrumbs
+          items={[
+            { label: "Home", href: "/" },
+            { label: "Pipeline" },
+          ]}
+        />
+      </div>
 
-        {error && (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4 text-sm text-destructive mb-6">
-            {error}
-          </div>
-        )}
-
-        {/* Pipeline Steps */}
-        <div className="space-y-1 mb-8">
-          {STEP_ORDER.map((stepDef) => {
-            const state = steps[stepDef.id];
-            const status = state?.status || "pending";
-            const isActive = status === "running";
-            const isHook = stepDef.id === "dossier_review" && hookData && status === "running";
-
-            return (
-              <div
-                key={stepDef.id}
-                className={`rounded-lg border p-4 transition-all ${
-                  isActive ? "border-primary bg-primary/5" : "border-border"
-                } ${status === "completed" ? "bg-green-50/50" : ""}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className={`font-mono text-lg ${statusColor[status]}`}>
-                      {status === "running" ? (
-                        <span className="inline-block h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        statusIcon[status]
-                      )}
-                    </span>
-                    <div>
-                      <span className={`text-sm font-medium ${status === "pending" ? "text-muted-foreground" : ""}`}>
-                        {stepDef.label}
-                      </span>
-                      {state?.message && status !== "pending" && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {state.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
-                    {state?.durationMs && (
-                      <span>{formatDuration(state.durationMs)}</span>
-                    )}
-                    {state?.cost && (
-                      <span>${state.cost.toFixed(3)}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Expandable detail */}
-                {state?.detail && !isHook && status === "completed" && (
-                  <div className="mt-2 pl-10 text-xs text-muted-foreground border-l-2 border-muted ml-2">
-                    {state.detail}
-                  </div>
-                )}
-
-                {/* Dossier Review Hook UI */}
-                {isHook && dossier && (
-                  <div className="mt-4 pl-2">
-                    <div className="rounded-lg border bg-card p-4 max-h-96 overflow-y-auto mb-4">
-                      <h3 className="text-sm font-semibold mb-2">
-                        {dossier.company?.name || "Company"} — Dossier
-                      </h3>
-                      <div className="text-xs space-y-2 text-muted-foreground">
-                        <p><strong>Industry:</strong> {dossier.company?.industry}</p>
-                        <p><strong>Size:</strong> {dossier.company?.size} ({dossier.company?.employeeCount} employees)</p>
-                        <p><strong>Systems:</strong> {dossier.systems?.length || 0} tracked</p>
-                        <p><strong>Risks:</strong> {dossier.risks?.length || 0} identified</p>
-                        <p><strong>Recent Events:</strong> {dossier.recentEvents?.length || 0} tracked</p>
-                        <p><strong>Compliance:</strong> {dossier.compliance?.join(", ")}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <Button onClick={handleConfirmDossier} disabled={confirming}>
-                        {confirming ? "Confirming..." : "Confirm & Continue"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => router.push(`/research/${projectId}`)}
-                      >
-                        Edit Dossier
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      {error && (
+        <div className="mx-4 mt-2 rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
+          {error}
         </div>
+      )}
 
-        {/* Completion state */}
-        {pipelineComplete && projectId && (
-          <div className="rounded-lg border-2 border-green-200 bg-green-50/50 p-6 text-center">
-            <h2 className="text-lg font-semibold mb-2">Pipeline Complete</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              All simulations and reports have been generated.
-            </p>
-            <Button onClick={() => router.push(`/report/comparative/${projectId}`)}>
-              View Comparative Report
-            </Button>
-          </div>
-        )}
-      </main>
-    </>
+      {/* Progress bar */}
+      <PipelineProgressBar steps={steps} stepOrder={STEP_ORDER} />
+
+      {/* Main split layout */}
+      <SplitPanel
+        viewMode="split"
+        splitRatio={[60, 40]}
+        leftPanel={
+          showGraph ? (
+            <GraphPanel
+              data={graphData}
+              isLive={isSimRunning}
+              isPushing={graphPushing}
+              onRefresh={pollGraph}
+            />
+          ) : (
+            <PipelineGraphPlaceholder
+              companyName={dossier?.company?.name}
+            />
+          )
+        }
+        rightPanel={
+          <PipelineContextPanel
+            steps={steps}
+            stepOrder={STEP_ORDER}
+            dossier={dossier}
+            hookData={hookData}
+            confirming={confirming}
+            onConfirmDossier={handleConfirmDossier}
+            projectId={projectId}
+            companyUrl={undefined}
+            simStatus={simStatus}
+            simActions={simActions}
+            graphData={graphData}
+            activeSimIndex={activeSimIndex}
+            totalSims={allSimIds.length}
+            simError={simError}
+            pipelineComplete={pipelineComplete}
+          />
+        }
+      />
+    </div>
   );
 }

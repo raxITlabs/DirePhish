@@ -10,6 +10,7 @@ interface SplitPanelProps {
   rightPanel: React.ReactNode;
   leftHeader?: React.ReactNode;
   rightHeader?: React.ReactNode;
+  splitRatio?: [number, number];
 }
 
 export default function SplitPanel({
@@ -18,9 +19,10 @@ export default function SplitPanel({
   rightPanel,
   leftHeader,
   rightHeader,
+  splitRatio = [50, 50],
 }: SplitPanelProps) {
-  const leftWidth = viewMode === "graph" ? "100%" : viewMode === "split" ? "50%" : "0%";
-  const rightWidth = viewMode === "focus" ? "100%" : viewMode === "split" ? "50%" : "0%";
+  const leftWidth = viewMode === "graph" ? "100%" : viewMode === "split" ? `${splitRatio[0]}%` : "0%";
+  const rightWidth = viewMode === "focus" ? "100%" : viewMode === "split" ? `${splitRatio[1]}%` : "0%";
 
   return (
     <div className="flex-1 flex min-h-0 px-4 pb-4 gap-3">
