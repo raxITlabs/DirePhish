@@ -16,7 +16,19 @@ import {
   getDossier,
   getProjectGraph,
 } from "@/app/actions/project";
+import { useRouter } from "next/navigation";
 import type { Project, CompanyDossier, GraphData } from "@/app/types";
+
+// Statuses where research is done and dossier exists
+const POST_RESEARCH_STATUSES = [
+  "research_complete",
+  "analyzing_threats",
+  "scenarios_ready",
+  "generating_config",
+  "config_ready",
+  "generating_configs",
+  "configs_ready",
+];
 
 export default function ResearchPage({
   params,
@@ -24,6 +36,7 @@ export default function ResearchPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = use(params);
+  const router = useRouter();
 
   const [project, setProject] = useState<Project | null>(null);
   const [dossier, setDossier] = useState<CompanyDossier | null>(null);
@@ -53,7 +66,7 @@ export default function ResearchPage({
   // Initial load
   useEffect(() => {
     fetchStatus().then((p) => {
-      if (p?.status === "research_complete") {
+      if (p && POST_RESEARCH_STATUSES.includes(p.status)) {
         loadReviewData();
       }
     });
@@ -64,7 +77,7 @@ export default function ResearchPage({
     if (!project || project.status !== "researching") return;
     const interval = setInterval(async () => {
       const p = await fetchStatus();
-      if (p?.status === "research_complete") {
+      if (p && POST_RESEARCH_STATUSES.includes(p.status)) {
         clearInterval(interval);
         loadReviewData();
       } else if (p?.status === "failed") {
@@ -81,7 +94,7 @@ export default function ResearchPage({
 
   // Poll graph until nodes appear (Zep processes episodes async)
   useEffect(() => {
-    if (!project || project.status !== "research_complete") return;
+    if (!project || !POST_RESEARCH_STATUSES.includes(project.status)) return;
     if (graphData.nodes.length > 0) return;
     const interval = setInterval(async () => {
       const result = await getProjectGraph(projectId);
@@ -130,7 +143,7 @@ export default function ResearchPage({
         <div className="flex items-center gap-3">
           <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Research" }, { label: projectId }]} />
         </div>
-        {project.status === "research_complete" && (
+        {POST_RESEARCH_STATUSES.includes(project.status) && (
           <ViewToggle mode={viewMode} onChange={setViewMode} />
         )}
       </div>
@@ -151,7 +164,7 @@ export default function ResearchPage({
       )}
 
       {/* Review state */}
-      {project.status === "research_complete" && dossier && (
+      {POST_RESEARCH_STATUSES.includes(project.status) && dossier && (
         <SplitPanel
           viewMode={viewMode}
           leftPanel={
@@ -175,15 +188,12 @@ export default function ResearchPage({
         />
       )}
 
-      {/* Config generating / config ready pass-through states */}
-      {(project.status === "generating_config" ||
-        project.status === "config_ready") && (
+      {/* Config / threat analysis pass-through states */}
+      {["generating_config", "config_ready", "analyzing_threats", "scenarios_ready", "generating_configs", "configs_ready"].includes(project.status) && !dossier && (
         <div className="flex-1 flex items-center justify-center px-6">
           <div className="w-full max-w-md text-center">
             <p className="text-sm text-muted-foreground">
-              {project.status === "generating_config"
-                ? "Generating simulation config..."
-                : "Config ready. Redirecting..."}
+              {project.progressMessage || "Processing..."}
             </p>
           </div>
         </div>
