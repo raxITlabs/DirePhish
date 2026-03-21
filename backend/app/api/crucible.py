@@ -311,6 +311,17 @@ def patch_project(project_id):
 # --- Predictive pipeline endpoints ---
 
 
+@crucible_bp.route("/projects/<project_id>/analyze-threats", methods=["POST"])
+def analyze_threats(project_id):
+    """Trigger threat analysis for a project (re-triggerable after dossier edits)."""
+    project = project_manager.get_project(project_id)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+    from ..services.threat_analyzer import run_threat_analysis
+    run_threat_analysis(project_id)
+    return jsonify({"data": {"status": "analyzing"}}), 202
+
+
 @crucible_bp.route("/projects/<project_id>/scenarios", methods=["GET"])
 def get_scenarios(project_id):
     analysis = project_manager.get_threat_analysis(project_id)

@@ -4,7 +4,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CompanyDossier } from "@/app/types";
-import { updateDossier, triggerConfigGeneration } from "@/app/actions/project";
+import { updateDossier } from "@/app/actions/project";
+import { triggerThreatAnalysis } from "@/app/actions/scenarios";
 import { Card, CardHeader, CardTitle, CardContent } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import CompanyProfile from "./CompanyProfile";
@@ -55,15 +56,10 @@ export default function DossierEditor({ projectId, initialDossier }: Props) {
       return;
     }
 
-    // Step 2: Trigger config generation
-    const genResult = await triggerConfigGeneration(projectId);
-    if ("error" in genResult) {
-      setError(`Failed to start config generation: ${genResult.error}`);
-      setSaving(false);
-      return;
-    }
+    // Step 2: Trigger threat analysis (new predictive pipeline)
+    await triggerThreatAnalysis(projectId);
 
-    // Step 3: Redirect
+    // Step 3: Redirect to configure page — it handles analyzing_threats, scenarios_ready, etc.
     router.push(`/configure/project/${projectId}`);
   };
 

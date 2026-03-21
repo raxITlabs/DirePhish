@@ -4,6 +4,15 @@
 import { fetchApi } from "@/app/lib/api";
 import type { ThreatAnalysisResponse, SimulationConfig, ScenarioVariant } from "@/app/types";
 
+export async function triggerThreatAnalysis(
+  projectId: string
+): Promise<{ data: { status: string } } | { error: string }> {
+  return fetchApi<{ status: string }>(
+    `/api/crucible/projects/${projectId}/analyze-threats`,
+    { method: "POST" }
+  );
+}
+
 export async function getScenarios(
   projectId: string
 ): Promise<{ data: ThreatAnalysisResponse } | { error: string }> {
