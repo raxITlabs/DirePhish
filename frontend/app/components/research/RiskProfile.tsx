@@ -2,6 +2,8 @@
 "use client";
 
 import type { RiskInfo } from "@/app/types";
+import { Input } from "@/app/components/ui/input";
+import { Button } from "@/app/components/ui/button";
 
 interface Props {
   risks: RiskInfo[];
@@ -40,24 +42,24 @@ export default function RiskProfile({ risks, onChange }: Props) {
   return (
     <div className="space-y-2">
       {risks.length === 0 && (
-        <p className="text-sm text-text-secondary">No risks defined.</p>
+        <p className="text-sm text-muted-foreground">No risks defined.</p>
       )}
       {risks.map((risk, i) => (
         <div
           key={i}
           className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center"
         >
-          <input
+          <Input
             type="text"
             value={risk.name}
             onChange={(e) => updateRisk(i, "name", e.target.value)}
             placeholder="Risk name (e.g. Ransomware)"
-            className="border border-border rounded-md px-2 py-1.5 text-xs bg-background focus:outline-none focus:border-accent"
+            className="text-xs"
           />
           <select
             value={risk.likelihood}
             onChange={(e) => updateRisk(i, "likelihood", e.target.value)}
-            className="border border-border rounded-md px-2 py-1.5 text-xs bg-background focus:outline-none focus:border-accent"
+            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {LIKELIHOODS.map((l) => (
               <option key={l} value={l}>
@@ -68,7 +70,7 @@ export default function RiskProfile({ risks, onChange }: Props) {
           <select
             value={risk.impact}
             onChange={(e) => updateRisk(i, "impact", e.target.value)}
-            className="border border-border rounded-md px-2 py-1.5 text-xs bg-background focus:outline-none focus:border-accent"
+            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {IMPACTS.map((imp) => (
               <option key={imp} value={imp}>
@@ -76,20 +78,19 @@ export default function RiskProfile({ risks, onChange }: Props) {
               </option>
             ))}
           </select>
-          <button
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={() => removeRisk(i)}
-            className="text-text-tertiary hover:text-severity-critical-text text-xs px-1.5 py-1.5 rounded hover:bg-severity-critical-bg transition-colors"
+            className="text-muted-foreground hover:text-destructive"
           >
-            ×
-          </button>
+            x
+          </Button>
         </div>
       ))}
-      <button
-        onClick={addRisk}
-        className="text-xs px-3 py-1.5 border border-dashed border-border rounded-md hover:bg-background transition-colors text-text-secondary hover:text-foreground"
-      >
+      <Button variant="outline" size="sm" onClick={addRisk} className="border-dashed">
         + Add Risk
-      </button>
+      </Button>
     </div>
   );
 }

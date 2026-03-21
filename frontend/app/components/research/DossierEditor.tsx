@@ -5,6 +5,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CompanyDossier } from "@/app/types";
 import { updateDossier, triggerConfigGeneration } from "@/app/actions/project";
+import { Card, CardHeader, CardTitle, CardContent } from "@/app/components/ui/card";
+import { Button } from "@/app/components/ui/button";
 import CompanyProfile from "./CompanyProfile";
 import OrgStructure from "./OrgStructure";
 import SystemsList from "./SystemsList";
@@ -25,10 +27,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-border rounded-lg bg-card p-4 mb-4">
-      <h3 className="text-sm font-semibold mb-3 text-foreground">{title}</h3>
-      {children}
-    </div>
+    <Card size="sm" className="mb-4">
+      <CardHeader>
+        <CardTitle className="text-sm">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   );
 }
 
@@ -114,21 +118,21 @@ export default function DossierEditor({ projectId, initialDossier }: Props) {
       {/* Fixed bottom bar */}
       <div className="border-t border-border bg-card px-4 py-3 flex items-center justify-between gap-3">
         {error && (
-          <p className="text-xs text-severity-critical-text flex-1">{error}</p>
+          <p className="text-xs text-destructive flex-1">{error}</p>
         )}
         {!error && (
-          <p className="text-xs text-text-secondary flex-1">
+          <p className="text-xs text-muted-foreground flex-1">
             Review the company intelligence above, then confirm to generate your
             simulation config.
           </p>
         )}
-        <button
+        <Button
           onClick={handleConfirm}
           disabled={saving}
-          className="px-5 py-2 rounded-lg bg-accent text-white font-medium text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity shrink-0"
+          className="shrink-0"
         >
           {saving ? "Saving..." : "Confirm & Generate Config"}
-        </button>
+        </Button>
       </div>
     </div>
   );

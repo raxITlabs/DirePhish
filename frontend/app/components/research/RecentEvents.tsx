@@ -2,6 +2,8 @@
 "use client";
 
 import type { EventInfo } from "@/app/types";
+import { Input } from "@/app/components/ui/input";
+import { Button } from "@/app/components/ui/button";
 
 interface Props {
   recentEvents: EventInfo[];
@@ -33,44 +35,43 @@ export default function RecentEvents({ recentEvents, onChange }: Props) {
   return (
     <div className="space-y-2">
       {recentEvents.length === 0 && (
-        <p className="text-sm text-text-secondary">No recent events.</p>
+        <p className="text-sm text-muted-foreground">No recent events.</p>
       )}
       {recentEvents.map((event, i) => (
         <div key={i} className="flex gap-2 items-start">
-          <input
+          <Input
             type="date"
             value={event.date}
             onChange={(e) => updateEvent(i, "date", e.target.value)}
-            className="border border-border rounded-md px-2 py-1.5 text-xs bg-background focus:outline-none focus:border-accent w-36 shrink-0"
+            className="text-xs w-36 shrink-0"
           />
-          <input
+          <Input
             type="text"
             value={event.description}
             onChange={(e) => updateEvent(i, "description", e.target.value)}
             placeholder="Event description"
-            className="flex-1 border border-border rounded-md px-2 py-1.5 text-xs bg-background focus:outline-none focus:border-accent"
+            className="flex-1 text-xs"
           />
-          <input
+          <Input
             type="text"
             value={event.source}
             onChange={(e) => updateEvent(i, "source", e.target.value)}
             placeholder="Source"
-            className="border border-border rounded-md px-2 py-1.5 text-xs bg-background focus:outline-none focus:border-accent w-28 shrink-0"
+            className="text-xs w-28 shrink-0"
           />
-          <button
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={() => removeEvent(i)}
-            className="text-text-tertiary hover:text-severity-critical-text text-xs px-1.5 py-1.5 rounded hover:bg-severity-critical-bg transition-colors shrink-0"
+            className="text-muted-foreground hover:text-destructive shrink-0"
           >
-            ×
-          </button>
+            x
+          </Button>
         </div>
       ))}
-      <button
-        onClick={addEvent}
-        className="text-xs px-3 py-1.5 border border-dashed border-border rounded-md hover:bg-background transition-colors text-text-secondary hover:text-foreground"
-      >
+      <Button variant="outline" size="sm" onClick={addEvent} className="border-dashed">
         + Add Event
-      </button>
+      </Button>
     </div>
   );
 }

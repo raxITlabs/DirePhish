@@ -7,6 +7,9 @@ import ViewToggle, { type ViewMode } from "@/app/components/simulation/ViewToggl
 import GraphPanel from "@/app/components/simulation/GraphPanel";
 import ResearchProgress from "@/app/components/research/ResearchProgress";
 import DossierEditor from "@/app/components/research/DossierEditor";
+import SplitPanel from "@/app/components/shared/SplitPanel";
+import { Alert, AlertDescription } from "@/app/components/ui/alert";
+import { Skeleton } from "@/app/components/ui/skeleton";
 import {
   getProjectStatus,
   getDossier,
@@ -89,20 +92,14 @@ export default function ResearchPage({
     return () => clearInterval(interval);
   }, [project?.status, graphData.nodes.length, projectId]);
 
-  // Panel widths based on view mode
-  const graphWidth =
-    viewMode === "graph" ? "100%" : viewMode === "split" ? "50%" : "0%";
-  const editorWidth =
-    viewMode === "focus" ? "100%" : viewMode === "split" ? "50%" : "0%";
-
   if (loadError) {
     return (
       <div className="h-screen flex flex-col">
         <Header />
         <main className="flex-1 flex items-center justify-center px-6">
-          <div className="p-4 rounded-lg bg-severity-critical-bg border border-severity-critical-border text-severity-critical-text text-sm max-w-md">
-            {loadError}
-          </div>
+          <Alert variant="destructive" className="max-w-md">
+            <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
         </main>
       </div>
     );
@@ -113,7 +110,11 @@ export default function ResearchPage({
       <div className="h-screen flex flex-col">
         <Header />
         <main className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-text-secondary">Loading...</p>
+          <div className="space-y-3 w-64">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
         </main>
       </div>
     );
@@ -127,7 +128,7 @@ export default function ResearchPage({
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
         <div className="flex items-center gap-3">
           <span className="font-semibold">Research</span>
-          <span className="text-sm text-text-secondary font-mono">
+          <span className="text-sm text-muted-foreground font-mono">
             {projectId}
           </span>
         </div>
@@ -153,47 +154,27 @@ export default function ResearchPage({
 
       {/* Review state */}
       {project.status === "research_complete" && dossier && (
-        <div className="flex-1 flex overflow-hidden px-4 pb-4 pt-3 gap-3">
-          {/* Graph panel */}
-          <div
-            className="overflow-hidden transition-all duration-300"
-            style={{
-              width: graphWidth,
-              opacity: viewMode === "focus" ? 0 : 1,
-            }}
-          >
-            <div className="h-full border border-border rounded-lg bg-card overflow-hidden">
-              <GraphPanel
-                data={graphData}
-                isLive={false}
-                onRefresh={refreshGraph}
-              />
-            </div>
-          </div>
-
-          {/* Dossier editor panel */}
-          <div
-            className="transition-all duration-300 min-h-0"
-            style={{
-              width: editorWidth,
-              opacity: viewMode === "graph" ? 0 : 1,
-            }}
-          >
-            <div className="h-full border border-border rounded-lg bg-card flex flex-col" style={{ minHeight: 0 }}>
-              <div className="px-4 py-2 border-b border-border shrink-0">
-                <span className="text-xs font-semibold text-text-secondary">
-                  Company Intelligence
-                </span>
-              </div>
-              <div className="flex-1 min-h-0 flex flex-col">
-                <DossierEditor
-                  projectId={projectId}
-                  initialDossier={dossier}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <SplitPanel
+          viewMode={viewMode}
+          leftPanel={
+            <GraphPanel
+              data={graphData}
+              isLive={false}
+              onRefresh={refreshGraph}
+            />
+          }
+          rightHeader={
+            <span className="text-xs font-semibold text-muted-foreground">
+              Company Intelligence
+            </span>
+          }
+          rightPanel={
+            <DossierEditor
+              projectId={projectId}
+              initialDossier={dossier}
+            />
+          }
+        />
       )}
 
       {/* Config generating / config ready pass-through states */}
@@ -201,7 +182,7 @@ export default function ResearchPage({
         project.status === "config_ready") && (
         <div className="flex-1 flex items-center justify-center px-6">
           <div className="w-full max-w-md text-center">
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm text-muted-foreground">
               {project.status === "generating_config"
                 ? "Generating simulation config..."
                 : "Config ready. Redirecting..."}

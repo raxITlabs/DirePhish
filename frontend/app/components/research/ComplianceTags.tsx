@@ -2,6 +2,9 @@
 "use client";
 
 import { useState } from "react";
+import { Input } from "@/app/components/ui/input";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
 
 interface Props {
   compliance: string[];
@@ -26,27 +29,24 @@ export default function ComplianceTags({ compliance, onChange }: Props) {
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
         {compliance.length === 0 && (
-          <span className="text-sm text-text-secondary">
+          <span className="text-sm text-muted-foreground">
             No compliance frameworks added.
           </span>
         )}
         {compliance.map((tag, i) => (
-          <span
-            key={i}
-            className="inline-flex items-center gap-1 bg-background border border-border rounded px-2 py-0.5 text-xs font-mono"
-          >
+          <Badge key={i} variant="outline" className="gap-1 font-mono">
             {tag}
             <button
               onClick={() => removeTag(i)}
-              className="text-text-tertiary hover:text-severity-critical-text leading-none"
+              className="text-muted-foreground hover:text-destructive leading-none"
             >
-              ×
+              x
             </button>
-          </span>
+          </Badge>
         ))}
       </div>
       <div className="flex gap-2">
-        <input
+        <Input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -57,14 +57,11 @@ export default function ComplianceTags({ compliance, onChange }: Props) {
             }
           }}
           placeholder="Add framework (e.g. PCI-DSS) and press Enter"
-          className="flex-1 border border-border rounded-md px-3 py-1.5 text-xs bg-background focus:outline-none focus:border-accent"
+          className="flex-1 text-xs"
         />
-        <button
-          onClick={addTag}
-          className="px-3 py-1.5 text-xs rounded-md border border-border hover:bg-background transition-colors"
-        >
+        <Button variant="outline" size="sm" onClick={addTag}>
           Add
-        </button>
+        </Button>
       </div>
     </div>
   );

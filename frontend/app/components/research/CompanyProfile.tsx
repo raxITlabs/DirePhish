@@ -3,6 +3,10 @@
 
 import { useState } from "react";
 import type { CompanyDossier } from "@/app/types";
+import { Input } from "@/app/components/ui/input";
+import { Label } from "@/app/components/ui/label";
+import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
 
 interface Props {
   company: CompanyDossier["company"];
@@ -34,38 +38,38 @@ export default function CompanyProfile({ company, onChange }: Props) {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">
+          <Label className="text-xs text-muted-foreground mb-1">
             Company Name
-          </label>
-          <input
+          </Label>
+          <Input
             type="text"
             value={company.name}
             onChange={(e) => update("name", e.target.value)}
-            className="w-full border border-border rounded-md px-3 py-1.5 text-sm bg-background focus:outline-none focus:border-accent"
+            className="text-sm"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">
+          <Label className="text-xs text-muted-foreground mb-1">
             Industry
-          </label>
-          <input
+          </Label>
+          <Input
             type="text"
             value={company.industry}
             onChange={(e) => update("industry", e.target.value)}
-            className="w-full border border-border rounded-md px-3 py-1.5 text-sm bg-background focus:outline-none focus:border-accent"
+            className="text-sm"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">
+          <Label className="text-xs text-muted-foreground mb-1">
             Company Size
-          </label>
+          </Label>
           <select
             value={company.size}
             onChange={(e) => update("size", e.target.value)}
-            className="w-full border border-border rounded-md px-3 py-1.5 text-sm bg-background focus:outline-none focus:border-accent"
+            className="w-full h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <option value="small">Small</option>
             <option value="medium">Medium</option>
@@ -73,41 +77,38 @@ export default function CompanyProfile({ company, onChange }: Props) {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">
+          <Label className="text-xs text-muted-foreground mb-1">
             Geography
-          </label>
-          <input
+          </Label>
+          <Input
             type="text"
             value={company.geography}
             onChange={(e) => update("geography", e.target.value)}
             placeholder="e.g. US, EU"
-            className="w-full border border-border rounded-md px-3 py-1.5 text-sm bg-background focus:outline-none focus:border-accent"
+            className="text-sm"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-text-secondary mb-1">
+        <Label className="text-xs text-muted-foreground mb-1">
           Products / Services
-        </label>
+        </Label>
         <div className="flex flex-wrap gap-1.5 mb-2">
           {company.products.map((product, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1 bg-background border border-border rounded px-2 py-0.5 text-xs"
-            >
+            <Badge key={i} variant="outline" className="gap-1">
               {product}
               <button
                 onClick={() => removeProduct(i)}
-                className="text-text-tertiary hover:text-foreground leading-none"
+                className="text-muted-foreground hover:text-foreground leading-none"
               >
-                ×
+                x
               </button>
-            </span>
+            </Badge>
           ))}
         </div>
         <div className="flex gap-2">
-          <input
+          <Input
             type="text"
             value={newProduct}
             onChange={(e) => setNewProduct(e.target.value)}
@@ -118,14 +119,11 @@ export default function CompanyProfile({ company, onChange }: Props) {
               }
             }}
             placeholder="Add product/service..."
-            className="flex-1 border border-border rounded-md px-3 py-1.5 text-sm bg-background focus:outline-none focus:border-accent"
+            className="flex-1 text-sm"
           />
-          <button
-            onClick={addProduct}
-            className="px-3 py-1.5 text-xs rounded-md border border-border hover:bg-background transition-colors"
-          >
+          <Button variant="outline" size="sm" onClick={addProduct}>
             Add
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -135,7 +133,7 @@ export default function CompanyProfile({ company, onChange }: Props) {
           id="publicCompany"
           checked={company.publicCompany}
           onChange={(e) => update("publicCompany", e.target.checked)}
-          className="w-4 h-4 rounded accent-accent"
+          className="w-4 h-4 rounded accent-primary"
         />
         <label htmlFor="publicCompany" className="text-sm cursor-pointer">
           Publicly traded company

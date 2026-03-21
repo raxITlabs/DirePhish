@@ -2,6 +2,8 @@
 "use client";
 
 import type { SystemInfo } from "@/app/types";
+import { Input } from "@/app/components/ui/input";
+import { Button } from "@/app/components/ui/button";
 
 interface Props {
   systems: SystemInfo[];
@@ -52,24 +54,24 @@ export default function SystemsList({ systems, onChange }: Props) {
   return (
     <div className="space-y-2">
       {systems.length === 0 && (
-        <p className="text-sm text-text-secondary">No systems defined.</p>
+        <p className="text-sm text-muted-foreground">No systems defined.</p>
       )}
       {systems.map((sys, i) => (
         <div
           key={i}
           className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center"
         >
-          <input
+          <Input
             type="text"
             value={sys.name}
             onChange={(e) => updateSystem(i, "name", e.target.value)}
             placeholder="System name (e.g. PostgreSQL)"
-            className="border border-border rounded-md px-2 py-1.5 text-xs bg-background focus:outline-none focus:border-accent"
+            className="text-xs"
           />
           <select
             value={sys.category}
             onChange={(e) => updateSystem(i, "category", e.target.value)}
-            className="border border-border rounded-md px-2 py-1.5 text-xs bg-background focus:outline-none focus:border-accent"
+            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
@@ -80,7 +82,7 @@ export default function SystemsList({ systems, onChange }: Props) {
           <select
             value={sys.criticality}
             onChange={(e) => updateSystem(i, "criticality", e.target.value)}
-            className="border border-border rounded-md px-2 py-1.5 text-xs bg-background focus:outline-none focus:border-accent"
+            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {CRITICALITIES.map((c) => (
               <option key={c} value={c}>
@@ -88,20 +90,19 @@ export default function SystemsList({ systems, onChange }: Props) {
               </option>
             ))}
           </select>
-          <button
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={() => removeSystem(i)}
-            className="text-text-tertiary hover:text-severity-critical-text text-xs px-1.5 py-1.5 rounded hover:bg-severity-critical-bg transition-colors"
+            className="text-muted-foreground hover:text-destructive"
           >
-            ×
-          </button>
+            x
+          </Button>
         </div>
       ))}
-      <button
-        onClick={addSystem}
-        className="text-xs px-3 py-1.5 border border-dashed border-border rounded-md hover:bg-background transition-colors text-text-secondary hover:text-foreground"
-      >
+      <Button variant="outline" size="sm" onClick={addSystem} className="border-dashed">
         + Add System
-      </button>
+      </Button>
     </div>
   );
 }

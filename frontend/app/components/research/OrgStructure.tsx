@@ -3,6 +3,8 @@
 
 import type { OrgRole } from "@/app/types";
 import type { CompanyDossier } from "@/app/types";
+import { Input } from "@/app/components/ui/input";
+import { Button } from "@/app/components/ui/button";
 
 interface Props {
   org: CompanyDossier["org"];
@@ -30,48 +32,47 @@ export default function OrgStructure({ org, onChange }: Props) {
   return (
     <div className="space-y-2">
       {org.roles.length === 0 && (
-        <p className="text-sm text-text-secondary">No roles defined.</p>
+        <p className="text-sm text-muted-foreground">No roles defined.</p>
       )}
       {org.roles.map((role, i) => (
         <div
           key={i}
           className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center"
         >
-          <input
+          <Input
             type="text"
             value={role.title}
             onChange={(e) => updateRole(i, "title", e.target.value)}
             placeholder="Title (e.g. CISO)"
-            className="border border-border rounded-md px-2 py-1.5 text-xs bg-background focus:outline-none focus:border-accent"
+            className="text-xs"
           />
-          <input
+          <Input
             type="text"
             value={role.department}
             onChange={(e) => updateRole(i, "department", e.target.value)}
             placeholder="Department"
-            className="border border-border rounded-md px-2 py-1.5 text-xs bg-background focus:outline-none focus:border-accent"
+            className="text-xs"
           />
-          <input
+          <Input
             type="text"
             value={role.reportsTo}
             onChange={(e) => updateRole(i, "reportsTo", e.target.value)}
             placeholder="Reports to"
-            className="border border-border rounded-md px-2 py-1.5 text-xs bg-background focus:outline-none focus:border-accent"
+            className="text-xs"
           />
-          <button
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={() => removeRole(i)}
-            className="text-text-tertiary hover:text-severity-critical-text text-xs px-1.5 py-1.5 rounded hover:bg-severity-critical-bg transition-colors"
+            className="text-muted-foreground hover:text-destructive"
           >
-            ×
-          </button>
+            x
+          </Button>
         </div>
       ))}
-      <button
-        onClick={addRole}
-        className="text-xs px-3 py-1.5 border border-dashed border-border rounded-md hover:bg-background transition-colors text-text-secondary hover:text-foreground"
-      >
+      <Button variant="outline" size="sm" onClick={addRole} className="border-dashed">
         + Add Role
-      </button>
+      </Button>
     </div>
   );
 }
