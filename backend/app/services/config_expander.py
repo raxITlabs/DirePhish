@@ -142,6 +142,13 @@ def _expand_single_scenario(
     agents = _generate_agent_personas(llm, dossier, scenario, cascading)
     _track("agent_personas")
 
+    # Normalize agent profiles — LLM sometimes uses "role_id" instead of "role"
+    for agent in agents:
+        if "role_id" in agent and "role" not in agent:
+            agent["role"] = agent.pop("role_id")
+        if "role" not in agent:
+            agent["role"] = agent.get("name", "unknown").lower().replace(" ", "_")
+
     # Call 8: World Design
     worlds = _generate_worlds(llm, scenario, agents)
     _track("world_design")
