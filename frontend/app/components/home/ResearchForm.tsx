@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createProject } from "@/app/actions/project";
+// Pipeline mode: triggers WDK workflow instead of direct Flask call
 import { Card, CardContent } from "@/app/components/ui/card";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
@@ -23,20 +23,28 @@ export default function ResearchForm() {
     setLoading(true);
     setError(null);
 
-    const formData = new FormData();
-    formData.append("company_url", url.trim());
-    if (context.trim()) formData.append("user_context", context.trim());
-    for (const file of files) {
-      formData.append("files", file);
-    }
-
-    const result = await createProject(formData);
-    if ("error" in result) {
-      setError(result.error);
+    // Launch the WDK pipeline workflow
+    try {
+      const res = await fetch("/api/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyUrl: url.trim(),
+          userContext: context.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (json.error) {
+        setError(json.error);
+        setLoading(false);
+        return;
+      }
+      router.push(`/pipeline/${json.data.runId}`);
+    } catch {
+      setError("Failed to start pipeline");
       setLoading(false);
       return;
     }
-    router.push(`/research/${result.data.projectId}`);
   }, [url, context, files, router]);
 
   const handleFileDrop = useCallback((e: React.DragEvent) => {
@@ -129,7 +137,7 @@ export default function ResearchForm() {
           disabled={!url.trim() || loading}
           className="w-full"
         >
-          {loading ? "Starting Research..." : "Start Research"}
+          {loading ? "Starting Pipeline..." : "Start Pipeline"}
         </Button>
       </CardContent>
     </Card>
