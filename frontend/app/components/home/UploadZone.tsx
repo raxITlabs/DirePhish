@@ -1,4 +1,3 @@
-// frontend/app/components/home/UploadZone.tsx
 "use client";
 
 import { useCallback, useState } from "react";
@@ -13,7 +12,6 @@ export default function UploadZone() {
     async (file: File) => {
       if (!file.name.endsWith(".json")) return;
       const text = await file.text();
-      // Upload via Server Action — stores on server, returns temp config ID
       const result = await uploadCustomConfig(text);
       if ("error" in result) return;
       router.push(`/configure/${result.data.configId}`);
@@ -32,11 +30,11 @@ export default function UploadZone() {
         if (file) handleFile(file);
       }}
       className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-        dragOver ? "border-accent bg-accent/5" : "border-border"
+        dragOver ? "border-primary bg-accent" : "border-border"
       }`}
     >
-      <p className="text-text-secondary mb-2">Drop a JSON config file here</p>
-      <label className="inline-block cursor-pointer text-accent hover:underline">
+      <p className="text-muted-foreground mb-2">Drop a JSON config file here</p>
+      <label className="inline-block cursor-pointer text-primary hover:underline">
         or browse
         <input
           type="file"
@@ -48,7 +46,7 @@ export default function UploadZone() {
           }}
         />
       </label>
-      <p className="text-xs text-text-tertiary mt-2">
+      <p className="text-xs text-muted-foreground mt-2">
         Seed document upload — coming soon
       </p>
     </div>

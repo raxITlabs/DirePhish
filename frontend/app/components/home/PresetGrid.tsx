@@ -1,11 +1,10 @@
-// frontend/app/components/home/PresetGrid.tsx
 import type { Preset } from "@/app/types";
 import PresetCard from "./PresetCard";
 
 export default function PresetGrid({ presets }: { presets: Preset[] }) {
   if (presets.length === 0) {
     return (
-      <div className="text-center py-12 text-text-secondary">
+      <div className="text-center py-12 text-muted-foreground">
         No presets available. Check that Crucible is installed.
       </div>
     );

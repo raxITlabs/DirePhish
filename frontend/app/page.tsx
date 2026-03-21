@@ -1,8 +1,8 @@
-// frontend/app/page.tsx
 import Header from "@/app/components/layout/Header";
 import PresetGrid from "@/app/components/home/PresetGrid";
 import UploadZone from "@/app/components/home/UploadZone";
 import ResearchForm from "@/app/components/home/ResearchForm";
+import { Alert, AlertDescription } from "@/app/components/ui/alert";
 import { getPresets } from "@/app/actions/presets";
 
 export default async function Home() {
@@ -16,15 +16,15 @@ export default async function Home() {
       <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10">
         <div className="mb-10">
           <h1 className="text-3xl font-bold mb-2">Crucible</h1>
-          <p className="text-text-secondary">
+          <p className="text-muted-foreground">
             Enterprise simulation engine. Pick a preset or upload a config to get started.
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-lg bg-severity-critical-bg border border-severity-critical-border text-severity-critical-text text-sm">
-            {error}
-          </div>
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         <section className="mb-10">

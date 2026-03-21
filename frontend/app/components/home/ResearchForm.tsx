@@ -1,9 +1,14 @@
-// frontend/app/components/home/ResearchForm.tsx
 "use client";
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createProject } from "@/app/actions/project";
+import { Card, CardContent } from "@/app/components/ui/card";
+import { Input } from "@/app/components/ui/input";
+import { Label } from "@/app/components/ui/label";
+import { Button } from "@/app/components/ui/button";
+import { Badge } from "@/app/components/ui/badge";
+import { Alert, AlertDescription } from "@/app/components/ui/alert";
 
 export default function ResearchForm() {
   const router = useRouter();
@@ -43,44 +48,45 @@ export default function ResearchForm() {
   }, []);
 
   return (
-    <div className="border border-border rounded-lg bg-card p-6">
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Company URL *</label>
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://company.com"
-          className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:border-accent"
-        />
-      </div>
+    <Card>
+      <CardContent className="p-6 space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="company-url">Company URL *</Label>
+          <Input
+            id="company-url"
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://company.com"
+          />
+        </div>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">
-          Additional Context <span className="text-text-tertiary">(optional)</span>
-        </label>
-        <textarea
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
-          placeholder="E.g., 'We just had a ransomware scare', 'Focus on GDPR compliance', 'Our CISO started 2 weeks ago'..."
-          rows={3}
-          className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:border-accent resize-none"
-        />
-      </div>
+        <div className="space-y-2">
+          <Label htmlFor="context">
+            Additional Context <span className="text-muted-foreground">(optional)</span>
+          </Label>
+          <textarea
+            id="context"
+            value={context}
+            onChange={(e) => setContext(e.target.value)}
+            placeholder="E.g., 'We just had a ransomware scare', 'Focus on GDPR compliance'..."
+            rows={3}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+          />
+        </div>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">
-          Documents <span className="text-text-tertiary">(optional — PDF, MD, TXT)</span>
-        </label>
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={handleFileDrop}
-          className="border-2 border-dashed border-border rounded-md p-4 text-center text-sm text-text-secondary"
-        >
-          {files.length === 0 ? (
-            <>
+        <div className="space-y-2">
+          <Label>
+            Documents <span className="text-muted-foreground">(optional — PDF, MD, TXT)</span>
+          </Label>
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleFileDrop}
+            className="border-2 border-dashed border-border rounded-md p-4 text-center text-sm text-muted-foreground"
+          >
+            {files.length === 0 ? (
               <p>Drop files here or{" "}
-                <label className="text-accent cursor-pointer hover:underline">
+                <label className="text-primary cursor-pointer hover:underline">
                   browse
                   <input
                     type="file"
@@ -94,36 +100,38 @@ export default function ResearchForm() {
                   />
                 </label>
               </p>
-            </>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {files.map((f, i) => (
-                <span key={i} className="inline-flex items-center gap-1 bg-background border border-border rounded px-2 py-1 text-xs">
-                  {f.name}
-                  <button
-                    onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                    className="text-text-tertiary hover:text-foreground"
-                  >
-                    x
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {files.map((f, i) => (
+                  <Badge key={i} variant="outline" className="gap-1">
+                    {f.name}
+                    <button
+                      onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                      className="text-muted-foreground hover:text-foreground ml-1"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {error && (
-        <div className="mb-4 text-sm text-severity-critical-text">{error}</div>
-      )}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      <button
-        onClick={handleSubmit}
-        disabled={!url.trim() || loading}
-        className="w-full px-4 py-2 rounded-lg bg-accent text-white font-medium text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-      >
-        {loading ? "Starting Research..." : "Start Research"}
-      </button>
-    </div>
+        <Button
+          onClick={handleSubmit}
+          disabled={!url.trim() || loading}
+          className="w-full"
+        >
+          {loading ? "Starting Research..." : "Start Research"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
