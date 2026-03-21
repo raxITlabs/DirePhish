@@ -68,10 +68,8 @@ export default function ConfigureProjectPage({
       setLaunching(false);
       return;
     }
-    // Navigate to first simulation
-    if (result.data.simIds.length > 0) {
-      router.push(`/simulation/${result.data.simIds[0]}`);
-    }
+    // Navigate to home — SimulationHistory shows all running sims
+    router.push("/");
   };
 
   useEffect(() => {
