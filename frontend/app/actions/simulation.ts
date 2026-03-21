@@ -31,6 +31,9 @@ export async function launchSimulation(
       name: a.name,
       role: a.role,
       persona: a.persona,
+      stress_profile: a.stressProfile,
+      incident_memory: a.incidentMemory,
+      decision_bias: a.decisionBias,
     })),
     worlds: config.worlds.map((w) => ({ type: w.type, name: w.name })),
     pressures: config.pressures.map((p) => ({
@@ -48,7 +51,31 @@ export async function launchSimulation(
     scheduled_events: config.scheduledEvents.map((e) => ({
       round: e.round,
       description: e.description,
+      kill_chain_step: e.killChainStep,
+      condition: e.condition ? {
+        unless: e.condition.unless,
+        keywords: e.condition.keywords,
+        target_systems: e.condition.targetSystems,
+        alternative: e.condition.alternative,
+      } : undefined,
     })),
+    // New optional fields (pass through if present)
+    scenario_id: config.scenarioId,
+    attack_path: config.attackPath ? {
+      kill_chain: config.attackPath.killChain.map((k) => ({
+        step: k.step,
+        tactic: k.tactic,
+        technique: k.technique,
+        target: k.target,
+        description: k.description,
+      })),
+    } : undefined,
+    cascading_effects: config.cascadingEffects ? {
+      first_order: config.cascadingEffects.firstOrder,
+      second_order: config.cascadingEffects.secondOrder,
+      third_order: config.cascadingEffects.thirdOrder,
+    } : undefined,
+    threat_actor_profile: config.threatActorProfile,
   };
   return fetchApi<{ simId: string }>("/api/crucible/simulations", {
     method: "POST",

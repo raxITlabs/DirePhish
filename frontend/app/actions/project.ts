@@ -38,6 +38,7 @@ export async function getProjectStatus(
       errorMessage: d.error_message as string | undefined,
       graphId: d.graph_id as string | undefined,
       simId: d.sim_id as string | undefined,
+      simIds: (d.sim_ids as string[]) || [],
       createdAt: (d.created_at as string) || "",
     },
   };

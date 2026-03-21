@@ -184,3 +184,83 @@ export async function getReportDownloadUrl(reportId: string): Promise<string> {
   const base = process.env.FLASK_API_URL || "http://localhost:5001";
   return `${base}/api/report/${reportId}/download`;
 }
+
+// --- Comparative report ---
+
+export interface ComparativeReportResponse {
+  projectId: string;
+  simIds: string[];
+  status: string;
+  executiveSummary?: string;
+  comparisonMatrix?: Array<{
+    scenario: string;
+    responseSpeed: number;
+    containmentEffectiveness: number;
+    communicationQuality: number;
+    complianceAdherence: number;
+    leadershipDecisiveness: number;
+  }>;
+  consistentWeaknesses?: string[];
+  scenarioFindings?: Array<{
+    scenario: string;
+    strengths: string[];
+    weaknesses: string[];
+    notableMoments: string[];
+  }>;
+  recommendations?: Array<{
+    priority: number;
+    recommendation: string;
+    addressesScenarios: string[];
+    impact: string;
+  }>;
+  error?: string;
+}
+
+export async function generateComparativeReport(
+  projectId: string
+): Promise<{ data: { status: string } } | { error: string }> {
+  return fetchApi<{ status: string }>(
+    `/api/crucible/projects/${projectId}/comparative-report`,
+    { method: "POST" }
+  );
+}
+
+export async function getComparativeReport(
+  projectId: string
+): Promise<{ data: ComparativeReportResponse } | { error: string }> {
+  const result = await fetchApi<Record<string, unknown>>(
+    `/api/crucible/projects/${projectId}/comparative-report`
+  );
+  if ("error" in result) return result;
+  const d = result.data;
+  return {
+    data: {
+      projectId: (d.project_id as string) || projectId,
+      simIds: (d.sim_ids as string[]) || [],
+      status: (d.status as string) || "generating",
+      executiveSummary: d.executive_summary as string | undefined,
+      comparisonMatrix: ((d.comparison_matrix as Array<Record<string, unknown>>) || []).map((m) => ({
+        scenario: (m.scenario as string) || "",
+        responseSpeed: (m.response_speed as number) || 0,
+        containmentEffectiveness: (m.containment_effectiveness as number) || 0,
+        communicationQuality: (m.communication_quality as number) || 0,
+        complianceAdherence: (m.compliance_adherence as number) || 0,
+        leadershipDecisiveness: (m.leadership_decisiveness as number) || 0,
+      })),
+      consistentWeaknesses: d.consistent_weaknesses as string[] | undefined,
+      scenarioFindings: ((d.scenario_findings as Array<Record<string, unknown>>) || []).map((sf) => ({
+        scenario: (sf.scenario as string) || "",
+        strengths: (sf.strengths as string[]) || [],
+        weaknesses: (sf.weaknesses as string[]) || [],
+        notableMoments: (sf.notable_moments as string[]) || [],
+      })),
+      recommendations: ((d.recommendations as Array<Record<string, unknown>>) || []).map((r) => ({
+        priority: (r.priority as number) || 0,
+        recommendation: (r.recommendation as string) || "",
+        addressesScenarios: (r.addresses_scenarios as string[]) || [],
+        impact: (r.impact as string) || "",
+      })),
+      error: d.error as string | undefined,
+    },
+  };
+}
