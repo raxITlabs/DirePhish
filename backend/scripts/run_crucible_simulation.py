@@ -413,7 +413,14 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                         **action_args,
                     }
                     msg_id = await channel.write_to_receive_queue(action_payload)
-                    response = await channel.read_from_send_queue(msg_id)
+                    try:
+                        response = await asyncio.wait_for(
+                            channel.read_from_send_queue(msg_id),
+                            timeout=30.0,
+                        )
+                    except asyncio.TimeoutError:
+                        print(f"  [{agent['name']}] {world_name}: channel response timed out, skipping")
+                        response = {"status": "timeout", "message": "Channel did not respond"}
                     result = response[1] if isinstance(response, tuple) else response
 
                     # Record in conversation history so next agents see this

@@ -365,14 +365,12 @@ Return ONLY valid JSON — an array:
 ]
 
 ONLY these platform types are available (no others exist):
-- slack: real-time coordination, quick decisions
-- email: formal communication, external parties, legal
-- pagerduty: on-call escalation, alerting
+- slack: real-time coordination, quick decisions, incident war rooms
+- email: formal communication, external parties, legal, regulatory disclosure
 
 REQUIREMENTS:
-- Always include slack and email (minimum 2 platforms)
-- Add pagerduty if scenario involves on-call escalation or alerting
-- Do NOT use any type not listed above (no siem, servicenow, edr, teams — they are not available)
+- Always include slack and email (exactly 2 platforms)
+- Do NOT use any other type (no pagerduty, siem, servicenow, edr, teams)
 - Each platform name should be descriptive of its role in THIS incident"""
 
     return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
