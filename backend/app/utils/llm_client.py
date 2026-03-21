@@ -1,6 +1,6 @@
 """
 LLM Client Wrapper
-Unified calls using OpenAI format
+Unified calls using OpenAI format. Instrumented with OpenTelemetry.
 """
 
 import json
@@ -9,6 +9,13 @@ from typing import Optional, Dict, Any, List
 from openai import OpenAI
 
 from ..config import Config
+
+# OpenTelemetry tracing
+try:
+    from opentelemetry import trace
+    _tracer = trace.get_tracer("mirofish.llm", "1.0.0")
+except ImportError:
+    _tracer = None
 
 
 class LLMClient:
@@ -58,23 +65,53 @@ class LLMClient:
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
-        
+
         if response_format:
             kwargs["response_format"] = response_format
-        
-        response = self.client.chat.completions.create(**kwargs)
-        # Capture token usage for cost tracking
-        if response.usage:
-            self.last_usage = {
-                "input_tokens": response.usage.prompt_tokens or 0,
-                "output_tokens": response.usage.completion_tokens or 0,
-            }
-        else:
-            self.last_usage = None
-        content = response.choices[0].message.content
-        # Some models (e.g., MiniMax M2.5) include <think> content in the response, which needs to be removed
-        content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
-        return content
+
+        # Wrap in OpenTelemetry span
+        span_ctx = _tracer.start_as_current_span(
+            "llm.chat",
+            attributes={
+                "llm.model": self.model,
+                "llm.temperature": temperature,
+                "llm.max_tokens": max_tokens,
+                "llm.message_count": len(messages),
+                "llm.has_json_mode": response_format is not None,
+            },
+        ) if _tracer else None
+
+        try:
+            if span_ctx:
+                span_ctx.__enter__()
+
+            response = self.client.chat.completions.create(**kwargs)
+            # Capture token usage for cost tracking
+            if response.usage:
+                self.last_usage = {
+                    "input_tokens": response.usage.prompt_tokens or 0,
+                    "output_tokens": response.usage.completion_tokens or 0,
+                }
+                # Record token usage in span
+                if span_ctx and _tracer:
+                    span = trace.get_current_span()
+                    span.set_attribute("llm.input_tokens", self.last_usage["input_tokens"])
+                    span.set_attribute("llm.output_tokens", self.last_usage["output_tokens"])
+            else:
+                self.last_usage = None
+            content = response.choices[0].message.content
+            # Some models (e.g., MiniMax M2.5) include <think> content in the response, which needs to be removed
+            content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
+            return content
+        except Exception as e:
+            if span_ctx and _tracer:
+                span = trace.get_current_span()
+                span.set_attribute("llm.error", str(e))
+                span.set_status(trace.StatusCode.ERROR, str(e))
+            raise
+        finally:
+            if span_ctx:
+                span_ctx.__exit__(None, None, None)
     
     def chat_json(
         self,

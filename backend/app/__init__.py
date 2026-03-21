@@ -15,6 +15,26 @@ from flask_cors import CORS
 from .config import Config
 from .utils.logger import setup_logger, get_logger
 
+# Initialize OpenTelemetry tracing
+try:
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanExporter, ConsoleSpanExporter
+    from opentelemetry.sdk.resources import Resource
+
+    resource = Resource.create({"service.name": "mirofish-backend", "service.version": "1.0.0"})
+    provider = TracerProvider(resource=resource)
+
+    # Export to console in dev (add OTLP exporter for production)
+    otel_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if otel_endpoint:
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        provider.add_span_processor(BatchSpanExporter(OTLPSpanExporter(endpoint=otel_endpoint)))
+    # Always set the provider so spans are recorded
+    trace.set_tracer_provider(provider)
+except ImportError:
+    pass  # OTel packages not installed — tracing disabled
+
 
 def create_app(config_class=Config):
     """Flask application factory function"""
