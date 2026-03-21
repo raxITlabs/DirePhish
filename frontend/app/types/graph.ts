@@ -8,6 +8,10 @@ export interface GraphNode {
   name: string;
   type: string;
   attributes: Record<string, unknown>;
+  summary?: string;
+  created_at?: string;
+  uuid?: string;
+  labels?: string[];
 }
 
 export interface GraphEdge {
@@ -15,4 +19,9 @@ export interface GraphEdge {
   target: string;
   label: string;
   type: string;
+  fact?: string;
+  uuid?: string;
+  created_at?: string;
+  valid_at?: string;
+  episodes?: string[];
 }
