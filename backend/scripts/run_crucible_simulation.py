@@ -143,6 +143,21 @@ def _call_llm(
     return "do_nothing", {}, usage
 
 
+def _evaluate_condition(condition: dict, actions: list[dict]) -> bool:
+    """Check if any action in history matches the condition's keywords + target systems."""
+    keywords = [k.lower() for k in condition.get("keywords", [])]
+    targets = [t.lower() for t in condition.get("target_systems", [])]
+    if not keywords:
+        return False
+    for action in actions:
+        action_text = f"{action.get('action', '')} {json.dumps(action.get('args', {}))}".lower()
+        keyword_match = any(kw in action_text for kw in keywords)
+        target_match = not targets or any(t in action_text for t in targets)
+        if keyword_match and target_match:
+            return True
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Graphiti helper
 # ---------------------------------------------------------------------------
@@ -292,10 +307,10 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
     scenario = config.get("scenario", "")
 
     # Scheduled events (injects that fire at specific rounds)
-    scheduled_events: dict[int, list[str]] = {}
+    scheduled_events: dict[int, list[dict]] = {}
     for event in config.get("scheduled_events", []):
         r = event["round"]
-        scheduled_events.setdefault(r, []).append(event["description"])
+        scheduled_events.setdefault(r, []).append(event)
 
     # Track active events for context
     active_events: list[str] = []
@@ -304,14 +319,22 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
         for round_num in range(1, total_rounds + 1):
             # Check for scheduled injects this round
             if round_num in scheduled_events:
-                for event_desc in scheduled_events[round_num]:
-                    active_events.append(event_desc)
-                    # Add to all world histories so agents see it
+                for event in scheduled_events[round_num]:
+                    # Resolve inject text (conditional or plain)
+                    if isinstance(event, dict) and event.get("condition"):
+                        condition_met = _evaluate_condition(event["condition"], all_actions)
+                        inject_text = event["condition"]["alternative"] if condition_met else event["description"]
+                    elif isinstance(event, dict):
+                        inject_text = event.get("description", str(event))
+                    else:
+                        inject_text = str(event)  # backward compat
+
+                    active_events.append(inject_text)
                     for wn in world_history:
                         world_history[wn].append(
-                            f"🚨 [SYSTEM ALERT] {event_desc}"
+                            f"🚨 [SYSTEM ALERT] {inject_text}"
                         )
-                    print(f"\n🚨 INJECT: {event_desc}")
+                    print(f"\n🚨 INJECT: {inject_text}")
 
             # Tick pressure engine each round
             env.pressure_engine.tick()
