@@ -67,14 +67,14 @@ export default function HomeClient({ simulations }: HomeClientProps) {
   const isRunning = (status: string) => status === "running" || status === "starting";
 
   return (
-    <div className="dark h-screen flex bg-[#131313] text-[#e5e2e1] overflow-hidden">
+    <div className="dark h-screen flex bg-background text-foreground overflow-hidden">
       {/* ── Sidebar ── */}
-      <aside className="w-[240px] shrink-0 bg-[#1a1a1a] border-r border-[#222] flex flex-col">
+      <aside className="w-[240px] shrink-0 bg-sidebar border-r border-sidebar-border flex flex-col">
         <div className="px-5 pt-6 pb-4">
-          <h1 className="font-mono text-xl font-bold text-primary tracking-tighter">
+          <h1 className="font-mono text-xl font-bold text-sidebar-primary tracking-tighter">
             DirePhish
           </h1>
-          <p className="font-mono text-[10px] tracking-widest text-muted-foreground/50 mt-0.5">
+          <p className="font-mono text-[10px] tracking-widest text-sidebar-foreground/50 mt-0.5">
             BY RAXIT LABS
           </p>
         </div>
@@ -82,7 +82,7 @@ export default function HomeClient({ simulations }: HomeClientProps) {
         <nav className="flex-1 overflow-y-auto px-3 space-y-6">
           {simulations.length > 0 && (
             <div>
-              <h3 className="font-mono uppercase text-[10px] tracking-[0.15em] text-muted-foreground/40 px-2 mb-2">
+              <h3 className="font-mono uppercase text-[10px] tracking-[0.15em] text-sidebar-foreground/40 px-2 mb-2">
                 Recent
               </h3>
               <ul className="space-y-0.5">
@@ -92,8 +92,8 @@ export default function HomeClient({ simulations }: HomeClientProps) {
                       href={getSimHref(sim)}
                       className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-all duration-150 ${
                         isRunning(sim.status)
-                          ? "text-primary bg-primary/8 border-r-2 border-primary"
-                          : "text-muted-foreground/70 hover:text-primary/80 hover:bg-[#222]"
+                          ? "text-sidebar-primary bg-sidebar-primary/8 border-r-2 border-sidebar-primary"
+                          : "text-sidebar-foreground/70 hover:text-sidebar-primary/80 hover:bg-sidebar-accent"
                       }`}
                     >
                       <span className="text-xs">
@@ -110,8 +110,8 @@ export default function HomeClient({ simulations }: HomeClientProps) {
           )}
         </nav>
 
-        <div className="px-5 py-4 border-t border-[#222]">
-          <p className="font-mono text-[9px] text-muted-foreground/30">
+        <div className="px-5 py-4 border-t border-sidebar-border">
+          <p className="font-mono text-[9px] text-sidebar-foreground/30">
             v0.1 · Crucible Engine
           </p>
         </div>
@@ -139,7 +139,7 @@ export default function HomeClient({ simulations }: HomeClientProps) {
 
         {/* Input Panel */}
         <div className="w-full max-w-2xl relative z-10">
-          <div className="bg-[#1a1a1a]/70 backdrop-blur-xl rounded-2xl border border-[#2a2a2a] overflow-hidden transition-all duration-300 focus-within:border-primary/25">
+          <div className="bg-card/70 backdrop-blur-xl rounded-2xl border border-border overflow-hidden transition-all duration-300 focus-within:border-primary/25">
             <div className="p-8 space-y-6">
               {/* URL Input */}
               <div>
@@ -156,7 +156,7 @@ export default function HomeClient({ simulations }: HomeClientProps) {
                     onChange={(e) => setUrl(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="https://company.com"
-                    className="w-full bg-[#111]/50 border border-[#2a2a2a] rounded-xl py-3.5 pl-11 pr-4 text-[#e5e2e1] font-mono text-base placeholder:text-muted-foreground/20 focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary/30 transition-all"
+                    className="w-full bg-background/50 border border-input rounded-xl py-3.5 pl-11 pr-4 text-foreground font-mono text-base placeholder:text-muted-foreground/20 focus:outline-none focus:ring-1 focus:ring-ring/20 focus:border-ring/30 transition-all"
                   />
                 </div>
               </div>
@@ -172,7 +172,7 @@ export default function HomeClient({ simulations }: HomeClientProps) {
                   onChange={(e) => setContext(e.target.value)}
                   placeholder="E.g., 'Recent phishing attempts detected', 'Focus on department-specific vectors'..."
                   rows={3}
-                  className="w-full bg-[#111]/50 border border-[#2a2a2a] rounded-xl p-4 text-sm text-[#e5e2e1] placeholder:text-muted-foreground/20 focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary/30 transition-all resize-none"
+                  className="w-full bg-background/50 border border-input rounded-xl p-4 text-sm text-foreground placeholder:text-muted-foreground/20 focus:outline-none focus:ring-1 focus:ring-ring/20 focus:border-ring/30 transition-all resize-none"
                 />
               </div>
 
@@ -185,7 +185,7 @@ export default function HomeClient({ simulations }: HomeClientProps) {
                 <div
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={handleFileDrop}
-                  className="border-2 border-dashed border-[#2a2a2a] rounded-xl py-8 flex flex-col items-center justify-center gap-2 hover:bg-[#111]/30 hover:border-primary/15 transition-all cursor-pointer group"
+                  className="border-2 border-dashed border-border rounded-xl py-8 flex flex-col items-center justify-center gap-2 hover:bg-background/30 hover:border-primary/15 transition-all cursor-pointer group"
                 >
                   {files.length === 0 ? (
                     <>
@@ -214,7 +214,7 @@ export default function HomeClient({ simulations }: HomeClientProps) {
                       {files.map((f, i) => (
                         <span
                           key={i}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#222] rounded-md font-mono text-[11px] text-muted-foreground/60"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-muted rounded-md font-mono text-[11px] text-muted-foreground/60"
                         >
                           {f.name}
                           <button
@@ -232,7 +232,7 @@ export default function HomeClient({ simulations }: HomeClientProps) {
 
               {/* Error */}
               {error && (
-                <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-400 font-mono">
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive font-mono">
                   {error}
                 </div>
               )}
