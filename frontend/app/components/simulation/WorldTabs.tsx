@@ -5,6 +5,7 @@ import type { AgentAction, ScheduledEvent } from "@/app/types";
 import SlackWorld from "./SlackWorld";
 import EmailWorld from "./EmailWorld";
 import TimelineView from "./TimelineView";
+import AgentSummary from "./AgentSummary";
 
 interface Props {
   actions: AgentAction[];
@@ -18,6 +19,7 @@ export default function WorldTabs({ actions, scheduledEvents }: Props) {
         <TabsTrigger value="slack">Slack</TabsTrigger>
         <TabsTrigger value="email">Email</TabsTrigger>
         <TabsTrigger value="timeline">Timeline</TabsTrigger>
+        <TabsTrigger value="agents">Agents</TabsTrigger>
       </TabsList>
       <TabsContent value="slack" className="flex-1 min-h-0 overflow-y-auto mt-0">
         <SlackWorld actions={actions} scheduledEvents={scheduledEvents} />
@@ -27,6 +29,9 @@ export default function WorldTabs({ actions, scheduledEvents }: Props) {
       </TabsContent>
       <TabsContent value="timeline" className="flex-1 min-h-0 overflow-y-auto mt-0">
         <TimelineView actions={actions} scheduledEvents={scheduledEvents} />
+      </TabsContent>
+      <TabsContent value="agents" className="flex-1 min-h-0 overflow-y-auto mt-0">
+        <AgentSummary actions={actions} />
       </TabsContent>
     </Tabs>
   );

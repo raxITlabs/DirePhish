@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { AgentAction } from "@/app/types";
 import { Card } from "@/app/components/ui/card";
+import { Badge } from "@/app/components/ui/badge";
 import RoundDivider from "./RoundDivider";
 
 interface Props {
@@ -43,6 +44,9 @@ export default function EmailWorld({ actions }: Props) {
                     <span className="text-sm font-medium truncate">
                       {action.agent}
                     </span>
+                    <Badge variant={action.action === "reply_email" ? "secondary" : "outline"} className="text-[10px]">
+                      {action.action === "reply_email" ? "reply" : "email"}
+                    </Badge>
                     <span className="text-xs text-muted-foreground">&rarr;</span>
                     <span className="text-xs text-muted-foreground truncate">
                       {(action.args.to as string) || ""}

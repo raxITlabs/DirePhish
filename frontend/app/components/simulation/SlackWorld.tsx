@@ -74,6 +74,9 @@ export default function SlackWorld({ actions, scheduledEvents }: Props) {
                   <Badge variant="secondary" className={`text-[10px] font-mono ${getRoleColor(action.role)}`}>
                     {action.role}
                   </Badge>
+                  <Badge variant={action.action === "reply_in_thread" ? "secondary" : "outline"} className="text-[10px]">
+                    {action.action === "reply_in_thread" ? "thread" : "message"}
+                  </Badge>
                   <span className="text-xs text-muted-foreground">
                     {new Date(action.timestamp).toLocaleTimeString()}
                   </span>

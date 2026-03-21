@@ -10,6 +10,7 @@ import { getSimulationStatus, getSimulationActions, stopSimulation } from "@/app
 import { generateReport } from "@/app/actions/report";
 import { getGraphData } from "@/app/actions/graph";
 import GraphPanel from "@/app/components/simulation/GraphPanel";
+import WorldStats from "@/app/components/simulation/WorldStats";
 import SplitPanel from "@/app/components/shared/SplitPanel";
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
@@ -109,6 +110,9 @@ export default function SimulationPage({
           <span className="text-sm font-medium">
             Round <strong>{status?.currentRound || 0}</strong>/{status?.totalRounds || "?"}
           </span>
+          <span className="text-xs text-muted-foreground font-mono">
+            {actions.length} actions &middot; {new Set(actions.map((a) => a.agent)).size} agents
+          </span>
           <Badge variant={statusVariant}>
             {status?.status || "loading"}
           </Badge>
@@ -134,6 +138,11 @@ export default function SimulationPage({
       {/* Pressure strip */}
       <div className="px-4 pt-3">
         <PressureStrip pressures={status?.pressures || []} />
+      </div>
+
+      {/* World stats */}
+      <div className="px-4 pt-2">
+        <WorldStats actions={actions} />
       </div>
 
       {/* Split panels */}
