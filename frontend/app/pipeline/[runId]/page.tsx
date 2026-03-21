@@ -83,41 +83,43 @@ export default function PipelinePage({
         if (!res.ok) return;
         const json = await res.json();
         if (json.data?.updates) {
-          const newSteps: Record<string, StepState> = { ...steps };
-          for (const update of json.data.updates as PipelineUpdate[]) {
-            newSteps[update.step] = {
-              status: update.status,
-              message: update.message,
-              detail: update.detail,
-              durationMs: update.durationMs,
-              cost: update.cost,
-            };
+          setSteps((prev) => {
+            const newSteps = { ...prev };
+            for (const update of json.data.updates as PipelineUpdate[]) {
+              newSteps[update.step] = {
+                status: update.status,
+                message: update.message,
+                detail: update.detail,
+                durationMs: update.durationMs,
+                cost: update.cost,
+              };
 
-            // Check for hook data (dossier review pause)
-            if (update.step === "dossier_review" && update.detail) {
-              try {
-                const parsed = JSON.parse(update.detail);
-                if (parsed.hookToken && parsed.projectId) {
-                  setHookData(parsed);
-                  setProjectId(parsed.projectId);
+              // Check for hook data (dossier review pause)
+              if (update.step === "dossier_review" && update.detail) {
+                try {
+                  const parsed = JSON.parse(update.detail);
+                  if (parsed.hookToken && parsed.projectId) {
+                    setHookData(parsed);
+                    setProjectId(parsed.projectId);
+                  }
+                } catch {
+                  // detail is not hook JSON, that's fine
                 }
-              } catch {
-                // detail is not hook JSON, that's fine
+              }
+
+              // Check for completion
+              if (update.step === "complete") {
+                setPipelineComplete(true);
+              }
+
+              // Check for project ID in research step
+              if (update.step === "research" && update.detail?.startsWith("Project:")) {
+                const pid = update.detail.replace("Project: ", "");
+                setProjectId(pid);
               }
             }
-
-            // Check for completion
-            if (update.step === "complete") {
-              setPipelineComplete(true);
-            }
-
-            // Check for project ID in research step
-            if (update.step === "research" && update.detail?.startsWith("Project:")) {
-              const pid = update.detail.replace("Project: ", "");
-              setProjectId(pid);
-            }
-          }
-          setSteps(newSteps);
+            return newSteps;
+          });
         }
       } catch {
         // polling failure is ok
@@ -125,7 +127,7 @@ export default function PipelinePage({
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [runId, pipelineComplete, steps]);
+  }, [runId, pipelineComplete]);
 
   // Load dossier when hook fires
   useEffect(() => {
