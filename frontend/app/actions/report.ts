@@ -22,6 +22,10 @@ export async function generateReport(
   simulationId: string,
   forceRegenerate = false
 ): Promise<{ data: GenerateReportResponse } | { error: string }> {
+  // Crucible projects use the crucible report endpoint
+  if (simulationId.startsWith("proj_")) {
+    return generateCrucibleReport(simulationId);
+  }
   return fetchApi<GenerateReportResponse>("/api/report/generate", {
     method: "POST",
     body: JSON.stringify({
@@ -29,6 +33,66 @@ export async function generateReport(
       force_regenerate: forceRegenerate,
     }),
   });
+}
+
+// --- Crucible report helpers ---
+
+export async function generateCrucibleReport(
+  simId: string
+): Promise<{ data: GenerateReportResponse } | { error: string }> {
+  const result = await fetchApi<{ status: string }>(
+    `/api/crucible/simulations/${simId}/report`,
+    { method: "POST" }
+  );
+  if ("error" in result) return result;
+  return {
+    data: {
+      simulation_id: simId,
+      report_id: simId, // crucible uses simId as the report key
+      task_id: "",
+      status: result.data.status === "complete" ? "completed" : "generating",
+      message: "",
+      already_generated: result.data.status === "complete",
+    },
+  };
+}
+
+export async function getCrucibleReport(
+  simId: string
+): Promise<{ data: CrucibleReport } | { error: string }> {
+  return fetchApi<CrucibleReport>(
+    `/api/crucible/simulations/${simId}/report`
+  );
+}
+
+export interface CrucibleReport {
+  simId: string;
+  status: string;
+  companyName?: string;
+  scenarioName?: string;
+  completedAt?: string;
+  duration?: string;
+  executiveSummary?: string;
+  timeline?: Array<{
+    round: number;
+    timestamp: string;
+    description: string;
+    significance: string;
+    agent: string;
+  }>;
+  communicationAnalysis?: string;
+  tensions?: string;
+  agentScores?: Array<{
+    name: string;
+    role: string;
+    score: number;
+    strengths: string[];
+    weaknesses: string[];
+    actionCount: number;
+    worldBreakdown: Record<string, number>;
+  }>;
+  recommendations?: string[];
+  error?: string;
 }
 
 export async function getGenerateStatus(

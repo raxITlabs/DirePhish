@@ -10,6 +10,7 @@ import DossierEditor from "@/app/components/research/DossierEditor";
 import SplitPanel from "@/app/components/shared/SplitPanel";
 import { Alert, AlertDescription } from "@/app/components/ui/alert";
 import { Skeleton } from "@/app/components/ui/skeleton";
+import Breadcrumbs from "@/app/components/layout/Breadcrumbs";
 import {
   getProjectStatus,
   getDossier,
@@ -127,10 +128,7 @@ export default function ResearchPage({
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
         <div className="flex items-center gap-3">
-          <span className="font-semibold">Research</span>
-          <span className="text-sm text-muted-foreground font-mono">
-            {projectId}
-          </span>
+          <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Research" }, { label: projectId }]} />
         </div>
         {project.status === "research_complete" && (
           <ViewToggle mode={viewMode} onChange={setViewMode} />

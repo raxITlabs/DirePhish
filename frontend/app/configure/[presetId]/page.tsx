@@ -6,6 +6,7 @@ import PressureCards from "@/app/components/configure/PressureCards";
 import EventTimeline from "@/app/components/configure/EventTimeline";
 import LaunchBar from "@/app/components/configure/LaunchBar";
 import { Alert, AlertDescription } from "@/app/components/ui/alert";
+import Breadcrumbs from "@/app/components/layout/Breadcrumbs";
 import { getPresetConfig } from "@/app/actions/presets";
 
 export default async function ConfigurePage({
@@ -35,6 +36,9 @@ export default async function ConfigurePage({
     <>
       <Header />
       <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10 pb-24">
+        <div className="mb-4">
+          <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Configure" }, { label: presetId }]} />
+        </div>
         <div className="mb-8">
           <h1 className="text-2xl font-bold mb-1">{config.companyName || presetId}</h1>
           {config.scenario && (

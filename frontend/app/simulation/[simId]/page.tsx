@@ -15,6 +15,7 @@ import SplitPanel from "@/app/components/shared/SplitPanel";
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
 import { Alert, AlertDescription } from "@/app/components/ui/alert";
+import Breadcrumbs from "@/app/components/layout/Breadcrumbs";
 import type { SimulationStatus, AgentAction, ScheduledEvent, GraphData } from "@/app/types";
 
 export default function SimulationPage({
@@ -102,8 +103,7 @@ export default function SimulationPage({
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
         <div className="flex items-center gap-3">
-          <span className="font-semibold">Crucible</span>
-          <span className="text-sm text-muted-foreground">{simId}</span>
+          <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Simulation" }, { label: simId }]} />
         </div>
         <div className="flex items-center gap-3">
           <ViewToggle mode={viewMode} onChange={setViewMode} />

@@ -11,6 +11,7 @@ import EventTimeline from "@/app/components/configure/EventTimeline";
 import { Alert, AlertDescription } from "@/app/components/ui/alert";
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { Button } from "@/app/components/ui/button";
+import Breadcrumbs from "@/app/components/layout/Breadcrumbs";
 import { getProjectStatus, getProjectConfig, linkSimToProject } from "@/app/actions/project";
 import { launchSimulation } from "@/app/actions/simulation";
 import type { SimulationConfig, Project } from "@/app/types";
@@ -122,6 +123,9 @@ export default function ConfigureProjectPage({
     <>
       <Header />
       <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10 pb-24">
+        <div className="mb-4">
+          <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Configure" }, { label: projectId }]} />
+        </div>
         <div className="mb-8">
           <h1 className="text-2xl font-bold mb-1">{config.companyName}</h1>
           {config.scenario && (

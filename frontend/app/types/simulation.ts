@@ -1,3 +1,11 @@
+export interface SimulationSummary {
+  simId: string;
+  status: string;
+  currentRound: number;
+  totalRounds: number;
+  actionCount: number;
+}
+
 export interface SimulationConfig {
   simulationId?: string;
   companyName: string;

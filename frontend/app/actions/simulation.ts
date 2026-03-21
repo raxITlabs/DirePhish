@@ -1,7 +1,21 @@
 "use server";
 
 import { fetchApi } from "@/app/lib/api";
-import type { SimulationConfig, SimulationStatus, AgentAction } from "@/app/types";
+import type { SimulationConfig, SimulationStatus, SimulationSummary, AgentAction } from "@/app/types";
+
+export async function listSimulations(): Promise<{ data: SimulationSummary[] } | { error: string }> {
+  const result = await fetchApi<{ sim_id: string; status: string; current_round: number; total_rounds: number; action_count: number }[]>("/api/crucible/simulations");
+  if ("error" in result) return result;
+  return {
+    data: result.data.map((s) => ({
+      simId: s.sim_id,
+      status: s.status,
+      currentRound: s.current_round,
+      totalRounds: s.total_rounds,
+      actionCount: s.action_count,
+    })),
+  };
+}
 
 export async function launchSimulation(
   config: SimulationConfig

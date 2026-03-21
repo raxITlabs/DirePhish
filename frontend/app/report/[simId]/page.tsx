@@ -14,6 +14,7 @@ import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import { Alert, AlertDescription } from "@/app/components/ui/alert";
 import { FileText, Loader2 } from "lucide-react";
+import Breadcrumbs from "@/app/components/layout/Breadcrumbs";
 import {
   checkReport,
   generateReport,
@@ -22,6 +23,8 @@ import {
   getFullReport,
   getAgentLog,
   getConsoleLog,
+  getCrucibleReport,
+  type CrucibleReport,
 } from "@/app/actions/report";
 import type {
   ReportStatus,
@@ -48,6 +51,9 @@ export default function ReportPage({
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [generating, setGenerating] = useState(false);
+  const [crucibleReport, setCrucibleReport] = useState<CrucibleReport | null>(null);
+
+  const isCrucible = simId.startsWith("proj_");
 
   // Use refs to track current lengths for incremental fetching inside intervals
   const agentLogsLenRef = useRef(0);
@@ -88,6 +94,28 @@ export default function ReportPage({
   // On mount: check if report exists
   useEffect(() => {
     const init = async () => {
+      if (isCrucible) {
+        // Crucible: check via GET /api/crucible/simulations/{id}/report
+        const result = await getCrucibleReport(simId);
+        if ("error" in result) {
+          // No report yet — stay in PENDING
+          return;
+        }
+        if (result.data.status === "complete") {
+          setCrucibleReport(result.data);
+          setReportId(simId);
+          setStatus("COMPLETED");
+        } else if (result.data.status === "failed") {
+          setStatus("FAILED");
+          setError(result.data.error || "Report generation failed.");
+        } else {
+          // Generating
+          setReportId(simId);
+          setStatus("GENERATING");
+        }
+        return;
+      }
+
       const result = await checkReport(simId);
       if ("error" in result) {
         setError(result.error);
@@ -113,7 +141,7 @@ export default function ReportPage({
       // If no report, stay in PENDING state showing Generate button
     };
     init();
-  }, [simId, fetchCompleteReport]);
+  }, [simId, isCrucible, fetchCompleteReport]);
 
   // Handle generate button
   const handleGenerate = async () => {
@@ -126,13 +154,44 @@ export default function ReportPage({
       return;
     }
     setReportId(result.data.report_id);
-    setStatus("PLANNING");
+    if (result.data.already_generated) {
+      // Crucible report was already complete
+      if (isCrucible) {
+        const reportResult = await getCrucibleReport(simId);
+        if ("data" in reportResult) setCrucibleReport(reportResult.data);
+      }
+      setStatus("COMPLETED");
+    } else {
+      setStatus(isCrucible ? "GENERATING" : "PLANNING");
+    }
     setGenerating(false);
   };
 
-  // Polling: progress
+  // Polling: crucible report (simple poll until complete)
   useEffect(() => {
-    if (!reportId) return;
+    if (!isCrucible || !reportId) return;
+    if (status === "COMPLETED" || status === "FAILED" || status === "PENDING")
+      return;
+
+    const interval = setInterval(async () => {
+      const result = await getCrucibleReport(simId);
+      if ("data" in result) {
+        if (result.data.status === "complete") {
+          setCrucibleReport(result.data);
+          setStatus("COMPLETED");
+        } else if (result.data.status === "failed") {
+          setStatus("FAILED");
+          setError(result.data.error || "Report generation failed.");
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isCrucible, reportId, simId, status]);
+
+  // Polling: progress (non-crucible only)
+  useEffect(() => {
+    if (isCrucible || !reportId) return;
     if (status === "COMPLETED" || status === "FAILED" || status === "PENDING")
       return;
 
@@ -164,11 +223,11 @@ export default function ReportPage({
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [reportId, status, fetchCompleteReport]);
+  }, [isCrucible, reportId, status, fetchCompleteReport]);
 
-  // Polling: sections
+  // Polling: sections (non-crucible only)
   useEffect(() => {
-    if (!reportId) return;
+    if (isCrucible || !reportId) return;
     if (status === "COMPLETED" || status === "FAILED" || status === "PENDING")
       return;
 
@@ -182,9 +241,9 @@ export default function ReportPage({
     return () => clearInterval(interval);
   }, [reportId, status]);
 
-  // Polling: agent logs
+  // Polling: agent logs (non-crucible only)
   useEffect(() => {
-    if (!reportId) return;
+    if (isCrucible || !reportId) return;
     if (status === "COMPLETED" || status === "FAILED" || status === "PENDING")
       return;
 
@@ -198,9 +257,9 @@ export default function ReportPage({
     return () => clearInterval(interval);
   }, [reportId, status]);
 
-  // Polling: console logs
+  // Polling: console logs (non-crucible only)
   useEffect(() => {
-    if (!reportId) return;
+    if (isCrucible || !reportId) return;
     if (status === "COMPLETED" || status === "FAILED" || status === "PENDING")
       return;
 
@@ -216,6 +275,47 @@ export default function ReportPage({
 
     return () => clearInterval(interval);
   }, [reportId, status]);
+
+  // Convert crucible report to outline + sections format for ReportContent
+  useEffect(() => {
+    if (!crucibleReport || crucibleReport.status !== "complete") return;
+
+    const sectionEntries: { title: string; content: string }[] = [];
+    if (crucibleReport.executiveSummary) {
+      sectionEntries.push({ title: "Executive Summary", content: crucibleReport.executiveSummary });
+    }
+    if (crucibleReport.communicationAnalysis) {
+      sectionEntries.push({ title: "Communication Analysis", content: crucibleReport.communicationAnalysis });
+    }
+    if (crucibleReport.tensions) {
+      sectionEntries.push({ title: "Tensions & Conflicts", content: crucibleReport.tensions });
+    }
+    if (crucibleReport.agentScores && crucibleReport.agentScores.length > 0) {
+      const scoresContent = crucibleReport.agentScores.map((a) =>
+        `### ${a.name} (${a.role}) — Score: ${a.score}/10\n\n` +
+        `**Strengths:** ${a.strengths.join(", ") || "N/A"}\n\n` +
+        `**Weaknesses:** ${a.weaknesses.join(", ") || "N/A"}\n\n` +
+        `**Actions:** ${a.actionCount}`
+      ).join("\n\n---\n\n");
+      sectionEntries.push({ title: "Agent Scorecards", content: scoresContent });
+    }
+    if (crucibleReport.recommendations && crucibleReport.recommendations.length > 0) {
+      const recsContent = crucibleReport.recommendations.map((r, i) => `${i + 1}. ${r}`).join("\n");
+      sectionEntries.push({ title: "Recommendations", content: recsContent });
+    }
+
+    setOutline({
+      title: `${crucibleReport.companyName || "Simulation"} — ${crucibleReport.scenarioName || "After-Action Report"}`,
+      summary: `Completed ${crucibleReport.completedAt ? new Date(crucibleReport.completedAt).toLocaleDateString() : ""} · ${crucibleReport.duration || ""}`,
+      sections: sectionEntries,
+    });
+
+    setSections(sectionEntries.map((s, i) => ({
+      filename: "",
+      section_index: i + 1,
+      content: s.content,
+    })));
+  }, [crucibleReport]);
 
   const isActive =
     status === "PLANNING" || status === "GENERATING";
@@ -235,18 +335,21 @@ export default function ReportPage({
       <Header />
 
       {/* Status bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
-        <div className="flex items-center gap-3">
-          <FileText size={16} className="text-muted-foreground" />
-          <span className="font-semibold text-sm truncate max-w-md">
-            {reportName}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          {!isPreGeneration && (
-            <ViewToggle mode={viewMode} onChange={setViewMode} />
-          )}
-          <Badge variant={statusVariant}>{status}</Badge>
+      <div className="flex flex-col gap-1 px-4 py-2 border-b border-border bg-card">
+        <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Report" }, { label: simId }]} />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FileText size={16} className="text-muted-foreground" />
+            <span className="font-semibold text-sm truncate max-w-md">
+              {reportName}
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            {!isPreGeneration && (
+              <ViewToggle mode={viewMode} onChange={setViewMode} />
+            )}
+            <Badge variant={statusVariant}>{status}</Badge>
+          </div>
         </div>
       </div>
 

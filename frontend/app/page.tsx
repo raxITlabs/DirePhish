@@ -2,6 +2,7 @@ import Header from "@/app/components/layout/Header";
 import PresetGrid from "@/app/components/home/PresetGrid";
 import UploadZone from "@/app/components/home/UploadZone";
 import ResearchForm from "@/app/components/home/ResearchForm";
+import SimulationHistory from "@/app/components/home/SimulationHistory";
 import { Alert, AlertDescription } from "@/app/components/ui/alert";
 import { getPresets } from "@/app/actions/presets";
 
@@ -26,6 +27,11 @@ export default async function Home() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+
+        <section className="mb-10">
+          <h2 className="text-lg font-semibold mb-4">Recent Simulations</h2>
+          <SimulationHistory />
+        </section>
 
         <section className="mb-10">
           <h2 className="text-lg font-semibold mb-4">Research Your Company</h2>
