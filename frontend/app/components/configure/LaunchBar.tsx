@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { launchSimulation } from "@/app/actions/simulation";
+import { Button } from "@/app/components/ui/button";
 import type { SimulationConfig } from "@/app/types";
 
 export default function LaunchBar({ config }: { config: SimulationConfig }) {
@@ -25,18 +26,17 @@ export default function LaunchBar({ config }: { config: SimulationConfig }) {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card px-6 py-3 flex items-center justify-between z-50">
-      <div className="text-sm text-text-secondary">
+      <div className="text-sm text-muted-foreground">
         {config.agents.length} agents · {config.worlds.length} worlds · {config.totalRounds} rounds
       </div>
       <div className="flex items-center gap-3">
-        {error && <span className="text-sm text-severity-critical-text">{error}</span>}
-        <button
+        {error && <span className="text-sm text-destructive">{error}</span>}
+        <Button
           onClick={handleLaunch}
           disabled={launching || config.agents.length === 0}
-          className="px-6 py-2 rounded-lg bg-accent text-white font-medium text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
         >
           {launching ? "Launching..." : "Launch Simulation"}
-        </button>
+        </Button>
       </div>
     </div>
   );

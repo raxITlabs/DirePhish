@@ -8,6 +8,9 @@ import AgentCards from "@/app/components/configure/AgentCards";
 import WorldList from "@/app/components/configure/WorldList";
 import PressureCards from "@/app/components/configure/PressureCards";
 import EventTimeline from "@/app/components/configure/EventTimeline";
+import { Alert, AlertDescription } from "@/app/components/ui/alert";
+import { Skeleton } from "@/app/components/ui/skeleton";
+import { Button } from "@/app/components/ui/button";
 import { getProjectStatus, getProjectConfig, linkSimToProject } from "@/app/actions/project";
 import { launchSimulation } from "@/app/actions/simulation";
 import type { SimulationConfig, Project } from "@/app/types";
@@ -81,9 +84,9 @@ export default function ConfigureProjectPage({
       <>
         <Header />
         <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10">
-          <div className="p-4 rounded-lg bg-severity-critical-bg border border-severity-critical-border text-severity-critical-text">
-            {error}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         </main>
       </>
     );
@@ -95,13 +98,17 @@ export default function ConfigureProjectPage({
         <Header />
         <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10">
           <div className="text-center py-20">
-            <div className="text-lg font-medium mb-2">Generating simulation config...</div>
-            <div className="text-sm text-text-secondary">
-              {project?.progressMessage || "The AI is building agents, scenarios, and pressures from your company data."}
+            <div className="space-y-3 max-w-xs mx-auto mb-4">
+              <Skeleton className="h-5 w-3/4 mx-auto" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
             </div>
-            <div className="mt-4 w-48 mx-auto h-1.5 bg-gray-100 rounded-full">
+            <p className="text-sm text-muted-foreground">
+              {project?.progressMessage || "The AI is building agents, scenarios, and pressures from your company data."}
+            </p>
+            <div className="mt-4 w-48 mx-auto h-1.5 bg-muted rounded-full">
               <div
-                className="h-full rounded-full bg-accent transition-all duration-500"
+                className="h-full rounded-full bg-primary transition-all duration-500"
                 style={{ width: `${project?.progress || 0}%` }}
               />
             </div>
@@ -118,7 +125,7 @@ export default function ConfigureProjectPage({
         <div className="mb-8">
           <h1 className="text-2xl font-bold mb-1">{config.companyName}</h1>
           {config.scenario && (
-            <p className="text-sm text-text-secondary mt-2">{config.scenario}</p>
+            <p className="text-sm text-muted-foreground mt-2">{config.scenario}</p>
           )}
         </div>
 
@@ -146,27 +153,26 @@ export default function ConfigureProjectPage({
           <h2 className="text-lg font-semibold mb-3">Settings</h2>
           <div className="flex gap-6 text-sm">
             <div>
-              <span className="text-text-secondary">Rounds:</span>{" "}
+              <span className="text-muted-foreground">Rounds:</span>{" "}
               <span className="font-medium">{config.totalRounds}</span>
             </div>
             <div>
-              <span className="text-text-secondary">Hours per round:</span>{" "}
+              <span className="text-muted-foreground">Hours per round:</span>{" "}
               <span className="font-medium">{config.hoursPerRound}</span>
             </div>
           </div>
         </section>
 
         <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card px-6 py-3 flex items-center justify-between z-50">
-          <div className="text-sm text-text-secondary">
+          <div className="text-sm text-muted-foreground">
             {config.agents.length} agents · {config.worlds.length} worlds · {config.totalRounds} rounds
           </div>
-          <button
+          <Button
             onClick={handleLaunch}
             disabled={launching || config.agents.length === 0}
-            className="px-6 py-2 rounded-lg bg-accent text-white font-medium text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
           >
             {launching ? "Launching..." : "Launch Simulation"}
-          </button>
+          </Button>
         </div>
       </main>
     </>

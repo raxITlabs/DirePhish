@@ -5,6 +5,7 @@ import WorldList from "@/app/components/configure/WorldList";
 import PressureCards from "@/app/components/configure/PressureCards";
 import EventTimeline from "@/app/components/configure/EventTimeline";
 import LaunchBar from "@/app/components/configure/LaunchBar";
+import { Alert, AlertDescription } from "@/app/components/ui/alert";
 import { getPresetConfig } from "@/app/actions/presets";
 
 export default async function ConfigurePage({
@@ -20,9 +21,9 @@ export default async function ConfigurePage({
       <>
         <Header />
         <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10">
-          <div className="p-4 rounded-lg bg-severity-critical-bg border border-severity-critical-border text-severity-critical-text">
-            {result.error}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{result.error}</AlertDescription>
+          </Alert>
         </main>
       </>
     );
@@ -37,7 +38,7 @@ export default async function ConfigurePage({
         <div className="mb-8">
           <h1 className="text-2xl font-bold mb-1">{config.companyName || presetId}</h1>
           {config.scenario && (
-            <p className="text-sm text-text-secondary mt-2">{config.scenario}</p>
+            <p className="text-sm text-muted-foreground mt-2">{config.scenario}</p>
           )}
         </div>
 
@@ -65,11 +66,11 @@ export default async function ConfigurePage({
           <h2 className="text-lg font-semibold mb-3">Settings</h2>
           <div className="flex gap-6 text-sm">
             <div>
-              <span className="text-text-secondary">Rounds:</span>{" "}
+              <span className="text-muted-foreground">Rounds:</span>{" "}
               <span className="font-medium">{config.totalRounds}</span>
             </div>
             <div>
-              <span className="text-text-secondary">Hours per round:</span>{" "}
+              <span className="text-muted-foreground">Hours per round:</span>{" "}
               <span className="font-medium">{config.hoursPerRound}</span>
             </div>
           </div>
