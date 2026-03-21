@@ -1,16 +1,35 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, useRef, useCallback, use } from "react";
 import Header from "@/app/components/layout/Header";
-import ReportHeader from "@/app/components/report/ReportHeader";
-import ReportTimeline from "@/app/components/report/ReportTimeline";
-import AgentScoreGrid from "@/app/components/report/AgentScoreGrid";
-import ExportButton from "@/app/components/report/ExportButton";
-import { Alert, AlertDescription } from "@/app/components/ui/alert";
-import { Skeleton } from "@/app/components/ui/skeleton";
+import ReportContent from "@/app/components/report/ReportContent";
+import WorkflowTimeline from "@/app/components/report/WorkflowTimeline";
+import ConsoleLog from "@/app/components/report/ConsoleLog";
+import ReportChat from "@/app/components/report/ReportChat";
+import SplitPanel from "@/app/components/shared/SplitPanel";
+import ViewToggle, {
+  type ViewMode,
+} from "@/app/components/simulation/ViewToggle";
+import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
-import { getReport } from "@/app/actions/report";
-import type { Report } from "@/app/types";
+import { Alert, AlertDescription } from "@/app/components/ui/alert";
+import { FileText, Loader2 } from "lucide-react";
+import {
+  checkReport,
+  generateReport,
+  getReportProgress,
+  getReportSections,
+  getFullReport,
+  getAgentLog,
+  getConsoleLog,
+} from "@/app/actions/report";
+import type {
+  ReportStatus,
+  ReportProgress,
+  ReportOutline,
+  ReportSectionData,
+  AgentLogEntry,
+} from "@/app/types";
 
 export default function ReportPage({
   params,
@@ -18,117 +37,291 @@ export default function ReportPage({
   params: Promise<{ simId: string }>;
 }) {
   const { simId } = use(params);
-  const [report, setReport] = useState<Report | null>(null);
+
+  const [reportId, setReportId] = useState<string | null>(null);
+  const [status, setStatus] = useState<ReportStatus>("PENDING");
+  const [progress, setProgress] = useState<ReportProgress | null>(null);
+  const [outline, setOutline] = useState<ReportOutline | null>(null);
+  const [sections, setSections] = useState<ReportSectionData[]>([]);
+  const [agentLogs, setAgentLogs] = useState<AgentLogEntry[]>([]);
+  const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("split");
+  const [generating, setGenerating] = useState(false);
+
+  // Use refs to track current lengths for incremental fetching inside intervals
+  const agentLogsLenRef = useRef(0);
+  const consoleLogsLenRef = useRef(0);
 
   useEffect(() => {
-    const load = async () => {
-      const result = await getReport(simId);
+    agentLogsLenRef.current = agentLogs.length;
+  }, [agentLogs]);
+
+  useEffect(() => {
+    consoleLogsLenRef.current = consoleLogs.length;
+  }, [consoleLogs]);
+
+  // Fetch full report data (outline, sections, logs) for a completed report
+  const fetchCompleteReport = useCallback(async (rId: string) => {
+    const [reportResult, sectionsResult, agentResult, consoleResult] =
+      await Promise.all([
+        getFullReport(rId),
+        getReportSections(rId),
+        getAgentLog(rId, 0),
+        getConsoleLog(rId, 0),
+      ]);
+
+    if ("data" in reportResult) {
+      setOutline(reportResult.data.outline);
+    }
+    if ("data" in sectionsResult) {
+      setSections(sectionsResult.data.sections);
+    }
+    if ("data" in agentResult) {
+      setAgentLogs(agentResult.data.logs);
+    }
+    if ("data" in consoleResult) {
+      setConsoleLogs(consoleResult.data.logs);
+    }
+  }, []);
+
+  // On mount: check if report exists
+  useEffect(() => {
+    const init = async () => {
+      const result = await checkReport(simId);
       if ("error" in result) {
         setError(result.error);
         return;
       }
-      setReport(result.data);
-    };
-    load();
-  }, [simId]);
 
-  // Poll while generating
+      const check = result.data;
+      if (check.has_report && check.report_id) {
+        setReportId(check.report_id);
+        if (check.report_status === "COMPLETED") {
+          setStatus("COMPLETED");
+          await fetchCompleteReport(check.report_id);
+        } else if (check.report_status === "FAILED") {
+          setStatus("FAILED");
+          setError("Report generation failed.");
+        } else {
+          // In progress - set status and polling will kick in
+          setStatus(
+            (check.report_status as ReportStatus) || "GENERATING"
+          );
+        }
+      }
+      // If no report, stay in PENDING state showing Generate button
+    };
+    init();
+  }, [simId, fetchCompleteReport]);
+
+  // Handle generate button
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setError(null);
+    const result = await generateReport(simId);
+    if ("error" in result) {
+      setError(result.error);
+      setGenerating(false);
+      return;
+    }
+    setReportId(result.data.report_id);
+    setStatus("PLANNING");
+    setGenerating(false);
+  };
+
+  // Polling: progress
   useEffect(() => {
-    if (!report || report.status !== "generating") return;
+    if (!reportId) return;
+    if (status === "COMPLETED" || status === "FAILED" || status === "PENDING")
+      return;
+
     const interval = setInterval(async () => {
-      const result = await getReport(simId);
-      if ("data" in result) setReport(result.data);
-    }, 5000);
+      const result = await getReportProgress(reportId);
+      if ("data" in result) {
+        const p = result.data;
+        setProgress(p);
+        setStatus(p.status);
+
+        // Once planning is complete, try to fetch the outline
+        if (
+          p.status === "GENERATING" ||
+          p.status === "COMPLETED"
+        ) {
+          const fullResult = await getFullReport(reportId);
+          if ("data" in fullResult && fullResult.data.outline) {
+            setOutline(fullResult.data.outline);
+          }
+        }
+
+        if (p.status === "COMPLETED") {
+          await fetchCompleteReport(reportId);
+        }
+        if (p.status === "FAILED") {
+          setError(p.message || "Report generation failed.");
+        }
+      }
+    }, 2000);
+
     return () => clearInterval(interval);
-  }, [report?.status, simId]);
+  }, [reportId, status, fetchCompleteReport]);
+
+  // Polling: sections
+  useEffect(() => {
+    if (!reportId) return;
+    if (status === "COMPLETED" || status === "FAILED" || status === "PENDING")
+      return;
+
+    const interval = setInterval(async () => {
+      const result = await getReportSections(reportId);
+      if ("data" in result) {
+        setSections(result.data.sections);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [reportId, status]);
+
+  // Polling: agent logs
+  useEffect(() => {
+    if (!reportId) return;
+    if (status === "COMPLETED" || status === "FAILED" || status === "PENDING")
+      return;
+
+    const interval = setInterval(async () => {
+      const result = await getAgentLog(reportId, agentLogsLenRef.current);
+      if ("data" in result && result.data.logs.length > 0) {
+        setAgentLogs((prev) => [...prev, ...result.data.logs]);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [reportId, status]);
+
+  // Polling: console logs
+  useEffect(() => {
+    if (!reportId) return;
+    if (status === "COMPLETED" || status === "FAILED" || status === "PENDING")
+      return;
+
+    const interval = setInterval(async () => {
+      const result = await getConsoleLog(
+        reportId,
+        consoleLogsLenRef.current
+      );
+      if ("data" in result && result.data.logs.length > 0) {
+        setConsoleLogs((prev) => [...prev, ...result.data.logs]);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [reportId, status]);
+
+  const isActive =
+    status === "PLANNING" || status === "GENERATING";
+  const isPreGeneration = status === "PENDING" && !reportId;
+
+  const statusVariant =
+    status === "FAILED"
+      ? "destructive"
+      : status === "COMPLETED"
+        ? "default"
+        : "secondary";
+
+  const reportName = outline?.title ?? `Report for ${simId}`;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col">
       <Header />
-      <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-10">
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
 
-        {report?.status === "generating" && (
-          <div className="py-20 space-y-4 max-w-sm mx-auto">
-            <Skeleton className="h-5 w-3/4 mx-auto" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-4 w-2/3" />
-            <p className="text-sm text-muted-foreground text-center mt-4">
-              The AI is analyzing {report.simId} simulation data.
+      {/* Status bar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
+        <div className="flex items-center gap-3">
+          <FileText size={16} className="text-muted-foreground" />
+          <span className="font-semibold text-sm truncate max-w-md">
+            {reportName}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          {!isPreGeneration && (
+            <ViewToggle mode={viewMode} onChange={setViewMode} />
+          )}
+          <Badge variant={statusVariant}>{status}</Badge>
+        </div>
+      </div>
+
+      {/* Error alert */}
+      {error && (
+        <Alert variant="destructive" className="mx-4 mt-2">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Pre-generation state */}
+      {isPreGeneration && (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <FileText
+              size={48}
+              className="mx-auto text-muted-foreground"
+            />
+            <h2 className="text-lg font-semibold">
+              No report yet for this simulation
+            </h2>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Generate an AI-powered analysis report from the simulation data.
             </p>
-          </div>
-        )}
-
-        {report?.status === "complete" && (
-          <>
-            <div className="flex justify-end mb-4">
-              <ExportButton report={report} />
-            </div>
-
-            <ReportHeader report={report} />
-
-            <section className="mb-8">
-              <h2 className="text-lg font-semibold mb-3">Executive Summary</h2>
-              <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {report.executiveSummary}
-              </div>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-lg font-semibold mb-3">Timeline</h2>
-              <ReportTimeline entries={report.timeline} />
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-lg font-semibold mb-3">Communication Effectiveness</h2>
-              <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {report.communicationAnalysis}
-              </div>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-lg font-semibold mb-3">Tensions & Conflicts</h2>
-              <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {report.tensions}
-              </div>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-lg font-semibold mb-3">Agent Scorecards</h2>
-              <AgentScoreGrid scores={report.agentScores} />
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-lg font-semibold mb-3">Recommendations</h2>
-              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                {report.recommendations.map((r, i) => (
-                  <li key={i}>{r}</li>
-                ))}
-              </ul>
-            </section>
-          </>
-        )}
-
-        {report?.status === "failed" && (
-          <div className="text-center py-20">
-            <Alert variant="destructive" className="max-w-sm mx-auto mb-4">
-              <AlertDescription>Report generation failed</AlertDescription>
-            </Alert>
             <Button
-              variant="link"
-              onClick={() => window.location.reload()}
+              onClick={handleGenerate}
+              disabled={generating}
+              size="lg"
             >
-              Retry
+              {generating && (
+                <Loader2 size={16} className="mr-2 animate-spin" />
+              )}
+              Generate Report
             </Button>
           </div>
-        )}
-      </main>
+        </div>
+      )}
+
+      {/* Main content: split panel */}
+      {!isPreGeneration && (
+        <>
+          <SplitPanel
+            viewMode={viewMode}
+            leftPanel={
+              <div className="h-full overflow-y-auto p-4">
+                <ReportContent
+                  outline={outline}
+                  sections={sections}
+                  progress={progress}
+                  reportId={reportId}
+                />
+              </div>
+            }
+            rightPanel={
+              <div className="flex flex-col h-full">
+                <div className="flex-1 min-h-0">
+                  <WorkflowTimeline
+                    entries={agentLogs}
+                    progress={progress}
+                    status={status}
+                  />
+                </div>
+                <ConsoleLog lines={consoleLogs} />
+              </div>
+            }
+          />
+
+          {/* Chat at bottom after completion */}
+          {status === "COMPLETED" && reportId && (
+            <div className="border-t border-border h-64 shrink-0">
+              <ReportChat simulationId={simId} reportId={reportId} />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

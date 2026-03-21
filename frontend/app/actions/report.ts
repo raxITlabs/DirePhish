@@ -97,7 +97,7 @@ export async function chatWithReport(
   });
 }
 
-export function getReportDownloadUrl(reportId: string): string {
+export async function getReportDownloadUrl(reportId: string): Promise<string> {
   const base = process.env.FLASK_API_URL || "http://localhost:5001";
   return `${base}/api/report/${reportId}/download`;
 }

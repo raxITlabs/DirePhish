@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -31,6 +32,14 @@ export default function ReportContent({
   progress,
   reportId,
 }: ReportContentProps) {
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (reportId) {
+      getReportDownloadUrl(reportId).then(setDownloadUrl);
+    }
+  }, [reportId]);
+
   const allComplete =
     outline &&
     outline.sections.length > 0 &&
@@ -79,18 +88,18 @@ export default function ReportContent({
             )}
           </div>
         </CardHeader>
-        {allComplete && reportId && (
+        {allComplete && reportId && downloadUrl && (
           <CardContent>
-            <Button variant="outline" size="sm" asChild>
-              <a
-                href={getReportDownloadUrl(reportId)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+            <a
+              href={downloadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" size="sm">
                 <Download size={14} className="mr-1" />
                 Download Report
-              </a>
-            </Button>
+              </Button>
+            </a>
           </CardContent>
         )}
       </Card>
