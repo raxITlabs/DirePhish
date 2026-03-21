@@ -306,3 +306,67 @@ def patch_project(project_id):
     if not project:
         return jsonify({"error": "Project not found"}), 404
     return jsonify({"data": {"status": "updated"}})
+
+
+# --- Predictive pipeline endpoints ---
+
+
+@crucible_bp.route("/projects/<project_id>/scenarios", methods=["GET"])
+def get_scenarios(project_id):
+    analysis = project_manager.get_threat_analysis(project_id)
+    if not analysis:
+        return jsonify({"error": "Threat analysis not found"}), 404
+    return jsonify({"data": {
+        "scenarios": analysis.get("scenarios", []),
+        "uncertainty_axes": analysis.get("uncertainty_axes", {}),
+        "attack_paths": analysis.get("attack_paths", []),
+    }})
+
+
+@crucible_bp.route("/projects/<project_id>/generate-configs", methods=["POST"])
+def generate_configs(project_id):
+    data = request.get_json()
+    if not data or "scenario_ids" not in data:
+        return jsonify({"error": "scenario_ids required"}), 400
+    project = project_manager.get_project(project_id)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+    from ..services.config_expander import run_config_expansion
+    run_config_expansion(project_id, data["scenario_ids"])
+    return jsonify({"data": {"status": "generating"}}), 202
+
+
+@crucible_bp.route("/projects/<project_id>/configs", methods=["GET"])
+def get_project_configs(project_id):
+    configs = project_manager.get_all_scenarios(project_id)
+    return jsonify({"data": configs})
+
+
+@crucible_bp.route("/projects/<project_id>/launch", methods=["POST"])
+def launch_project_simulations(project_id):
+    configs = project_manager.get_all_scenarios(project_id)
+    if not configs:
+        return jsonify({"error": "No configs ready"}), 404
+    sim_ids = []
+    for config in configs:
+        sim_id = launch_simulation(config)
+        sim_ids.append(sim_id)
+    project_manager.update_project(project_id, sim_ids=sim_ids)
+    return jsonify({"data": {"sim_ids": sim_ids}}), 201
+
+
+@crucible_bp.route("/projects/<project_id>/comparative-report", methods=["POST"])
+def trigger_comparative_report(project_id):
+    from ..services.comparative_report_agent import run_comparative_report
+    run_comparative_report(project_id)
+    return jsonify({"data": {"status": "generating"}}), 202
+
+
+@crucible_bp.route("/projects/<project_id>/comparative-report", methods=["GET"])
+def get_comparative_report(project_id):
+    report_path = Path(__file__).parent.parent.parent / "uploads" / "simulations" / f"comparative_{project_id}" / "report.json"
+    if not report_path.exists():
+        return jsonify({"data": {"status": "generating"}}), 200
+    with open(report_path) as f:
+        report = json.load(f)
+    return jsonify({"data": report})
