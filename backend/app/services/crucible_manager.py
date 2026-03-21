@@ -106,6 +106,22 @@ _processes: dict[str, subprocess.Popen] = {}
 _pushed_action_counts: dict[str, int] = {}  # tracks how many actions have been pushed to Graphiti
 
 
+def list_all_simulations() -> list[dict]:
+    """Return all simulations sorted by most recent first."""
+    result = []
+    for sim_id, state in _simulations.items():
+        result.append({
+            "sim_id": sim_id,
+            "status": state.get("status", "unknown"),
+            "current_round": state.get("current_round", 0),
+            "total_rounds": state.get("total_rounds", 0),
+            "action_count": state.get("action_count", 0),
+        })
+    # Most recent first (sim_id contains timestamps or sequential IDs)
+    result.sort(key=lambda x: x["sim_id"], reverse=True)
+    return result
+
+
 def launch_simulation(config: dict) -> str:
     """Save config and launch run_crucible_simulation.py as subprocess."""
     sim_id = config.get("simulation_id") or f"crucible_{uuid.uuid4().hex[:8]}"

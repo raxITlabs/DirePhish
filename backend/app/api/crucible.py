@@ -11,6 +11,7 @@ from flask import Blueprint, jsonify, request
 from ..services.crucible_manager import (
     list_presets,
     get_preset_config,
+    list_all_simulations,
     launch_simulation,
     get_simulation_status,
     get_simulation_actions,
@@ -46,6 +47,13 @@ def upload_config():
     with open(config_path, "w") as f:
         f.write(data["config"])
     return jsonify({"data": {"configId": config_id}})
+
+
+@crucible_bp.route("/simulations", methods=["GET"])
+def list_simulations():
+    """List all simulations with their current status."""
+    sims = list_all_simulations()
+    return jsonify({"data": sims})
 
 
 @crucible_bp.route("/simulations", methods=["POST"])
