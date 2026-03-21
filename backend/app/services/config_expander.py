@@ -357,19 +357,15 @@ Return ONLY valid JSON — an array:
   {{ "type": "email", "name": "Corporate Email" }}
 ]
 
-Available platform types: slack, email, siem, servicenow, pagerduty, edr, teams
+ONLY these platform types are available (no others exist):
 - slack: real-time coordination, quick decisions
 - email: formal communication, external parties, legal
-- siem: security monitoring, alert triage
-- servicenow: ticket management, change requests
-- pagerduty: on-call escalation
-- edr: endpoint detection, forensics
-- teams: cross-department collaboration
+- pagerduty: on-call escalation, alerting
 
 REQUIREMENTS:
-- Always include slack (primary coordination) and email (formal/external)
-- Add siem if scenario involves detection/monitoring
-- Add others only if the scenario specifically needs them
+- Always include slack and email (minimum 2 platforms)
+- Add pagerduty if scenario involves on-call escalation or alerting
+- Do NOT use any type not listed above (no siem, servicenow, edr, teams — they are not available)
 - Each platform name should be descriptive of its role in THIS incident"""
 
     return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
