@@ -91,11 +91,13 @@ def update_project(project_id: str, **updates) -> dict | None:
     project = _load_project(project_id)
     if not project:
         return None
+    old_status = project.get("status")
     project.update(updates)
     _save_project(project_id, project)
 
-    # Auto-chain: trigger threat analysis when research completes
-    if updates.get("status") == "research_complete":
+    # Auto-chain: trigger threat analysis when transitioning TO research_complete
+    # Guard: only fire if old status was different (prevents double-trigger on retry)
+    if updates.get("status") == "research_complete" and old_status != "research_complete":
         from .threat_analyzer import run_threat_analysis
         run_threat_analysis(project_id)
 
@@ -145,6 +147,19 @@ from . import project_manager
 logger = get_logger("threat_analyzer")
 
 
+def _extract_list(result) -> list:
+    """Extract a list from chat_json result — handles both bare arrays and wrapper objects.
+    JSON mode often requires a top-level object, so the LLM may wrap arrays like {"threats": [...]}."""
+    if isinstance(result, list):
+        return result
+    if isinstance(result, dict):
+        # Return the first list value found
+        for v in result.values():
+            if isinstance(v, list):
+                return v
+    return []
+
+
 def run_threat_analysis(project_id: str) -> None:
     """Run threat analysis in a background thread."""
     thread = threading.Thread(target=_analysis_pipeline, args=(project_id,), daemon=True)
@@ -154,12 +169,11 @@ def run_threat_analysis(project_id: str) -> None:
 def _analysis_pipeline(project_id: str) -> None:
     """Execute the 4-step threat intelligence pipeline."""
     try:
-        project_manager.update_project.__wrapped__(project_id,
+        project_manager.update_project(project_id,
             status="analyzing_threats", progress=10,
             progress_message="Analyzing threat landscape...")
-        # NOTE: We call __wrapped__ or a direct _save version to avoid
-        # re-triggering the auto-chain hook. Simpler approach: just check
-        # status != "research_complete" in the hook.
+        # Safe: the auto-chain hook only fires on transition TO "research_complete",
+        # so setting "analyzing_threats" here won't re-trigger it.
 
         dossier = project_manager.get_dossier(project_id)
         if not dossier:
@@ -346,7 +360,7 @@ REQUIREMENTS:
 - Include at least 2 threats rated "high" relevance
 - Cover diverse attack types: supply chain, ransomware, insider, social engineering, DDoS, data breach, etc."""
 
-    return llm.chat_json([{"role": "user", "content": prompt}])
+    return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
 
 
 def _map_vulnerabilities(llm: LLMClient, dossier: dict, threats: list[dict]) -> list[dict]:
@@ -384,7 +398,7 @@ REQUIREMENTS:
 - Include both technical gaps (missing tools, misconfigurations) and process gaps (no IR plan, no vendor audits)
 - Prioritize gaps that enable the highest-relevance threats"""
 
-    return llm.chat_json([{"role": "user", "content": prompt}])
+    return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
 
 
 def _generate_attack_paths(llm: LLMClient, dossier: dict, threats: list[dict], vulnerabilities: list[dict]) -> list[dict]:
@@ -432,7 +446,7 @@ REQUIREMENTS:
 - Paths should be diverse — different initial access vectors, different targets
 - The expected_outcome should reference specific business impacts (compliance deadlines, customer data volumes, revenue impact)"""
 
-    return llm.chat_json([{"role": "user", "content": prompt}])
+    return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
 
 
 def _frame_scenarios(llm: LLMClient, dossier: dict, attack_paths: list[dict]) -> dict:
@@ -494,30 +508,7 @@ REQUIREMENTS:
     return llm.chat_json([{"role": "user", "content": prompt}])
 ```
 
-- [ ] **Step 2: Fix the auto-chain hook to avoid re-triggering**
-
-The `update_project` hook triggers on `research_complete`. But `_analysis_pipeline` also calls `update_project`. We need to prevent the hook from re-firing. Update `project_manager.py`'s `update_project`:
-
-```python
-def update_project(project_id: str, **updates) -> dict | None:
-    """Update project fields. Auto-chains threat analysis when research completes."""
-    project = _load_project(project_id)
-    if not project:
-        return None
-    project.update(updates)
-    _save_project(project_id, project)
-
-    # Auto-chain: trigger threat analysis when research completes
-    # Only trigger if transitioning TO research_complete (not already past it)
-    if (updates.get("status") == "research_complete"
-            and project.get("status") == "research_complete"):
-        from .threat_analyzer import run_threat_analysis
-        run_threat_analysis(project_id)
-
-    return project
-```
-
-- [ ] **Step 3: Verify the module imports cleanly**
+- [ ] **Step 2: Verify the module imports cleanly**
 
 Run: `cd backend && uv run python -c "from app.services.threat_analyzer import run_threat_analysis; print('OK')"`
 Expected: `OK`
@@ -556,6 +547,17 @@ from ..utils.logger import get_logger
 from . import project_manager
 
 logger = get_logger("config_expander")
+
+
+def _extract_list(result) -> list:
+    """Extract a list from chat_json result — handles wrapper objects."""
+    if isinstance(result, list):
+        return result
+    if isinstance(result, dict):
+        for v in result.values():
+            if isinstance(v, list):
+                return v
+    return []
 
 
 def run_config_expansion(project_id: str, scenario_ids: list[str]) -> None:
@@ -804,7 +806,7 @@ REQUIREMENTS:
 - Alternatives should be meaningfully different outcomes, not just "nothing happens"
 - Space injects across rounds — not all in round 1"""
 
-    return llm.chat_json([{"role": "user", "content": prompt}])
+    return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
 
 
 def _generate_agent_personas(llm: LLMClient, dossier: dict, scenario: dict, cascading: dict) -> list[dict]:
@@ -866,7 +868,7 @@ REQUIREMENTS:
 - At least 2 pairs of agents should have natural tension (e.g., CISO wants containment, CEO wants uptime)
 - incident_memory should be scenario-specific, not generic"""
 
-    return llm.chat_json([{"role": "user", "content": prompt}])
+    return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
 
 
 def _generate_worlds(llm: LLMClient, scenario: dict, agents: list[dict]) -> list[dict]:
@@ -904,7 +906,7 @@ REQUIREMENTS:
 - Add others only if the scenario specifically needs them
 - Each platform name should be descriptive of its role in THIS incident"""
 
-    return llm.chat_json([{"role": "user", "content": prompt}])
+    return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
 
 
 def _generate_time_config(llm: LLMClient, scenario: dict, attack_path: dict | None, events: list[dict]) -> dict:
@@ -2011,9 +2013,44 @@ Add after the existing `handleLaunch`:
   };
 ```
 
-- [ ] **Step 5: Add JSX for new statuses in the render**
+- [ ] **Step 5: Restructure the early return guard and add JSX for new statuses**
 
-In the main return JSX, add sections for the new statuses. Before the existing config display section, add:
+The existing page has a `!config` early return (line 96-120) that shows a loading skeleton. This would block new statuses from rendering. Change the `!config` guard to also check for new statuses that don't need a config:
+
+Replace the `if (!config)` block (lines 96-120) with:
+
+```tsx
+  // Show loading skeleton only during legacy config generation or initial load
+  // New pipeline statuses (analyzing_threats, scenarios_ready, generating_configs, configs_ready) handle their own UI
+  const newPipelineStatuses = ["analyzing_threats", "scenarios_ready", "generating_configs", "configs_ready"];
+  if (!config && !newPipelineStatuses.includes(project?.status || "")) {
+    return (
+      <>
+        <Header />
+        <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10">
+          <div className="text-center py-20">
+            <div className="space-y-3 max-w-xs mx-auto mb-4">
+              <Skeleton className="h-5 w-3/4 mx-auto" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {project?.progressMessage || "The AI is building agents, scenarios, and pressures from your company data."}
+            </p>
+            <div className="mt-4 w-48 mx-auto h-1.5 bg-muted rounded-full">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-500"
+                style={{ width: `${project?.progress || 0}%` }}
+              />
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
+```
+
+Then in the main return JSX, add sections for the new statuses. Before the existing config display section, add:
 
 ```tsx
         {/* Threat Analysis in progress */}
