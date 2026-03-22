@@ -61,4 +61,4 @@ backend/uploads/
 data/
 
 # Graphiti/Kuzu local graph databases
-backend/data/
+backend/data/.stitch/
