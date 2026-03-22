@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crucible simulation runner for MiroFish-IR-Simulation.
+"""Crucible simulation runner for DirePhish.
 
 Takes a JSON config describing agents, worlds, and pressures, then runs
 a multi-round simulation where each agent interacts with each world

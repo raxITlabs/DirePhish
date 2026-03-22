@@ -1,5 +1,5 @@
 """
-MiroFish Backend 启动入口
+DirePhish Backend entry point
 """
 
 import os

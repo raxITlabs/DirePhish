@@ -336,15 +336,31 @@ def _web_search_gemini(company_name: str, cost_tracker: CostTracker = None) -> s
             f"What regulatory frameworks apply to them (GDPR, HIPAA, PCI-DSS, SOX, etc.)? "
             f"What are the top 5-6 cybersecurity risks specific to this company given its industry, size, and public profile? "
             f"Have any competitors or peers in their industry had notable security incidents recently? "
-            f"What is their geographic footprint and where do they have offices?"
+            f"What is their geographic footprint and where do they have offices? "
+            f"Based on where they operate, what geopolitical risks could impact them — sanctions, trade restrictions, regional conflicts, "
+            f"state-sponsored cyber threats, data sovereignty laws, or political instability? "
+            f"Do they have exposure to high-risk regions or supply chain dependencies in geopolitically sensitive areas?"
         ),
         (
             "recent_news",
             f"What are the most significant news stories about {company_name} from the last 6 to 12 months? "
             f"Include: major business developments, leadership changes, acquisitions, layoffs, product launches, "
             f"regulatory actions, lawsuits, earnings surprises, partnerships, and any security or privacy incidents. "
+            f"Include any announcements about AI adoption, AI product launches, or AI-related policy changes. "
+            f"Include geopolitical events that could impact the company — sanctions, trade wars, regional conflicts, regulatory shifts in countries where they operate. "
             f"For each event, provide the approximate date and why it matters. "
             f"Focus on events that would affect the company's risk profile, reputation, or operations."
+        ),
+        (
+            "ai_and_emerging_tech",
+            f"Research {company_name}'s adoption and use of artificial intelligence and emerging technologies. "
+            f"Are they building AI-powered products or features? Do they use AI/ML internally for operations, security, or decision-making? "
+            f"Have they made public statements, blog posts, or press releases about their AI strategy? "
+            f"Have they hired AI/ML leadership roles (Head of AI, VP of Machine Learning, Chief AI Officer)? "
+            f"Are they using third-party AI services (OpenAI, Anthropic, Google AI, AWS Bedrock, etc.)? "
+            f"What AI-related risks do they face — model security, data poisoning, prompt injection, shadow AI usage, IP leakage through LLMs? "
+            f"Have there been any controversies or incidents related to their AI use? "
+            f"Also note any emerging technology adoption that creates new attack surface: IoT deployments, blockchain, edge computing, or quantum readiness initiatives."
         ),
     ]
 

@@ -1,4 +1,4 @@
-# MiroFish Prediction Prompt — Paste this into the "Prediction Requirement" field
+# DirePhish Prediction Prompt — Paste this into the "Prediction Requirement" field
 
 Simulate the next 12 hours of NovaPay's incident response starting from Day 1, 03:00 UTC. Focus on these prediction questions:
 

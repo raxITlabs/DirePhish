@@ -1,4 +1,4 @@
-"""Shared fixtures for the MiroFish backend test suite."""
+"""Shared fixtures for the DirePhish backend test suite."""
 
 import pytest
 

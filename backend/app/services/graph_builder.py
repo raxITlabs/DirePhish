@@ -54,7 +54,7 @@ class GraphBuilderService:
         self,
         text: str,
         ontology: Dict[str, Any],
-        graph_name: str = "MiroFish Graph",
+        graph_name: str = "DirePhish Graph",
         chunk_size: int = 500,
         chunk_overlap: int = 50,
         batch_size: int = 3
@@ -186,12 +186,12 @@ class GraphBuilderService:
     
     def create_graph(self, name: str) -> str:
         """Create Zep graph (public method)"""
-        graph_id = f"mirofish_{uuid.uuid4().hex[:16]}"
+        graph_id = f"direphish_{uuid.uuid4().hex[:16]}"
         
         self.client.graph.create(
             graph_id=graph_id,
             name=name,
-            description="MiroFish Social Simulation Graph"
+            description="DirePhish Simulation Graph"
         )
         
         return graph_id

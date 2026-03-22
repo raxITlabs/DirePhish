@@ -1,9 +1,9 @@
 services:
-  mirofish:
-    image: ghcr.io/666ghj/mirofish:latest
+  direphish:
+    image: ghcr.io/raxitlabs/direphish:latest
     # 加速镜像（如拉取缓慢可替换上方地址）
-    # image: ghcr.nju.edu.cn/666ghj/mirofish:latest
-    container_name: mirofish
+    # image: ghcr.nju.edu.cn/raxitlabs/direphish:latest
+    container_name: direphish
     env_file:
       - .env
     ports:

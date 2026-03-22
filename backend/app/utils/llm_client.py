@@ -13,7 +13,7 @@ from ..config import Config
 # OpenTelemetry tracing
 try:
     from opentelemetry import trace
-    _tracer = trace.get_tracer("mirofish.llm", "1.0.0")
+    _tracer = trace.get_tracer("direphish.llm", "1.0.0")
 except ImportError:
     _tracer = None
 
