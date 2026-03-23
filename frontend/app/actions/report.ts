@@ -185,6 +185,165 @@ export async function getReportDownloadUrl(reportId: string): Promise<string> {
   return `${base}/api/report/${reportId}/download`;
 }
 
+// --- Exercise report (unified) ---
+
+export interface ExerciseReport {
+  projectId: string;
+  status: string;
+  companyName?: string;
+  generatedAt?: string;
+  error?: string;
+
+  disclaimer?: string;
+  executiveSummary?: string;
+
+  conclusions?: {
+    headline: string;
+    keyFindings: Array<{
+      id: string;
+      finding: string;
+      severity: "critical" | "high" | "medium";
+      businessImpact?: string;
+      regulatoryExposure?: string;
+      scenariosAffected: string[];
+      evidenceRef?: string;
+    }>;
+    // Legacy field — kept for backward compat
+    priorityRecommendations?: Array<{
+      priority: number;
+      recommendation: string;
+      addressesFindings: string[];
+      impact: "high" | "medium" | "low";
+    }>;
+    // New exec action table
+    actionItems?: Array<{
+      priority: number;
+      action: string;
+      predictedRiskReduction: string;
+      suggestedOwner: string;
+      suggestedTimeline: string;
+      investmentLevel: "High" | "Medium" | "Low";
+      addressesFindings: string[];
+    }>;
+  };
+
+  teamPerformance?: {
+    teams: Array<{
+      name: string;
+      roles: string[];
+      scores: {
+        responseSpeed: number;
+        containmentEffectiveness: number;
+        communicationQuality: number;
+        complianceAdherence: number;
+        leadershipDecisiveness: number;
+      };
+      narrative: string;
+    }>;
+    heatmapData: Array<{
+      scenario: string;
+      dimension: string;
+      score: number;
+    }>;
+  };
+
+  rootCauseAnalysis?: Array<{
+    issue: string;
+    severity: string;
+    fiveWhys: Array<{
+      level: number;
+      question: string;
+      answer: string;
+    }>;
+    rootCause: string;
+    predictedBusinessImpact?: string;
+    mitreReference?: string;
+    scenariosAffected: string[];
+  }>;
+
+  methodology?: {
+    scenarioCount: number;
+    scenarios: Array<{
+      id: string;
+      title: string;
+      summary: string;
+      rounds: number;
+    }>;
+    simulationApproach: string;
+    agentCount: number;
+    totalRounds: number;
+    totalActions: number;
+    attackPaths?: Array<{
+      title: string;
+      threatName: string;
+      killChain: Array<{
+        step: number;
+        tactic: string;
+        technique: string;
+        target: string;
+        description: string;
+      }>;
+    }>;
+  };
+
+  costs?: {
+    totalUsd: number;
+    breakdown: Array<{
+      phase: string;
+      usd: number;
+      inputTokens: number;
+      outputTokens: number;
+    }>;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    model?: string;
+  };
+
+  appendix?: {
+    scenarioDetails: Array<{
+      scenarioId: string;
+      title: string;
+      executiveSummary: string;
+      timeline: Array<{
+        round: number;
+        timestamp: string;
+        description: string;
+        significance: string;
+        agent: string;
+      }>;
+      communicationAnalysis: string;
+      tensions: string;
+      recommendations: string[];
+    }>;
+    crossScenarioComparison: {
+      consistentWeaknesses: string[];
+      scenarioFindings: Array<{
+        scenario: string;
+        strengths: string[];
+        weaknesses: string[];
+        notableMoments: string[];
+      }>;
+    };
+  };
+}
+
+export async function generateExerciseReport(
+  projectId: string
+): Promise<{ data: { status: string } } | { error: string }> {
+  return fetchApi<{ status: string }>(
+    `/api/crucible/projects/${projectId}/exercise-report`,
+    { method: "POST" }
+  );
+}
+
+export async function getExerciseReport(
+  projectId: string
+): Promise<{ data: ExerciseReport } | { error: string }> {
+  return fetchApi<ExerciseReport>(
+    `/api/crucible/projects/${projectId}/exercise-report`
+  );
+}
+
 // --- Comparative report ---
 
 export interface ComparativeReportResponse {

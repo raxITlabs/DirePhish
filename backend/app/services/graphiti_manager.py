@@ -54,6 +54,27 @@ def _get_graphiti(project_id: str):
     from graphiti_core.llm_client.config import LLMConfig
     from graphiti_core.embedder.gemini import GeminiEmbedder, GeminiEmbedderConfig
 
+    # Tracked embedder wrapper — counts tokens for cost tracking
+    class TrackedGeminiEmbedder(GeminiEmbedder):
+        """Wraps GeminiEmbedder to count embedding tokens."""
+        total_tokens: int = 0
+        total_calls: int = 0
+
+        async def create(self, input_data):
+            self.total_calls += 1
+            if isinstance(input_data, str):
+                self.total_tokens += len(input_data) // 4  # ~4 chars per token estimate
+            result = await super().create(input_data)
+            return result
+
+        async def create_batch(self, input_data_list):
+            self.total_calls += 1
+            for item in input_data_list:
+                if isinstance(item, str):
+                    self.total_tokens += len(item) // 4
+            result = await super().create_batch(input_data_list)
+            return result
+
     # Create project-specific Kuzu DB file path (Kuzu creates the file itself)
     os.makedirs(Config.GRAPHITI_DB_PATH, exist_ok=True)
     db_path = os.path.join(Config.GRAPHITI_DB_PATH, f"{project_id}.kuzu")
@@ -70,7 +91,7 @@ def _get_graphiti(project_id: str):
         )
     )
 
-    embedder = GeminiEmbedder(
+    embedder = TrackedGeminiEmbedder(
         config=GeminiEmbedderConfig(
             api_key=Config.LLM_API_KEY,
             embedding_model="gemini-embedding-2-preview",
@@ -78,7 +99,20 @@ def _get_graphiti(project_id: str):
     )
 
     from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
-    cross_encoder = GeminiRerankerClient(
+
+    class TrackedGeminiReranker(GeminiRerankerClient):
+        """Wraps GeminiRerankerClient to count reranking LLM calls."""
+        total_tokens: int = 0
+        total_calls: int = 0
+
+        async def rank(self, query: str, passages: list[str]) -> list[tuple[str, float]]:
+            self.total_calls += 1
+            # Each passage gets a scoring prompt (~50 tokens query + ~100 tokens passage)
+            self.total_tokens += len(passages) * 150
+            result = await super().rank(query, passages)
+            return result
+
+    cross_encoder = TrackedGeminiReranker(
         config=LLMConfig(
             api_key=Config.LLM_API_KEY,
             model=Config.LLM_MODEL_NAME,
@@ -538,3 +572,49 @@ def _classify_node(name: str, summary: str) -> str:
         return "org"
 
     return "system"
+
+
+def get_embedding_usage(project_id: str) -> dict:
+    """Get actual embedding token usage from the tracked embedder.
+
+    Returns actual token counts from the TrackedGeminiEmbedder wrapper if
+    available, otherwise estimates from graph node count.
+    """
+    try:
+        graphiti = _instances.get(project_id)
+        if graphiti and hasattr(graphiti, 'embedder'):
+            embedder = graphiti.embedder
+            if hasattr(embedder, 'total_tokens') and embedder.total_tokens > 0:
+                return {
+                    "tokens": embedder.total_tokens,
+                    "calls": embedder.total_calls,
+                    "source": "tracked",
+                }
+
+        # Fallback: estimate from node count
+        graph_data = get_graph_data(project_id)
+        node_count = len(graph_data.get("nodes", []))
+        return {
+            "tokens": node_count * 300,
+            "calls": node_count,
+            "source": "estimated",
+        }
+    except Exception:
+        return {"tokens": 0, "calls": 0, "source": "unavailable"}
+
+
+def get_reranker_usage(project_id: str) -> dict:
+    """Get reranker LLM usage from the tracked cross encoder."""
+    try:
+        graphiti = _instances.get(project_id)
+        if graphiti and hasattr(graphiti, 'cross_encoder'):
+            reranker = graphiti.cross_encoder
+            if hasattr(reranker, 'total_tokens') and reranker.total_tokens > 0:
+                return {
+                    "tokens": reranker.total_tokens,
+                    "calls": reranker.total_calls,
+                    "source": "tracked",
+                }
+        return {"tokens": 0, "calls": 0, "source": "unavailable"}
+    except Exception:
+        return {"tokens": 0, "calls": 0, "source": "unavailable"}

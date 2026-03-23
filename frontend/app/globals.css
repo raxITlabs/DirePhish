@@ -367,11 +367,80 @@
   100% { background-position: -200% 0; }
 }
 
+/* React Flow theme overrides */
+.react-flow__controls {
+  box-shadow: none !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  overflow: hidden;
+}
+.react-flow__controls-button {
+  background: var(--card) !important;
+  border-bottom: 1px solid var(--border) !important;
+  fill: var(--foreground) !important;
+}
+.react-flow__controls-button:hover {
+  background: var(--muted) !important;
+}
+.react-flow__minimap {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  background: var(--card) !important;
+}
+.react-flow__background {
+  background: var(--background) !important;
+}
+
 /* Reduced motion: suppress all animations and transitions */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Graph breathing animations ── */
+@keyframes breathe-node {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 3px var(--breathe-color, rgba(0, 0, 0, 0.1)));
+  }
+  50% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 10px var(--breathe-color, rgba(0, 0, 0, 0.3)));
+  }
+}
+
+.animate-breathe {
+  animation: breathe-node 3s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-breathe {
+    animation: none;
+  }
+}
+
+/* ── Panel slide-in animation ── */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-in-right {
+    animation: none;
   }
 }

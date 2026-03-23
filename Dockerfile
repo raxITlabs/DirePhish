@@ -1,29 +1,34 @@
-FROM python:3.11
+FROM python:3.11-bookworm
 
-# 安装 Node.js （满足 >=18）及必要工具
+# Debian's default nodejs is too old; Next.js 16 needs Node >= 20.9
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends nodejs npm \
+  && apt-get install -y --no-install-recommends curl ca-certificates git gnupg \
+  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y --no-install-recommends nodejs \
   && rm -rf /var/lib/apt/lists/*
 
-# 从 uv 官方镜像复制 uv
+RUN npm install -g pnpm@9.15.9
+
 COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /uvx /bin/
 
 WORKDIR /app
 
-# 先复制依赖描述文件以利用缓存
+# Backend pulls PyTorch (via camel-oasis → sentence-transformers). The wheel is large;
+# the Docker VM needs several GB free or uv extract fails with "No space left on device".
+# Free space: Docker Desktop → Troubleshoot → Clean / Purge data, or increase disk in Settings → Resources.
+ENV UV_NO_CACHE=1
+
 COPY package.json package-lock.json ./
-COPY frontend/package.json frontend/package-lock.json ./frontend/
+COPY frontend/package.json frontend/pnpm-lock.yaml ./frontend/
 COPY backend/pyproject.toml backend/uv.lock ./backend/
 
-# 安装依赖（Node + Python）
 RUN npm ci \
-  && npm ci --prefix frontend \
-  && cd backend && uv sync --frozen
+  && cd frontend && pnpm install --frozen-lockfile \
+  && cd ../backend && uv sync --frozen \
+  && rm -rf /root/.cache/uv
 
-# 复制项目源码
 COPY . .
 
 EXPOSE 3000 5001
 
-# 同时启动前后端（开发模式）
 CMD ["npm", "run", "dev"]

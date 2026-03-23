@@ -3,7 +3,7 @@ import { Badge } from "@/app/components/ui/badge";
 
 export default function GlobalHeader() {
   return (
-    <header className="flex items-center px-4 shrink-0 h-12">
+    <header className="flex items-center px-4 h-12 bg-background/60 backdrop-blur-sm">
       <Link href="/" className="transition-opacity hover:opacity-80">
         <div className="flex items-center gap-2">
           <span className="font-mono text-base font-bold text-primary tracking-tighter">

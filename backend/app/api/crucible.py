@@ -381,3 +381,22 @@ def get_comparative_report(project_id):
     with open(report_path) as f:
         report = json.load(f)
     return jsonify({"data": report})
+
+
+# --- Exercise Report (unified) ---
+
+@crucible_bp.route("/projects/<project_id>/exercise-report", methods=["POST"])
+def trigger_exercise_report(project_id):
+    from ..services.exercise_report_agent import run_exercise_report
+    run_exercise_report(project_id)
+    return jsonify({"data": {"status": "generating"}}), 202
+
+
+@crucible_bp.route("/projects/<project_id>/exercise-report", methods=["GET"])
+def get_exercise_report(project_id):
+    report_path = Path(__file__).parent.parent.parent / "uploads" / "simulations" / f"exercise_{project_id}" / "report.json"
+    if not report_path.exists():
+        return jsonify({"data": {"status": "generating"}}), 200
+    with open(report_path) as f:
+        report = json.load(f)
+    return jsonify({"data": report})

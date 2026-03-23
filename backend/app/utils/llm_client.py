@@ -91,12 +91,14 @@ class LLMClient:
                 self.last_usage = {
                     "input_tokens": response.usage.prompt_tokens or 0,
                     "output_tokens": response.usage.completion_tokens or 0,
+                    "cached_tokens": getattr(response.usage, "cached_prompt_tokens", 0) or 0,
                 }
                 # Record token usage in span
                 if span_ctx and _tracer:
                     span = trace.get_current_span()
                     span.set_attribute("llm.input_tokens", self.last_usage["input_tokens"])
                     span.set_attribute("llm.output_tokens", self.last_usage["output_tokens"])
+                    span.set_attribute("llm.cached_tokens", self.last_usage["cached_tokens"])
             else:
                 self.last_usage = None
             content = response.choices[0].message.content

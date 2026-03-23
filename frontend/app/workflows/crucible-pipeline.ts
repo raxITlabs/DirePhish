@@ -145,6 +145,20 @@ async function pollComparativeReport(projectId: string): Promise<void> {
   throw new Error("Comparative report timed out");
 }
 
+// --- Step: poll exercise report ---
+
+async function pollExerciseReport(projectId: string): Promise<void> {
+  "use step";
+  for (let i = 0; i < 120; i++) {
+    const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/exercise-report`);
+    const json = await res.json();
+    if (json.data?.status === "complete") return;
+    if (json.data?.status === "failed") throw new Error(`Exercise report failed: ${json.data?.error || "unknown"}`);
+    await new Promise(r => setTimeout(r, 5000));
+  }
+  throw new Error("Exercise report timed out");
+}
+
 // ============================================================
 // THE PIPELINE WORKFLOW
 // ============================================================
@@ -157,6 +171,8 @@ export async function cruciblePipeline(input: {
 
   let projectId = "";
   let simIds: string[] = [];
+  let companyName = "";
+  let scenarioTitles: string[] = [];
 
   try {
     // ─── STEP 1: Create project & start research ───
@@ -186,6 +202,16 @@ export async function cruciblePipeline(input: {
 
     await emitProgress("research", "completed", "Research complete");
 
+    // Fetch company name from dossier for display metadata
+    try {
+      const dossier = await flaskApi<{ company?: { name?: string } }>(
+        `/api/crucible/projects/${projectId}/dossier`,
+      );
+      companyName = dossier?.company?.name || "";
+    } catch {
+      // Non-critical — fall back to URL-based display
+    }
+
     // ─── STEP 2: Wait for dossier confirmation ───
     const hook = createHook<DossierConfirmation>({
       token: `dossier-confirm-${projectId}`,
@@ -202,7 +228,7 @@ export async function cruciblePipeline(input: {
     if (!confirmation.confirmed) {
       await emitProgress("dossier_review", "failed", "Dossier rejected by user");
       await closeProgress();
-      return { projectId, status: "cancelled" };
+      return { projectId, companyName, status: "cancelled" };
     }
 
     await emitProgress("dossier_review", "completed", "Dossier confirmed");
@@ -246,6 +272,10 @@ export async function cruciblePipeline(input: {
       const sorted = [...scenarios].sort((a, b) => b.probability - a.probability);
       selectedIds = sorted.slice(0, 2).map(s => s.id);
     }
+
+    scenarioTitles = scenarios
+      .filter(s => selectedIds.includes(s.id))
+      .map(s => s.title);
 
     const selectedTitles = scenarios
       .filter(s => selectedIds.includes(s.id))
@@ -292,32 +322,17 @@ export async function cruciblePipeline(input: {
     await emitProgress("simulations", "completed",
       `All ${simIds.length} simulations complete`);
 
-    // ─── STEP 7: Generate reports ───
-    await emitProgress("reports", "running", "Generating after-action reports...");
-
-    for (let i = 0; i < simIds.length; i++) {
-      await flaskApi<{ status: string }>(
-        `/api/crucible/simulations/${simIds[i]}/report`,
-        { method: "POST" },
-      );
-      await emitProgress("reports", "running",
-        `Report ${i + 1}/${simIds.length} generating...`);
-      await pollReport(simIds[i]);
-    }
-
-    await emitProgress("reports", "completed", "All reports generated");
-
-    // ─── STEP 8: Comparative report ───
-    await emitProgress("comparative", "running", "Generating comparative analysis...");
+    // ─── STEP 7: Exercise Report (unified) ───
+    await emitProgress("exercise_report", "running", "Generating exercise report...");
 
     await flaskApi<{ status: string }>(
-      `/api/crucible/projects/${projectId}/comparative-report`,
+      `/api/crucible/projects/${projectId}/exercise-report`,
       { method: "POST" },
     );
 
-    await pollComparativeReport(projectId);
+    await pollExerciseReport(projectId);
 
-    await emitProgress("comparative", "completed", "Comparative analysis complete");
+    await emitProgress("exercise_report", "completed", "Exercise report complete");
 
     // ─── DONE ───
     await emitProgress("complete", "completed", "Pipeline complete!");
@@ -328,5 +343,5 @@ export async function cruciblePipeline(input: {
   }
 
   await closeProgress();
-  return { projectId, simIds, status: "complete" };
+  return { projectId, simIds, companyName, scenarioTitles, status: "complete" };
 }

@@ -1,5 +1,9 @@
-# DirePhish
-> Swarm-predict what goes wrong next
+<p align="center">
+  <img src="./static/image/direphish-logo.png" alt="DirePhish" width="200" />
+</p>
+
+<h1 align="center">DirePhish</h1>
+<p align="center"><em>Swarm-predict what goes wrong next</em></p>
 
 DirePhish spawns autonomous agents that act as your organization —
 then simulates a threat scenario playing out across Slack and email
@@ -87,8 +91,16 @@ npm run dev
 
 ### Docker
 
+Development (hot reload):
+
 ```bash
 docker compose up
+```
+
+Production (`next build` + `next start`, Flask via Gunicorn):
+
+```bash
+docker compose -f docker-compose.prod.yml up --build
 ```
 
 ## Tech stack
@@ -98,7 +110,7 @@ docker compose up
 | Frontend | Next.js 16, React 19, Tailwind CSS 4, shadcn/ui |
 | Backend | Flask, Python 3.11+ |
 | Models | Google Gemini with grounded search |
-| Simulation | CAMEL-AI OASIS engine |
+| Simulation | [Crucible](https://github.com/raxITlabs/crucible) (enterprise IR) + CAMEL-AI OASIS |
 | Knowledge graph | Graphiti + Kuzu (local) |
 | Orchestration | Vercel WDK (durable workflows) |
 | Observability | OpenTelemetry |
@@ -106,7 +118,8 @@ docker compose up
 ## Links
 
 - [raxIT Labs](https://raxit.ai) — the team behind DirePhish
-- [MiroFish](https://github.com/666ghj/MiroFish) — the open-source engine we built on
+- [Crucible](https://github.com/raxITlabs/crucible) — the enterprise simulation engine powering DirePhish
+- [MiroFish](https://github.com/666ghj/MiroFish) — the open-source swarm intelligence engine we built on
 
 ## License
 

@@ -3,16 +3,18 @@
   "version": "0.1.0",
   "description": "DirePhish — Swarm-predict what goes wrong next",
   "scripts": {
-    "setup": "npm install && cd frontend && npm install",
+    "setup": "npm install && cd frontend && pnpm install",
     "setup:backend": "cd backend && uv sync",
     "setup:all": "npm run setup && npm run setup:backend",
-    "dev": "concurrently --kill-others -n \"backend,frontend\" -c \"green,cyan\" \"npm run backend\" \"npm run frontend\"",
+    "dev": "concurrently --kill-others -n \"backend,frontend\" -c \"green,cyan\" \"npm run backend\" \"npm run frontend:wait\"",
     "backend": "cd backend && uv run python run.py",
-    "frontend": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build"
+    "frontend": "cd frontend && pnpm run dev",
+    "frontend:wait": "wait-on -t 120000 http-get://127.0.0.1:5001/health && cd frontend && pnpm run dev",
+    "build": "cd frontend && pnpm run build"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "wait-on": "^8.0.5"
   },
   "engines": {
     "node": ">=18.0.0"

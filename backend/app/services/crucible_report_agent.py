@@ -23,97 +23,105 @@ def run_report_generation(sim_id: str) -> None:
     thread.start()
 
 
-def _generate_report(sim_id: str) -> None:
-    """Full report generation pipeline."""
-    try:
-        sim_dir = Path(Config.UPLOAD_FOLDER) / "simulations" / sim_id
-        config_path = sim_dir / "config.json"
-        actions_path = sim_dir / "actions.jsonl"
-        report_path = sim_dir / "report.json"
+def generate_sim_report_data(sim_id: str, llm: LLMClient | None = None,
+                             cost_tracker: CostTracker | None = None) -> dict:
+    """Generate report data for a single simulation and return as dict.
 
-        if not config_path.exists() or not actions_path.exists():
-            logger.error(f"Missing config or actions for {sim_id}")
-            return
+    Can be called directly (from exercise_report_agent) or via the background
+    thread wrapper below. When called directly, pass an existing LLM client
+    and cost tracker to share across multiple simulations.
+    """
+    sim_dir = Path(Config.UPLOAD_FOLDER) / "simulations" / sim_id
+    config_path = sim_dir / "config.json"
+    actions_path = sim_dir / "actions.jsonl"
 
-        with open(config_path) as f:
-            config = json.load(f)
-        actions = _read_actions(actions_path)
+    if not config_path.exists() or not actions_path.exists():
+        raise FileNotFoundError(f"Missing config or actions for {sim_id}")
 
-        # Derive project_id for Graphiti queries
-        project_id = sim_id.replace("_sim", "") if sim_id.startswith("proj_") else None
+    with open(config_path) as f:
+        config = json.load(f)
+    actions = _read_actions(actions_path)
 
-        # Query Graphiti for evidence (if available)
-        graph_context = {}
-        if project_id:
-            graph_context = _query_graph_for_report(project_id, config, actions)
+    project_id = sim_id.replace("_sim", "") if sim_id.startswith("proj_") else None
 
-        # Generate each report section via LLM
+    graph_context = {}
+    if project_id:
+        graph_context = _query_graph_for_report(project_id, config, actions)
+
+    if llm is None:
         llm = LLMClient()
-        company = config.get("company_name", "Company")
-        scenario = config.get("scenario", "")
-        agents = config.get("agent_profiles", [])
-        timeline_text = _format_timeline(actions)
 
-        # Load existing cost tracker (with research + simulation costs)
+    company = config.get("company_name", "Company")
+    scenario = config.get("scenario", "")
+    agents = config.get("agent_profiles", [])
+    timeline_text = _format_timeline(actions)
+
+    own_tracker = cost_tracker is None
+    if own_tracker:
         cost_tracker = CostTracker(sim_id)
         existing = CostTracker.load(sim_id)
         if existing:
             cost_tracker.entries = existing.get("entries", [])
 
-        def _track(description: str):
-            if llm.last_usage:
-                cost_tracker.track_llm("report_generation", llm.model, llm.last_usage["input_tokens"], llm.last_usage["output_tokens"], description)
+    def _track(description: str):
+        if llm.last_usage:
+            cost_tracker.track_llm("report_generation", llm.model, llm.last_usage["input_tokens"], llm.last_usage["output_tokens"], description)
 
-        # Executive Summary
-        summary = _generate_section(llm, "executive_summary", company, scenario, timeline_text, graph_context)
-        _track("executive_summary")
+    summary = _generate_section(llm, "executive_summary", company, scenario, timeline_text, graph_context)
+    _track("executive_summary")
 
-        # Timeline entries
-        timeline = _generate_timeline_entries(llm, actions, graph_context)
-        _track("timeline")
+    timeline = _generate_timeline_entries(llm, actions, graph_context)
+    _track("timeline")
 
-        # Communication Analysis
-        comm = _generate_section(llm, "communication", company, scenario, timeline_text, graph_context)
-        _track("communication_analysis")
+    comm = _generate_section(llm, "communication", company, scenario, timeline_text, graph_context)
+    _track("communication_analysis")
 
-        # Tensions
-        tensions = _generate_section(llm, "tensions", company, scenario, timeline_text, graph_context)
-        _track("tensions")
+    tensions = _generate_section(llm, "tensions", company, scenario, timeline_text, graph_context)
+    _track("tensions")
 
-        # Agent Scorecards
-        agent_scores = _generate_agent_scores(llm, agents, actions, graph_context)
-        _track("agent_scores")
+    agent_scores = _generate_agent_scores(llm, agents, actions, graph_context)
+    _track("agent_scores")
 
-        # Recommendations
-        recs = _generate_recommendations(llm, company, scenario, timeline_text, graph_context)
-        _track("recommendations")
+    recs = _generate_recommendations(llm, company, scenario, timeline_text, graph_context)
+    _track("recommendations")
 
-        # Save updated costs
+    if own_tracker:
         cost_tracker.save(str(sim_dir))
 
-        report = {
-            "simId": sim_id,
-            "status": "complete",
-            "companyName": company,
-            "scenarioName": scenario[:100],
-            "completedAt": datetime.now(timezone.utc).isoformat(),
-            "duration": f"{config.get('total_rounds', 5)} rounds",
-            "executiveSummary": summary,
-            "timeline": timeline,
-            "communicationAnalysis": comm,
-            "tensions": tensions,
-            "agentScores": agent_scores,
-            "recommendations": recs,
-        }
+    return {
+        "simId": sim_id,
+        "status": "complete",
+        "companyName": company,
+        "scenarioName": config.get("threat_actor_profile", scenario[:100]),
+        "completedAt": datetime.now(timezone.utc).isoformat(),
+        "duration": f"{config.get('total_rounds', 5)} rounds",
+        "totalRounds": config.get("total_rounds", 5),
+        "executiveSummary": summary,
+        "timeline": timeline,
+        "communicationAnalysis": comm,
+        "tensions": tensions,
+        "agentScores": agent_scores,
+        "recommendations": recs,
+        "config": config,
+        "actionCount": len(actions),
+    }
 
+
+def _generate_report(sim_id: str) -> None:
+    """Full report generation pipeline (background thread wrapper)."""
+    try:
+        report = generate_sim_report_data(sim_id)
+
+        report_path = Path(Config.UPLOAD_FOLDER) / "simulations" / sim_id / "report.json"
+        # Remove internal fields before saving the legacy format
+        save_report = {k: v for k, v in report.items() if k not in ("config", "actionCount")}
         with open(report_path, "w") as f:
-            json.dump(report, f, indent=2, ensure_ascii=False)
+            json.dump(save_report, f, indent=2, ensure_ascii=False)
 
         logger.info(f"Report generated for {sim_id}")
 
     except Exception as e:
         logger.error(f"Report generation failed for {sim_id}: {e}")
-        # Write error report so frontend knows
         report_path = Path(Config.UPLOAD_FOLDER) / "simulations" / sim_id / "report.json"
         with open(report_path, "w") as f:
             json.dump({"simId": sim_id, "status": "failed", "error": str(e)}, f)

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { listSimulations } from "@/app/actions/simulation";
 import AppSidebar from "@/app/components/layout/AppSidebar";
 import GlobalHeader from "@/app/components/layout/GlobalHeader";
 
@@ -20,23 +19,21 @@ export const metadata: Metadata = {
   description: "Predictive incident response simulation. AI agents rehearse your war room before the breach happens.",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const result = await listSimulations();
-  const simulations = "data" in result ? result.data : [];
 
   return (
     <html
       lang="en"
       className={`${geistMono.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="h-full font-sans flex flex-col">
+      <body className="h-full font-sans">
         <GlobalHeader />
-        <div className="relative flex-1 min-h-0">
-          <AppSidebar simulations={simulations} />
+        <div className="relative" style={{ height: "calc(100svh - 3rem)" }}>
+          <AppSidebar />
           <main className="absolute inset-0 overflow-auto">{children}</main>
         </div>
       </body>

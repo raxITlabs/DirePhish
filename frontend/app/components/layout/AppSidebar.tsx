@@ -1,23 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { SimulationSummary } from "@/app/types";
+import type { PipelineRun } from "@/app/types";
+import RunHistoryContent from "@/app/components/home/RunHistoryContent";
 
-interface AppSidebarProps {
-  simulations: SimulationSummary[];
-}
-
-function getSimHref(sim: SimulationSummary) {
-  return sim.status === "completed" ? `/report/${sim.simId}` : `/simulation/${sim.simId}`;
-}
-
-function isRunning(status: string) {
-  return status === "running" || status === "starting";
-}
-
-export default function AppSidebar({ simulations }: AppSidebarProps) {
+export default function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
+  const [runs, setRuns] = useState<PipelineRun[]>([]);
+
+  const isPipeline = pathname.startsWith("/pipeline/");
+
+  useEffect(() => {
+    if (!isPipeline) {
+      fetch("/api/runs")
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.data) setRuns(json.data);
+        })
+        .catch(() => {
+          // Silently fail — sidebar just shows empty state
+        });
+    }
+  }, [isPipeline]);
+
+  // Pipeline page has its own integrated stages panel — hide sidebar entirely
+  if (isPipeline) return null;
 
   return (
     <aside
@@ -29,68 +39,7 @@ export default function AppSidebar({ simulations }: AppSidebarProps) {
         {/* Sidebar content */}
         {!collapsed && (
           <div className="flex-1 overflow-y-auto p-2">
-            {simulations.length > 0 ? (
-              <nav className="space-y-6">
-                <div>
-                  <h3 className="font-mono uppercase text-[10.5px] tracking-widest text-sidebar-foreground/50 px-3 mb-2">
-                    Recent
-                  </h3>
-                  <ul className="space-y-0.5">
-                    {simulations.slice(0, 3).map((sim, index) => (
-                      <li key={sim.simId}>
-                        <a
-                          href={getSimHref(sim)}
-                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                            isRunning(sim.status)
-                              ? "text-sidebar-primary bg-sidebar-accent font-medium"
-                              : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                          }`}
-                        >
-                          <span className="text-[13px]">
-                            {isRunning(sim.status) ? "◉" : sim.status === "completed" ? "✓" : "○"}
-                          </span>
-                          <span className="font-mono text-sm tracking-tight">
-                            Run {index + 1}
-                          </span>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {simulations.length > 3 && (
-                  <div>
-                    <h3 className="font-mono uppercase text-[10.5px] tracking-widest text-sidebar-foreground/50 px-3 mb-2">
-                      Past Runs
-                    </h3>
-                    <ul className="space-y-0.5">
-                      {simulations.slice(3, 8).map((sim, index) => (
-                        <li key={sim.simId}>
-                          <a
-                            href={getSimHref(sim)}
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
-                          >
-                            <span className="text-[13px]">○</span>
-                            <span className="font-mono text-sm tracking-tight">
-                              Run {index + 4}
-                            </span>
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </nav>
-            ) : (
-              <div className="px-4 py-8 text-center">
-                <p className="text-sm text-sidebar-foreground/50 font-mono">
-                  No runs yet
-                </p>
-                <p className="text-xs text-sidebar-foreground/30 font-mono mt-1">
-                  Start an analysis to see history here
-                </p>
-              </div>
-            )}
+            <RunHistoryContent runs={runs} />
           </div>
         )}
 

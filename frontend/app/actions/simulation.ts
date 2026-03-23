@@ -3,6 +3,7 @@
 import { fetchApi } from "@/app/lib/api";
 import type { SimulationConfig, SimulationStatus, SimulationSummary, AgentAction } from "@/app/types";
 
+/** @deprecated Use GET /api/runs (WDK-backed) instead for run listing */
 export async function listSimulations(): Promise<{ data: SimulationSummary[] } | { error: string }> {
   const result = await fetchApi<{ sim_id: string; status: string; current_round: number; total_rounds: number; action_count: number }[]>("/api/crucible/simulations");
   if ("error" in result) return result;

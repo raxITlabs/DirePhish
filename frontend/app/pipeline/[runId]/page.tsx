@@ -1,18 +1,19 @@
 // frontend/app/pipeline/[runId]/page.tsx
 "use client";
 
-import { use, useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import Header from "@/app/components/layout/Header";
-import Breadcrumbs from "@/app/components/layout/Breadcrumbs";
-import SplitPanel from "@/app/components/shared/SplitPanel";
-import GraphPanel from "@/app/components/simulation/GraphPanel";
-import PipelineProgressBar from "@/app/components/pipeline/PipelineProgressBar";
-import PipelineGraphPlaceholder from "@/app/components/pipeline/PipelineGraphPlaceholder";
-import PipelineContextPanel from "@/app/components/pipeline/PipelineContextPanel";
+import { use, useEffect, useRef, useState, useCallback } from "react";
+import PipelineCanvas from "@/app/components/pipeline/PipelineCanvas";
+import PipelineStagesPanel from "@/app/components/pipeline/PipelineStagesPanel";
+import PipelineDetailPanel from "@/app/components/pipeline/PipelineDetailPanel";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/app/components/ui/resizable";
 import { useSimulationPolling } from "@/app/hooks/useSimulationPolling";
-import { getDossier } from "@/app/actions/project";
-import type { CompanyDossier } from "@/app/types";
+import { getDossier, getProjectGraph, updateDossier } from "@/app/actions/project";
+import { getScenarios, getConfigs } from "@/app/actions/scenarios";
+import type { CompanyDossier, GraphData, GraphNode, ThreatAnalysisResponse, SimulationConfig } from "@/app/types";
 
 type StepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
 
@@ -41,8 +42,7 @@ const STEP_ORDER = [
   { id: "scenario_selection", label: "Scenario Selection" },
   { id: "config_expansion", label: "Config Generation" },
   { id: "simulations", label: "Simulations" },
-  { id: "reports", label: "After-Action Reports" },
-  { id: "comparative", label: "Comparative Analysis" },
+  { id: "exercise_report", label: "Exercise Report" },
 ];
 
 export default function PipelinePage({
@@ -51,9 +51,7 @@ export default function PipelinePage({
   params: Promise<{ runId: string }>;
 }) {
   const { runId } = use(params);
-  const router = useRouter();
-
-  // Pipeline state (existing)
+  // Pipeline state
   const [steps, setSteps] = useState<Record<string, StepState>>({});
   const [hookData, setHookData] = useState<{ hookToken: string; projectId: string } | null>(null);
   const [dossier, setDossier] = useState<CompanyDossier | null>(null);
@@ -62,19 +60,59 @@ export default function PipelinePage({
   const [projectId, setProjectId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  // New simulation state
+  // Simulation state
   const [allSimIds, setAllSimIds] = useState<string[]>([]);
   const [activeSimId, setActiveSimId] = useState<string | null>(null);
   const [activeSimIndex, setActiveSimIndex] = useState(0);
 
+  // Project graph (from research phase, before simulations)
+  const [projectGraph, setProjectGraph] = useState<GraphData>({ nodes: [], edges: [] });
+
+  // Threat analysis data (scenarios, threats, attack paths)
+  const [threatData, setThreatData] = useState<ThreatAnalysisResponse | null>(null);
+
+  // Canvas state
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+
+  // Detail panel state — which stage is selected for detail view
+  const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+
+  const [configs, setConfigs] = useState<SimulationConfig[] | null>(null);
+
   // Simulation polling hook
-  const { simStatus, simActions, graphData, graphPushing, error: simError, pollGraph } =
+  const { simStatus, simActions, graphData: simGraphData, graphPushing, error: simError, pollGraph } =
     useSimulationPolling(activeSimId);
+
+  // Merge: use simulation graph if available, otherwise project graph
+  const graphData = simGraphData.nodes.length > 0 ? simGraphData : projectGraph;
 
   const isSimRunning = simStatus?.status === "running" || simStatus?.status === "starting";
 
-  // Show GraphPanel as soon as activeSimId is set — GraphPanel handles empty data gracefully
-  const showGraph = !!activeSimId;
+  const lastAutoFollowedRef = useRef<string | null>(null);
+
+  // Auto-follow only when a NEW stage starts running — not on every poll
+  useEffect(() => {
+    const runningStep = STEP_ORDER.find((s) => steps[s.id]?.status === "running");
+    if (!runningStep) return;
+    if (runningStep.id === lastAutoFollowedRef.current) return;
+    if (runningStep.id === "dossier_review" && !dossier) return;
+    if (runningStep.id === "simulations" && !simStatus) return;
+    lastAutoFollowedRef.current = runningStep.id;
+    setSelectedStageId(runningStep.id);
+  }, [steps, dossier, simStatus]);
+
+  // Handle stage selection from sidebar
+  const handleSelectStage = useCallback((stageId: string) => {
+    setSelectedStageId((prev) => (prev === stageId ? null : stageId));
+  }, []);
+
+  // Handle simulation switching
+  const handleSimChange = useCallback((newIndex: number) => {
+    if (newIndex >= 0 && newIndex < allSimIds.length) {
+      setActiveSimIndex(newIndex);
+      setActiveSimId(allSimIds[newIndex]);
+    }
+  }, [allSimIds]);
 
   // Poll for pipeline updates
   useEffect(() => {
@@ -125,12 +163,10 @@ export default function PipelinePage({
               if (update.step === "simulations" && update.status === "running" && update.detail) {
                 const ids = update.detail.split(", ").filter(Boolean);
                 if (ids.length > 1) {
-                  // First "running" update: "simId1, simId2"
                   setAllSimIds(ids);
                   setActiveSimId(ids[0]);
                   setActiveSimIndex(0);
                 } else if (ids.length === 1) {
-                  // Per-sim update: single simId
                   setActiveSimId(ids[0]);
                 }
               }
@@ -162,90 +198,120 @@ export default function PipelinePage({
     });
   }, [hookData?.projectId]);
 
-  const handleConfirmDossier = useCallback(async () => {
-    if (!hookData) return;
+  // Fetch project graph once research completes (projectId is available)
+  useEffect(() => {
+    if (!projectId) return;
+    const researchState = steps["research"];
+    if (researchState?.status !== "completed") return;
+    getProjectGraph(projectId).then((result) => {
+      if ("data" in result && result.data.nodes.length > 0) {
+        setProjectGraph(result.data);
+      }
+    });
+  }, [projectId, steps]);
+
+  // Fetch threat analysis data as soon as threat_analysis or scenario_selection completes
+  useEffect(() => {
+    if (!projectId || threatData) return;
+    const threatState = steps["threat_analysis"];
+    const scenarioState = steps["scenario_selection"];
+    if (threatState?.status !== "completed" && scenarioState?.status !== "completed") return;
+    getScenarios(projectId).then((result) => {
+      if ("data" in result) setThreatData(result.data);
+    });
+  }, [projectId, steps, threatData]);
+
+  // Fetch configs when config_expansion completes
+  useEffect(() => {
+    if (!projectId) return;
+    const configState = steps["config_expansion"];
+    if (configState?.status !== "completed" || configs) return;
+    getConfigs(projectId).then((result) => {
+      if ("data" in result) setConfigs(result.data);
+    });
+  }, [projectId, steps, configs]);
+
+  const handleConfirmWithSave = useCallback(async (editedDossier: CompanyDossier) => {
+    if (!hookData || !projectId) return;
     setConfirming(true);
     try {
-      const res = await fetch("/api/pipeline/confirm", {
+      // Save edited dossier
+      await updateDossier(projectId, editedDossier);
+      setDossier(editedDossier);
+      // Then confirm pipeline
+      await fetch("/api/pipeline/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: hookData.hookToken,
-          confirmed: true,
-        }),
+        body: JSON.stringify({ token: hookData.hookToken, confirmed: true }),
       });
-      if (!res.ok) {
-        setError("Failed to confirm dossier");
-      }
       setHookData(null);
     } catch {
       setError("Failed to confirm dossier");
     } finally {
       setConfirming(false);
     }
-  }, [hookData]);
+  }, [hookData, projectId]);
 
   return (
-    <div className="h-screen flex flex-col">
-      <Header />
-
-      {/* Breadcrumbs bar */}
-      <div className="px-4 py-2 border-b border-border">
-        <Breadcrumbs
-          items={[
-            { label: "Home", href: "/" },
-            { label: "Pipeline" },
-          ]}
-        />
-      </div>
-
-      {error && (
-        <div className="mx-4 mt-2 rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
-      {/* Progress bar */}
-      <PipelineProgressBar steps={steps} stepOrder={STEP_ORDER} />
-
-      {/* Main split layout */}
-      <SplitPanel
-        viewMode="split"
-        splitRatio={[60, 40]}
-        leftPanel={
-          showGraph ? (
-            <GraphPanel
-              data={graphData}
-              isLive={isSimRunning}
-              isPushing={graphPushing}
-              onRefresh={pollGraph}
-            />
-          ) : (
-            <PipelineGraphPlaceholder
-              companyName={dossier?.company?.name}
-            />
-          )
-        }
-        rightPanel={
-          <PipelineContextPanel
-            steps={steps}
-            stepOrder={STEP_ORDER}
-            dossier={dossier}
-            hookData={hookData}
-            confirming={confirming}
-            onConfirmDossier={handleConfirmDossier}
-            projectId={projectId}
-            companyUrl={undefined}
-            simStatus={simStatus}
-            simActions={simActions}
-            graphData={graphData}
-            activeSimIndex={activeSimIndex}
-            totalSims={allSimIds.length}
-            simError={simError}
-            pipelineComplete={pipelineComplete}
-          />
-        }
+    <div className="flex" style={{ width: "100%", height: "calc(100svh - 3rem)" }}>
+      {/* Left: stage navigator — always visible */}
+      <PipelineStagesPanel
+        steps={steps}
+        stepOrder={STEP_ORDER}
+        selectedStageId={selectedStageId}
+        onSelectStage={handleSelectStage}
+        simStatus={simStatus}
+        dossierSummary={dossier?.company?.name}
+        pipelineComplete={pipelineComplete}
+        threatData={threatData}
       />
+
+      {/* Center + Right: canvas with optional detail panel */}
+      <div className="flex-1 min-w-0">
+        {selectedStageId ? (
+          <ResizablePanelGroup orientation="horizontal" className="h-full">
+            <ResizablePanel defaultSize={60} minSize={30}>
+              <PipelineCanvas
+                graphData={graphData}
+                selectedNode={selectedNode}
+                onSelectNode={setSelectedNode}
+                error={error || simError}
+                isSimRunning={isSimRunning}
+              />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={40} minSize={25}>
+              <PipelineDetailPanel
+                stageId={selectedStageId}
+                steps={steps}
+                dossier={dossier}
+                onConfirmDossier={handleConfirmWithSave}
+                confirming={confirming}
+                simStatus={simStatus}
+                simActions={simActions}
+                activeSimIndex={activeSimIndex}
+                totalSims={allSimIds.length}
+                threatData={threatData}
+                graphData={graphData}
+                scenarioTitle={threatData?.scenarios?.[activeSimIndex]?.title}
+                onClose={() => setSelectedStageId(null)}
+                projectId={projectId}
+                allSimIds={allSimIds}
+                onSimChange={handleSimChange}
+                configs={configs}
+              />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          <PipelineCanvas
+            graphData={graphData}
+            selectedNode={selectedNode}
+            onSelectNode={setSelectedNode}
+            error={error || simError}
+            isSimRunning={isSimRunning}
+          />
+        )}
+      </div>
     </div>
   );
 }

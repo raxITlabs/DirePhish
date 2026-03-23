@@ -58,6 +58,8 @@ def _expansion_pipeline(project_id: str, scenario_ids: list[str]) -> None:
         # Find selected scenarios from the analysis
         all_scenarios = {s["id"]: s for s in analysis.get("scenarios", [])}
         attack_paths = {p["id"]: p for p in analysis.get("attack_paths", [])}
+        threats = analysis.get("threats", [])
+        vulnerabilities = analysis.get("vulnerabilities", [])
 
         completed = 0
         failed_scenarios = []
@@ -76,9 +78,13 @@ def _expansion_pipeline(project_id: str, scenario_ids: list[str]) -> None:
                 progress=pct,
                 progress_message=f"Expanding scenario: {scenario.get('title', sid)}...")
 
+            # Build threat context for this scenario
+            threat_context = _build_threat_context(scenario, threats, vulnerabilities)
+
             try:
                 config = _expand_single_scenario(
                     project_id, dossier, scenario, attack_path, cost_tracker, sid,
+                    threat_context,
                 )
                 project_manager.save_scenario(project_id, sid, config)
                 completed += 1
@@ -108,6 +114,55 @@ def _expansion_pipeline(project_id: str, scenario_ids: list[str]) -> None:
             progress_message="Config generation failed.")
 
 
+def _build_threat_context(scenario: dict, threats: list[dict], vulnerabilities: list[dict]) -> str:
+    """Build a threat intelligence context string from analysis data."""
+    sections = []
+
+    # Scenario metadata
+    prob = scenario.get("probability", 0)
+    severity = scenario.get("severity", "unknown")
+    affected = scenario.get("affected_teams", [])
+    evidence = scenario.get("evidence", [])
+
+    if prob or severity != "unknown":
+        sections.append(f"Scenario Probability: {prob*100:.0f}% | Severity: {severity}")
+    if affected:
+        sections.append(f"Primarily Affected Teams: {', '.join(affected)}")
+    if evidence:
+        sections.append("Supporting Evidence from Dossier:")
+        for e in evidence[:5]:
+            sections.append(f"  - {e[:150]}")
+
+    # Relevant threat actors
+    if threats:
+        sections.append("\nThreat Intelligence:")
+        for t in threats[:5]:
+            name = t.get("name", t.get("threat_name", "Unknown"))
+            actors = t.get("threat_actors", [])
+            techniques = t.get("mitre_techniques", [])
+            reasoning = t.get("reasoning", "")
+            sections.append(f"  Threat: {name}")
+            if actors:
+                sections.append(f"    Known Actors: {', '.join(actors[:3])}")
+            if techniques:
+                sections.append(f"    MITRE Techniques: {', '.join(techniques[:5])}")
+            if reasoning:
+                sections.append(f"    Reasoning: {reasoning[:150]}")
+
+    # Vulnerability gaps
+    if vulnerabilities:
+        sections.append("\nIdentified Vulnerability Gaps:")
+        for v in vulnerabilities[:5]:
+            gap = v.get("gap", v.get("vulnerability", "Unknown"))
+            sev = v.get("severity", "medium")
+            systems = v.get("affected_systems", [])
+            sections.append(f"  [{sev.upper()}] {gap}")
+            if systems:
+                sections.append(f"    Affected Systems: {', '.join(systems[:3])}")
+
+    return "\n".join(sections)
+
+
 def _expand_single_scenario(
     project_id: str,
     dossier: dict,
@@ -115,6 +170,7 @@ def _expand_single_scenario(
     attack_path: dict | None,
     cost_tracker: CostTracker,
     scenario_id: str,
+    threat_context: str = "",
 ) -> dict:
     """Run 5 LLM calls to expand a scenario into a full SimulationConfig."""
     llm = LLMClient()
@@ -131,15 +187,15 @@ def _expand_single_scenario(
             )
 
     # Call 5: Cascading Pressures
-    cascading = _generate_cascading_pressures(llm, dossier, scenario, attack_path)
+    cascading = _generate_cascading_pressures(llm, dossier, scenario, attack_path, threat_context)
     _track("cascading_pressures")
 
     # Call 6: Timed Injects
-    events = _generate_timed_injects(llm, scenario, attack_path, cascading)
+    events = _generate_timed_injects(llm, scenario, attack_path, cascading, threat_context)
     _track("timed_injects")
 
     # Call 7: Agent Personas
-    agents = _generate_agent_personas(llm, dossier, scenario, cascading)
+    agents = _generate_agent_personas(llm, dossier, scenario, cascading, threat_context)
     _track("agent_personas")
 
     # Normalize agent profiles — LLM sometimes uses "role_id" instead of "role"
@@ -178,7 +234,8 @@ def _expand_single_scenario(
     return config
 
 
-def _generate_cascading_pressures(llm: LLMClient, dossier: dict, scenario: dict, attack_path: dict | None) -> dict:
+def _generate_cascading_pressures(llm: LLMClient, dossier: dict, scenario: dict,
+                                   attack_path: dict | None, threat_context: str = "") -> dict:
     """Call 5: Generate cascading 1st/2nd/3rd order effects and pressure configs."""
     compliance = dossier.get("compliance", [])
     org_roles = [r.get("title", "") for r in dossier.get("org", {}).get("roles", [])]
@@ -192,6 +249,9 @@ Summary: {scenario.get("summary", "")}
 
 ## Attack Path
 {path_text}
+
+## Threat Intelligence & Vulnerability Context
+{threat_context}
 
 ## Company Compliance Requirements
 {", ".join(compliance)}
@@ -226,12 +286,15 @@ REQUIREMENTS:
 - Include at least 3 pressures covering: regulatory, operational, and reputational/business
 - Pressure types must be one of: countdown, deadline, threshold, triggered
 - affects_roles must use role identifiers (lowercase, underscored) from the org roles above
-- Each cascading order should escalate from the previous"""
+- Each cascading order should escalate from the previous
+- Ground pressures in the specific vulnerability gaps identified above — reference the actual defense gaps and their severity
+- Pressures should reflect the scenario's probability and severity level"""
 
     return llm.chat_json([{"role": "user", "content": prompt}])
 
 
-def _generate_timed_injects(llm: LLMClient, scenario: dict, attack_path: dict | None, cascading: dict) -> list[dict]:
+def _generate_timed_injects(llm: LLMClient, scenario: dict, attack_path: dict | None,
+                            cascading: dict, threat_context: str = "") -> list[dict]:
     """Call 6: Generate 6-10 timed injects with conditional branching."""
     kill_chain = attack_path.get("kill_chain", []) if attack_path else []
     effects = cascading.get("cascading_effects", {})
@@ -246,6 +309,9 @@ def _generate_timed_injects(llm: LLMClient, scenario: dict, attack_path: dict | 
 
 ## Cascading Effects
 {json.dumps(effects, indent=2)}
+
+## Threat Intelligence & Vulnerability Context
+{threat_context}
 
 Generate 6-10 timed injects that follow the kill chain progression. For rounds 3 and later, add conditional branching where defender actions can change the outcome.
 
@@ -277,12 +343,15 @@ REQUIREMENTS:
 - target_systems should be lowercase fragments that would appear in action args
 - Each inject should reference a kill_chain_step from the chain above
 - Alternatives should be meaningfully different outcomes, not just "nothing happens"
-- Space injects across rounds — not all in round 1"""
+- Space injects across rounds — not all in round 1
+- Ground inject descriptions in specific threat actor techniques and vulnerability gaps from the threat intelligence above
+- Inject alerts should reference specific systems, tools, and MITRE techniques that the threat actors are known to use"""
 
     return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
 
 
-def _generate_agent_personas(llm: LLMClient, dossier: dict, scenario: dict, cascading: dict) -> list[dict]:
+def _generate_agent_personas(llm: LLMClient, dossier: dict, scenario: dict,
+                              cascading: dict, threat_context: str = "") -> list[dict]:
     """Call 7: Select roles and generate rich personas for this scenario."""
     org = dossier.get("org", {})
     roles = org.get("roles", [])
@@ -313,6 +382,9 @@ def _generate_agent_personas(llm: LLMClient, dossier: dict, scenario: dict, casc
 ## Active Pressures During This Incident
 {json.dumps([p.get("name", "") for p in pressures])}
 
+## Threat Intelligence & Vulnerability Context
+{threat_context}
+
 For each agent, generate:
 - A realistic full name (use real names from the org if available)
 - A role ID (lowercase, underscored)
@@ -339,7 +411,9 @@ REQUIREMENTS:
 - Personas must reference specific company context (recent events, org changes, company size)
 - Each agent should have a realistic reason to be stressed or conflicted during THIS scenario
 - At least 2 pairs of agents should have natural tension (e.g., CISO wants containment, CEO wants uptime)
-- incident_memory should be scenario-specific, not generic"""
+- incident_memory should be scenario-specific, not generic
+- Ensure agents represent the affected teams identified in the threat analysis above
+- Personas should reference awareness of specific threat actors and vulnerability gaps where relevant"""
 
     return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
 
