@@ -284,6 +284,21 @@ export interface ExerciseReport {
         description: string;
       }>;
     }>;
+    worldsPerScenario?: Array<{
+      scenarioTitle: string;
+      worlds: Array<{
+        name: string;
+        type: string;
+        description: string;
+        participantCount: number;
+        actionCount: number;
+      }>;
+      totalActions: number;
+    }>;
+    pipelineSteps?: Array<{
+      step: string;
+      description: string;
+    }>;
   };
 
   costs?: {

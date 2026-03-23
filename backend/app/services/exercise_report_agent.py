@@ -933,21 +933,79 @@ def _build_methodology(sim_data_list: list[dict], project: dict) -> dict:
     # Extract regulatory context from graph
     # (compliance nodes are already collected but we get them from the graph query)
 
+    # Build per-scenario world architecture from actions data
+    worlds_per_scenario = []
+    for sd in sim_data_list:
+        sim_actions = sd.get("actions", [])
+        config = sd.get("config", {})
+        worlds_cfg = config.get("worlds", [])
+
+        # Count actions per world
+        world_action_counts: dict[str, int] = {}
+        for a in sim_actions:
+            w = a.get("world", "Unknown")
+            world_action_counts[w] = world_action_counts.get(w, 0) + 1
+
+        worlds_detail = []
+        for w in worlds_cfg:
+            name = w.get("name", "Unknown")
+            participants = w.get("participants", [])
+            worlds_detail.append({
+                "name": name,
+                "type": w.get("type", "slack"),
+                "description": w.get("description", ""),
+                "participantCount": len(participants) if participants else len(config.get("agent_profiles", [])),
+                "actionCount": world_action_counts.get(name, 0),
+            })
+
+        worlds_per_scenario.append({
+            "scenarioTitle": sd["scenarioName"],
+            "worlds": worlds_detail,
+            "totalActions": len(sim_actions),
+        })
+
+    # Pipeline lifecycle steps
+    pipeline_steps = [
+        {
+            "step": "Company Research",
+            "description": f"AI-powered research on the target organization's public profile, technology stack, security posture, and recent events.",
+        },
+        {
+            "step": "Threat Analysis",
+            "description": f"Identified {len(scenarios)} threat scenarios with MITRE ATT&CK mapped attack paths based on the company's specific risk profile.",
+        },
+        {
+            "step": "Simulation Design",
+            "description": f"Generated {len(agent_names)} agent personas across {sum(len(ws['worlds']) for ws in worlds_per_scenario)} communication channels with role-based access filtering.",
+        },
+        {
+            "step": "Agent-Based Simulation",
+            "description": f"Ran {len(scenarios)} scenarios × {total_rounds // len(scenarios) if scenarios else 0} rounds = {total_actions} total agent interactions across Slack and Email channels.",
+        },
+        {
+            "step": "Cross-Scenario Analysis",
+            "description": "Root cause analysis using 5 Whys technique, team performance scoring, and executive action recommendations.",
+        },
+    ]
+
     return {
         "scenarioCount": len(scenarios),
         "scenarios": scenarios,
         "simulationApproach": (
             f"This predictive exercise simulated {len(scenarios)} incident response "
-            f"scenario(s) using AI-driven agent-based modeling. Agents representing "
-            f"key organizational roles interacted via simulated communication channels "
-            f"while responding to evolving threat conditions. The simulation models "
-            f"predict how the organization would likely respond based on its current "
-            f"structure, policies, and capabilities."
+            f"scenario(s) using AI-driven agent-based modeling. {len(agent_names)} agents "
+            f"representing key organizational roles interacted via "
+            f"{sum(len(ws['worlds']) for ws in worlds_per_scenario)} simulated communication "
+            f"channels while responding to evolving threat conditions over {total_rounds} rounds, "
+            f"producing {total_actions} total interactions. The simulation models predict how the "
+            f"organization would likely respond based on its current structure, policies, and capabilities."
         ),
         "agentCount": len(agent_names),
         "totalRounds": total_rounds,
         "totalActions": total_actions,
         "attackPaths": attack_paths,
+        "worldsPerScenario": worlds_per_scenario,
+        "pipelineSteps": pipeline_steps,
     }
 
 
@@ -1061,16 +1119,84 @@ Return ONLY valid JSON:
                 "recommendations": [],
             })
 
+    # ─── Cross-scenario comparison (LLM-powered) ───
+    cross_scenario = _generate_cross_scenario_comparison(llm, scenario_details, cost_tracker)
+
     return {
         "scenarioDetails": scenario_details,
-        "crossScenarioComparison": {
-            "consistentWeaknesses": ["See Root Cause Analysis section for systemic findings."],
+        "crossScenarioComparison": cross_scenario,
+    }
+
+
+def _generate_cross_scenario_comparison(
+    llm: LLMClient, scenario_details: list[dict], cost_tracker: CostTracker
+) -> dict:
+    """Generate cross-scenario comparison by analysing all scenario appendix details."""
+    if not scenario_details:
+        return {"consistentWeaknesses": [], "scenarioFindings": []}
+
+    # Build context from per-scenario analyses
+    scenarios_context = ""
+    for sd in scenario_details:
+        scenarios_context += f"\n### {sd['title']}\n"
+        scenarios_context += f"Executive Summary: {sd.get('executiveSummary', '')[:600]}\n"
+        scenarios_context += f"Tensions: {sd.get('tensions', '')[:400]}\n"
+        recs = sd.get("recommendations", [])
+        if recs:
+            scenarios_context += f"Recommendations: {'; '.join(recs[:5])}\n"
+
+    prompt = f"""{LEGAL_PREAMBLE}
+
+You are writing the cross-scenario comparison section of a simulation exercise report appendix.
+
+Below are the per-scenario analyses from {len(scenario_details)} simulated incident scenarios:
+{scenarios_context}
+
+Analyse ACROSS all scenarios to identify:
+
+1. CONSISTENT WEAKNESSES (3-6): Predicted organizational gaps that appear in MULTIPLE scenarios. These are systemic — not scenario-specific. Each should be a concrete, actionable finding (not vague). Example: "Predicted 45+ minute delay in escalation to executive leadership across both scenarios due to unclear severity classification criteria."
+
+2. PER-SCENARIO FINDINGS: For EACH scenario, list:
+   - strengths (2-3): What the organization is predicted to do well
+   - weaknesses (2-3): Scenario-specific gaps (distinct from consistent weaknesses above)
+   - notableMoments (2-3): Specific predicted decision points or pivotal moments
+
+Return ONLY valid JSON:
+{{
+  "consistentWeaknesses": ["weakness1", "weakness2", ...],
+  "scenarioFindings": [
+    {{
+      "scenario": "scenario title",
+      "strengths": ["strength1", ...],
+      "weaknesses": ["weakness1", ...],
+      "notableMoments": ["moment1", ...]
+    }}
+  ]
+}}"""
+
+    try:
+        logger.info("Generating cross-scenario comparison...")
+        result = llm.chat_json([{"role": "user", "content": prompt}])
+        if llm.last_usage:
+            cost_tracker.track_llm(
+                "exercise_report", llm.model,
+                llm.last_usage["input_tokens"],
+                llm.last_usage["output_tokens"],
+                "appendix_cross_scenario",
+            )
+        return {
+            "consistentWeaknesses": result.get("consistentWeaknesses", []),
+            "scenarioFindings": result.get("scenarioFindings", []),
+        }
+    except Exception as e:
+        logger.warning(f"Cross-scenario comparison failed: {e}")
+        return {
+            "consistentWeaknesses": [],
             "scenarioFindings": [
                 {"scenario": d["title"], "strengths": [], "weaknesses": [], "notableMoments": []}
                 for d in scenario_details
             ],
-        },
-    }
+        }
 
 
 def _build_timeline_from_actions(actions: list[dict]) -> list[dict]:

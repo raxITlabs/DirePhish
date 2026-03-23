@@ -141,6 +141,68 @@ export default function MethodologySection({ methodology, costs }: MethodologySe
         </div>
       )}
 
+      {/* Pipeline Lifecycle */}
+      {methodology.pipelineSteps && methodology.pipelineSteps.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Analysis Pipeline
+          </h3>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="space-y-0">
+                {methodology.pipelineSteps.map((step, idx) => (
+                  <div key={idx} className="flex items-stretch gap-3">
+                    <div className="flex flex-col items-center w-6 shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-royal-azure-100 text-royal-azure-700 text-xs font-bold flex items-center justify-center shrink-0">
+                        {idx + 1}
+                      </div>
+                      {idx < methodology.pipelineSteps!.length - 1 && (
+                        <div className="w-px flex-1 bg-royal-azure-200" />
+                      )}
+                    </div>
+                    <div className="pb-4 flex-1 min-w-0">
+                      <p className="text-sm font-medium">{step.step}</p>
+                      <p className="text-xs text-muted-foreground">{step.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Simulation Architecture */}
+      {methodology.worldsPerScenario && methodology.worldsPerScenario.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Simulation Architecture
+          </h3>
+          {methodology.worldsPerScenario.map((scenario, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">{scenario.scenarioTitle}</CardTitle>
+                <p className="text-xs text-muted-foreground">{scenario.totalActions} total interactions across {scenario.worlds.length} channels</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {scenario.worlds.map((world, j) => (
+                    <div key={j} className="flex items-center gap-3 text-xs">
+                      <Badge variant="outline" className={world.type === "slack" ? "bg-royal-azure-50 text-royal-azure-700 border-royal-azure-200" : "bg-sandy-brown-50 text-sandy-brown-700 border-sandy-brown-200"}>
+                        {world.type}
+                      </Badge>
+                      <span className="font-medium flex-1">{world.name}</span>
+                      <span className="text-muted-foreground">{world.participantCount} agents</span>
+                      <span className="font-mono text-muted-foreground">{world.actionCount} actions</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {/* Scenario details are in the Appendix — no need to repeat here */}
     </section>
   );

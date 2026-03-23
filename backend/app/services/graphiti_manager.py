@@ -560,7 +560,7 @@ def _classify_node(name: str, summary: str) -> str:
     if any(k in text for k in ["ciso", "ceo", "cto", "cro", "analyst", "engineer",
                                 "counsel", "officer", "director", "lead", "manager",
                                 "head of", "chief"]):
-        return "agent"
+        return "person"
     if any(k in text for k in ["risk", "threat", "ransomware", "breach", "attack",
                                 "vulnerability", "exploit"]):
         return "threat"

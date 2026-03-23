@@ -333,7 +333,8 @@ export default function PipelineCanvas(props: PipelineCanvasProps) {
 
 /* ── Constants ── */
 const TYPE_COLORS: Record<string, string> = {
-  agent: "var(--color-royal-azure-500)",
+  person: "var(--color-royal-azure-500)",
+  agent: "var(--color-royal-azure-500)",  // backward compat
   org: "var(--color-sandy-brown-500)",
   threat: "var(--color-burnt-peach-500)",
   compliance: "var(--color-tuscan-sun-500)",
@@ -346,7 +347,8 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  agent: "Agent",
+  person: "Person",
+  agent: "Person",  // backward compat — knowledge entities, not sim agents
   org: "Organization",
   threat: "Threat",
   compliance: "Compliance",
