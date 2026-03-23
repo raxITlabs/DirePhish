@@ -313,7 +313,7 @@ def _generate_timed_injects(llm: LLMClient, scenario: dict, attack_path: dict | 
 ## Threat Intelligence & Vulnerability Context
 {threat_context}
 
-Generate 6-10 timed injects that follow the kill chain progression. For rounds 3 and later, add conditional branching where defender actions can change the outcome.
+Generate 8-15 timed injects that follow the kill chain progression. Space them across all rounds. For rounds 3 and later, add conditional branching where defender actions can change the outcome.
 
 Return ONLY valid JSON — an array of injects:
 [
@@ -358,6 +358,15 @@ def _generate_agent_personas(llm: LLMClient, dossier: dict, scenario: dict,
     events = dossier.get("recentEvents") or dossier.get("recent_events", [])
     pressures = cascading.get("pressures", [])
 
+    # Dynamic agent count based on company size
+    company_size = dossier.get("company", {}).get("size", "large")
+    if company_size in ("small", "startup"):
+        agent_range = "6-8"
+    elif company_size in ("medium",):
+        agent_range = "8-10"
+    else:
+        agent_range = "10-14"
+
     roles_text = "\n".join(
         f"- {r.get('name', '')} — {r.get('title', '?')} in {r.get('department', '?')}"
         + (f" ({r.get('responsibilities', '')})" if r.get("responsibilities") else "")
@@ -368,7 +377,7 @@ def _generate_agent_personas(llm: LLMClient, dossier: dict, scenario: dict,
         for e in events[:8]
     )
 
-    prompt = f"""You are an organizational psychologist designing a crisis simulation. Select 5-8 people from this company who would be most critical during this incident, and give each a detailed persona.
+    prompt = f"""You are an organizational psychologist designing a crisis simulation. Select {agent_range} people from this company who would be most critical during this incident, and give each a detailed persona.
 
 ## Scenario
 {scenario.get("summary", "")}
@@ -407,10 +416,17 @@ Return ONLY valid JSON — an array of agents:
 ]
 
 REQUIREMENTS:
-- 5-8 agents, covering: leadership, security operations, legal/compliance, communications, and technical responders
+- {agent_range} agents. You MUST cover ALL of these functional areas:
+  1. Executive leadership (CEO or COO — 1 agent)
+  2. Security leadership (CISO or VP Security — 1 agent)
+  3. Technical response (SOC lead, cloud/security engineer, or forensics analyst — 2-3 agents minimum)
+  4. Legal & Compliance (General Counsel, Compliance Officer, DPO — 1-2 agents)
+  5. Communications (PR/Comms lead or Investor Relations — 1 agent)
+  6. Affected business unit (head of the impacted business line — 1 agent)
+  7. Technology leadership (CTO or Head of Engineering — 1 agent)
 - Personas must reference specific company context (recent events, org changes, company size)
 - Each agent should have a realistic reason to be stressed or conflicted during THIS scenario
-- At least 2 pairs of agents should have natural tension (e.g., CISO wants containment, CEO wants uptime)
+- At least 3 pairs of agents should have natural tension (e.g., CISO wants containment, CEO wants uptime, Legal wants forensic hold)
 - incident_memory should be scenario-specific, not generic
 - Ensure agents represent the affected teams identified in the threat analysis above
 - Personas should reference awareness of specific threat actors and vulnerability gaps where relevant"""
@@ -419,33 +435,54 @@ REQUIREMENTS:
 
 
 def _generate_worlds(llm: LLMClient, scenario: dict, agents: list[dict]) -> list[dict]:
-    """Call 8: Select communication platforms relevant to this scenario."""
+    """Call 8: Design multi-channel communication environment."""
     roles = [a.get("role", "") for a in agents]
+    roles_text = ", ".join(roles)
 
-    prompt = f"""You are designing the communication environment for an incident response simulation.
+    prompt = f"""You are designing a realistic communication environment for an incident response simulation. Create MULTIPLE channels to emulate how a real organization coordinates during a crisis.
 
-## Scenario Type
-{scenario.get("title", "")}
+## Scenario
+{scenario.get("title", "")}: {scenario.get("summary", "")[:200]}
 
-## Agent Roles
-{", ".join(roles)}
+## Agent Roles Available
+{roles_text}
 
-Select 2-4 communication platforms that are most relevant for THIS type of incident. Each platform should serve a distinct purpose.
+Design 3-5 communication channels using these platform types:
+- slack: real-time coordination channels (war rooms, team-specific channels, alert channels)
+- email: formal communication threads (regulatory disclosure, client communications, executive updates)
+
+Create SEPARATE channels for different purposes — a real organization doesn't put everyone in one Slack channel. Examples:
+- "IR War Room" (slack) — SOC, CISO, engineers — tactical containment decisions
+- "Executive Strategy" (slack) — CEO, CTO, CLO — strategic decisions and business impact
+- "SOC-Engineering" (slack) — SOC team, engineers — technical triage and alert discussion
+- "Regulatory Disclosure" (email) — Legal, Compliance, CEO — formal regulatory notifications
+- "Client Communications" (email) — PR, Client Services, CEO — external stakeholder messaging
 
 Return ONLY valid JSON — an array:
 [
-  {{ "type": "slack", "name": "IR War Room" }},
-  {{ "type": "email", "name": "Corporate Email" }}
+  {{
+    "type": "slack",
+    "name": "IR War Room",
+    "description": "Tactical containment coordination for security and engineering teams",
+    "participants": ["soc_lead", "ciso", "cloud_security_engineer", "cto"]
+  }},
+  {{
+    "type": "email",
+    "name": "Regulatory Disclosure",
+    "description": "Formal regulatory communications and disclosure preparation",
+    "participants": ["chief_legal_officer", "head_of_compliance", "ceo"]
+  }}
 ]
 
-ONLY these platform types are available (no others exist):
-- slack: real-time coordination, quick decisions, incident war rooms
-- email: formal communication, external parties, legal, regulatory disclosure
-
 REQUIREMENTS:
-- Always include slack and email (exactly 2 platforms)
-- Do NOT use any other type (no pagerduty, siem, servicenow, edr, teams)
-- Each platform name should be descriptive of its role in THIS incident"""
+- 3-5 channels total (mix of slack and email)
+- ONLY use types "slack" and "email" — no other platform types
+- Each channel has a clear purpose (description) and target audience (participants)
+- participants must use role IDs from the agent list above (lowercase, underscored)
+- NOT every agent in every channel — create natural information silos
+- At least 1 tactical channel (SOC/engineering focused) and 1 strategic channel (executive focused)
+- At least 1 email thread for formal/regulatory communication
+- Channels should create realistic coordination challenges — teams need to bridge between channels"""
 
     return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
 
@@ -480,9 +517,11 @@ Return ONLY valid JSON:
 }}
 
 REQUIREMENTS:
-- total_rounds must be between 4 and 10
+- total_rounds must be between 8 and 15
 - hours_per_round must be between 0.5 and 4.0
-- Enough rounds to fit all injects with breathing room
-- The total simulated time (rounds x hours) should match the realistic incident duration"""
+- Scale rounds to incident type: ransomware/DDoS (8-10), insider threat (10-12), supply chain/data exfiltration (12-15)
+- More agents means more interactions per round — account for this
+- The total simulated time (rounds x hours) should match realistic incident duration
+- Enough rounds to fit all injects with breathing room for response"""
 
     return llm.chat_json([{"role": "user", "content": prompt}])

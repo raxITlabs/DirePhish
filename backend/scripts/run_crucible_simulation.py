@@ -210,20 +210,25 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
 
     # Load platform configs from builtins, override name with world name
     world_configs: list[PlatformConfig] = []
+    world_participants: dict[str, list[str]] = {}
     for w in worlds_cfg:
         pc = _load_world_config(w["type"])
         pc = pc.model_copy(update={"name": w["name"]})
         world_configs.append(pc)
+        # Store participant filtering (new: agents only act in their channels)
+        if w.get("participants"):
+            world_participants[w["name"]] = w["participants"]
 
     # Build pressure configs
     pressure_configs = [PressureConfig(**p) for p in pressures_cfg]
 
-    # Create CrucibleEnv
+    # Create CrucibleEnv with per-world participant filtering
     env = CrucibleEnv(
         world_configs=world_configs,
         pressure_configs=pressure_configs,
         db_dir=db_dir,
         hours_per_round=hours_per_round,
+        world_participants=world_participants,
     )
 
     # OpenAI client from env vars
@@ -342,8 +347,16 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
             print(f"\n=== Round {round_num}/{total_rounds} ===")
 
             for agent in agent_profiles:
+                # Filter worlds: use agent's "worlds" list or env participant filtering
+                agent_world_names = agent.get("worlds")  # explicit list from config
                 for wc in world_configs:
                     world_name = wc.name
+                    # Skip worlds this agent doesn't participate in
+                    if agent_world_names and world_name not in agent_world_names:
+                        continue
+                    participants = world_participants.get(world_name, [])
+                    if participants and agent.get("role", "") not in participants:
+                        continue
 
                     # Build AgentInfo with the world's system prompt template
                     agent_info = AgentInfo(
