@@ -41,19 +41,12 @@ def get_project(project_id: str) -> dict | None:
 
 
 def update_project(project_id: str, **updates) -> dict | None:
-    """Update project fields. Auto-chains threat analysis when research completes."""
+    """Update project fields."""
     project = _load_project(project_id)
     if not project:
         return None
-    old_status = project.get("status")
     project.update(updates)
     _save_project(project_id, project)
-
-    # Auto-chain: trigger threat analysis when transitioning TO research_complete
-    if updates.get("status") == "research_complete" and old_status != "research_complete":
-        from .threat_analyzer import run_threat_analysis
-        run_threat_analysis(project_id)
-
     return project
 
 

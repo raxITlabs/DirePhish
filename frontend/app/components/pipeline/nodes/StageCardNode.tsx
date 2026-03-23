@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { SimulationStatus, AgentAction } from "@/app/types";
+import { formatDuration } from "@/app/lib/utils";
 
 type StepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
 
@@ -83,7 +84,7 @@ function StageCardNode({ data }: NodeProps) {
           )}
           {d.durationMs && d.status === "completed" && (
             <span className="text-[10px] font-mono text-muted-foreground">
-              {(d.durationMs / 1000).toFixed(1)}s
+              {formatDuration(d.durationMs)}
             </span>
           )}
         </div>

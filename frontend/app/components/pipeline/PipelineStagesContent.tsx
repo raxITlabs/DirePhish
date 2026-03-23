@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
+import { formatDuration } from "@/app/lib/utils";
 
 type StepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
 
@@ -81,7 +82,7 @@ export default function PipelineStagesContent() {
                 <span className="font-mono text-xs tracking-tight flex-1">{step.label}</span>
                 {state?.durationMs && status === "completed" && (
                   <span className="text-[10px] font-mono text-muted-foreground/40">
-                    {(state.durationMs / 1000).toFixed(0)}s
+                    {formatDuration(state.durationMs)}
                   </span>
                 )}
               </button>

@@ -1,7 +1,22 @@
+"use client";
+
+import { useState } from "react";
+import { X } from "lucide-react";
 import type { PipelineRun } from "@/app/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/app/components/ui/alert-dialog";
 
 interface RunHistoryContentProps {
   runs: PipelineRun[];
+  onDelete?: (runId: string) => void;
 }
 
 function getDisplayName(run: PipelineRun): string {
@@ -65,7 +80,9 @@ function getRelativeTime(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-export default function RunHistoryContent({ runs }: RunHistoryContentProps) {
+export default function RunHistoryContent({ runs, onDelete }: RunHistoryContentProps) {
+  const [deleteTarget, setDeleteTarget] = useState<PipelineRun | null>(null);
+
   if (runs.length === 0) {
     return (
       <div className="px-4 py-8 text-center">
@@ -79,49 +96,108 @@ export default function RunHistoryContent({ runs }: RunHistoryContentProps) {
     );
   }
 
-  return (
-    <nav>
-      <h3 className="font-mono uppercase text-[10.5px] tracking-widest text-sidebar-foreground/50 px-3 mb-2">
-        Runs
-      </h3>
-      <ul className="space-y-0.5">
-        {runs.map((run) => {
-          const isActive = run.status === "running" || run.status === "pending";
-          const isFailed = run.status === "failed" || run.status === "cancelled";
+  function handleDeleteClick(e: React.MouseEvent, run: PipelineRun) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDeleteTarget(run);
+  }
 
-          return (
-            <li key={run.runId}>
-              <a
-                href={`/pipeline/${run.runId}`}
-                className={`flex items-start gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isActive
-                    ? "text-sidebar-primary bg-sidebar-accent font-medium"
-                    : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                }`}
-              >
-                <span className={`text-[13px] mt-0.5 shrink-0 ${isFailed ? "text-destructive/70" : ""}`}>
-                  {getStatusIndicator(run.status)}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline justify-between gap-2">
-                    <span className="font-mono text-sm tracking-tight truncate">
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    const runId = deleteTarget.runId;
+    setDeleteTarget(null);
+
+    fetch(`/api/runs/${runId}`, { method: "DELETE" })
+      .then((res) => {
+        if (res.ok) onDelete?.(runId);
+      })
+      .catch(() => {});
+  }
+
+  return (
+    <>
+      <nav>
+        <h3 className="font-mono uppercase text-[10.5px] tracking-widest text-sidebar-foreground/50 px-3 mb-2">
+          Runs
+        </h3>
+        <ul className="space-y-0.5">
+          {runs.map((run) => {
+            const isActive = run.status === "running" || run.status === "pending";
+            const isFailed = run.status === "failed" || run.status === "cancelled";
+
+            return (
+              <li key={run.runId} className="group">
+                <a
+                  href={`/pipeline/${run.runId}`}
+                  className={`block px-3 py-2.5 rounded-lg transition-colors ${
+                    isActive
+                      ? "text-sidebar-primary bg-sidebar-accent font-medium"
+                      : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                  }`}
+                >
+                  {/* Row 1: status indicator + company name */}
+                  <span className="flex items-center gap-2.5">
+                    <span className={`text-[12px] shrink-0 ${isFailed ? "text-destructive/70" : ""}`}>
+                      {getStatusIndicator(run.status)}
+                    </span>
+                    <span className="font-mono text-[13px] tracking-tight truncate">
                       {getDisplayName(run)}
                     </span>
-                    <span className="font-mono text-[10px] text-sidebar-foreground/40 shrink-0">
+                  </span>
+
+                  {/* Row 2: status line + time / delete on hover */}
+                  <span className="flex items-center justify-between mt-1 pl-[22px]">
+                    <span className={`font-mono text-[10.5px] ${
+                      isFailed ? "text-destructive/60" : "text-sidebar-foreground/40"
+                    }`}>
+                      {getStatusLine(run)}
+                    </span>
+
+                    {/* Time — hidden on hover, replaced by delete */}
+                    <span className="font-mono text-[10px] text-sidebar-foreground/30 group-hover:hidden">
                       {getRelativeTime(run.createdAt)}
                     </span>
+
+                    {/* Delete — shown on hover */}
+                    <button
+                      onClick={(e) => handleDeleteClick(e, run)}
+                      className="hidden group-hover:flex items-center gap-1 text-[10px] font-mono text-sidebar-foreground/40 hover:text-destructive transition-colors"
+                      aria-label="Delete run"
+                    >
+                      <X className="size-3" />
+                    </button>
                   </span>
-                  <span className={`block font-mono text-[11px] mt-0.5 ${
-                    isFailed ? "text-destructive/60" : "text-sidebar-foreground/40"
-                  }`}>
-                    {getStatusLine(run)}
-                  </span>
-                </span>
-              </a>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this run?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the{" "}
+              <span className="font-medium text-foreground">
+                {deleteTarget ? getDisplayName(deleteTarget) : ""}
+              </span>{" "}
+              run and all associated data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import type { SimulationStatus, ThreatAnalysisResponse } from "@/app/types";
+import { formatDuration } from "@/app/lib/utils";
 
 type StepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
 
@@ -201,7 +202,7 @@ export default function PipelineStagesPanel({
                   )}
                   {state?.durationMs && status === "completed" && (
                     <span className="text-[10px] font-mono text-muted-foreground/40 shrink-0 mt-0.5">
-                      {(state.durationMs / 1000).toFixed(0)}s
+                      {formatDuration(state.durationMs)}
                     </span>
                   )}
                 </button>

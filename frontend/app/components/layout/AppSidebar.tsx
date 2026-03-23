@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { PipelineRun } from "@/app/types";
@@ -26,6 +26,10 @@ export default function AppSidebar() {
     }
   }, [isPipeline]);
 
+  const handleDelete = useCallback((runId: string) => {
+    setRuns((prev) => prev.filter((r) => r.runId !== runId));
+  }, []);
+
   // Pipeline page has its own integrated stages panel — hide sidebar entirely
   if (isPipeline) return null;
 
@@ -39,7 +43,7 @@ export default function AppSidebar() {
         {/* Sidebar content */}
         {!collapsed && (
           <div className="flex-1 overflow-y-auto p-2">
-            <RunHistoryContent runs={runs} />
+            <RunHistoryContent runs={runs} onDelete={handleDelete} />
           </div>
         )}
 

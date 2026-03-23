@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { formatDuration } from "@/app/lib/utils";
 import type {
   CompanyDossier,
   GraphData,
@@ -9,6 +11,7 @@ import type {
   AgentAction,
   SimulationConfig,
 } from "@/app/types";
+import { getExerciseReport, type ExerciseReport } from "@/app/actions/report";
 import PipelineDossierPanel from "./PipelineDossierPanel";
 import PipelineSimulationPanel from "./PipelineSimulationPanel";
 
@@ -157,7 +160,7 @@ export default function PipelineDetailPanel({
           </span>
           {state?.durationMs && status === "completed" && (
             <span className="text-[10px] font-mono text-muted-foreground/50">
-              {(state.durationMs / 1000).toFixed(1)}s
+              {formatDuration(state.durationMs)}
             </span>
           )}
         </div>
@@ -175,6 +178,67 @@ export default function PipelineDetailPanel({
           allSimIds={allSimIds}
         />
       </div>
+    </div>
+  );
+}
+
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: "bg-destructive/10 text-destructive",
+  high: "bg-tuscan-sun-100 text-tuscan-sun-800",
+  medium: "bg-royal-azure-50 text-royal-azure-700",
+};
+
+function ExerciseReportSummary({ projectId, message }: { projectId: string; message?: string }) {
+  const [report, setReport] = useState<ExerciseReport | null>(null);
+
+  useEffect(() => {
+    getExerciseReport(projectId).then((result) => {
+      if ("data" in result) setReport(result.data);
+    });
+  }, [projectId]);
+
+  const headline = report?.conclusions?.headline;
+  const findings = report?.conclusions?.keyFindings;
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs font-mono text-verdigris-700">{message || "Exercise report complete"}</p>
+
+      {/* Report link */}
+      <Link
+        href={`/report/exercise/${projectId}`}
+        className="flex items-center justify-between bg-royal-azure-50 rounded-md px-3 py-3 hover:bg-royal-azure-100 transition-colors"
+      >
+        <span className="text-xs font-mono font-medium text-royal-azure-700">View Full Report</span>
+        <span className="text-[10px] font-mono text-royal-azure-600">→</span>
+      </Link>
+
+      {/* Headline */}
+      {headline && (
+        <p className="text-sm font-mono font-medium leading-relaxed">{headline}</p>
+      )}
+
+      {/* Key findings */}
+      {findings && findings.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+            Key Findings
+          </h4>
+          {findings.map((f, i) => (
+            <div key={f.id || i} className="bg-muted/30 rounded-md px-3 py-2 space-y-1">
+              <div className="flex items-start gap-2">
+                <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 mt-0.5 ${SEVERITY_COLORS[f.severity] || "bg-muted text-muted-foreground"}`}>
+                  {f.severity}
+                </span>
+                <span className="text-xs font-mono leading-snug">{f.finding}</span>
+              </div>
+              {f.businessImpact && (
+                <p className="text-[10px] font-mono text-muted-foreground/70 pl-[42px]">{f.businessImpact}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -573,20 +637,9 @@ function StageDetail({
     );
   }
 
-  // Exercise report completed — unified report link
+  // Exercise report completed — summary + link
   if (stageId === "exercise_report" && state?.status === "completed" && projectId) {
-    return (
-      <div className="space-y-4">
-        <p className="text-xs font-mono text-verdigris-700">{state.message || "Exercise report complete"}</p>
-        <Link
-          href={`/report/exercise/${projectId}`}
-          className="flex items-center justify-between bg-royal-azure-50 rounded-md px-3 py-3 hover:bg-royal-azure-100 transition-colors"
-        >
-          <span className="text-xs font-mono font-medium text-royal-azure-700">Exercise Report</span>
-          <span className="text-[10px] font-mono text-royal-azure-600">View Report →</span>
-        </Link>
-      </div>
-    );
+    return <ExerciseReportSummary projectId={projectId} message={state.message} />;
   }
 
   // Generic fallback — running or completed

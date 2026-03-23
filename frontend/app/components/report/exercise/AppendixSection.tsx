@@ -140,7 +140,7 @@ export default function AppendixSection({ appendix }: AppendixSectionProps) {
             <CardTitle className="text-sm">Consistent Weaknesses Across Scenarios</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="list-disc list-inside text-sm space-y-1">
+            <ul className="list-disc list-inside text-sm space-y-2">
               {appendix.crossScenarioComparison.consistentWeaknesses.map(
                 (w, i) => (
                   <li key={i} className="text-muted-foreground">
@@ -151,6 +151,62 @@ export default function AppendixSection({ appendix }: AppendixSectionProps) {
             </ul>
           </CardContent>
         </Card>
+      )}
+
+      {/* Per-scenario findings (strengths/weaknesses/notable moments) */}
+      {appendix.crossScenarioComparison.scenarioFindings?.some(
+        (f) => f.strengths.length > 0 || f.weaknesses.length > 0 || f.notableMoments.length > 0
+      ) && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Scenario Comparison
+          </h3>
+          {appendix.crossScenarioComparison.scenarioFindings.map((finding, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <CardTitle className="text-sm">{finding.scenario}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 pt-0">
+                {finding.strengths.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+                      Strengths
+                    </h4>
+                    <ul className="list-disc list-inside text-sm space-y-1">
+                      {finding.strengths.map((s, j) => (
+                        <li key={j} className="text-muted-foreground">{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {finding.weaknesses.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+                      Weaknesses
+                    </h4>
+                    <ul className="list-disc list-inside text-sm space-y-1">
+                      {finding.weaknesses.map((w, j) => (
+                        <li key={j} className="text-muted-foreground">{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {finding.notableMoments.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+                      Notable Moments
+                    </h4>
+                    <ul className="list-disc list-inside text-sm space-y-1">
+                      {finding.notableMoments.map((m, j) => (
+                        <li key={j} className="text-muted-foreground">{m}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
 
       {/* Per-scenario details (collapsible) */}

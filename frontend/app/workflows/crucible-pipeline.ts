@@ -245,23 +245,13 @@ export async function cruciblePipeline(input: {
     stageStart = Date.now();
     await emitProgress("threat_analysis", "running", "Analyzing threats...");
 
-    // Check if threat analysis already started (auto-chained from research)
-    const currentStatus = await flaskApi<Record<string, unknown>>(
-      `/api/crucible/projects/${projectId}/status`,
+    await flaskApi<{ status: string }>(
+      `/api/crucible/projects/${projectId}/analyze-threats`,
+      { method: "POST" },
     );
-    const status = currentStatus.status as string;
 
-    if (!["analyzing_threats", "scenarios_ready"].includes(status)) {
-      await flaskApi<{ status: string }>(
-        `/api/crucible/projects/${projectId}/analyze-threats`,
-        { method: "POST" },
-      );
-    }
-
-    if (status !== "scenarios_ready") {
-      await emitProgress("threat_analysis", "running", "Mapping vulnerabilities...");
-      await pollStatus(projectId, ["scenarios_ready"]);
-    }
+    await emitProgress("threat_analysis", "running", "Mapping vulnerabilities...");
+    await pollStatus(projectId, ["scenarios_ready"]);
 
     stageDurations.threat_analysis = Date.now() - stageStart;
     await emitProgress("threat_analysis", "completed", "Threat analysis complete", undefined, stageDurations.threat_analysis);
