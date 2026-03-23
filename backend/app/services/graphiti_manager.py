@@ -13,10 +13,44 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from ..config import Config
 from ..utils.logger import get_logger
 
 logger = get_logger("graphiti_manager")
+
+
+# ─── Entity type definitions for Graphiti's LLM-based classification ───
+# These are passed to add_episode_bulk() so the LLM classifies entities during extraction.
+
+class PersonEntity(BaseModel):
+    """A specific named individual person — executives, employees, analysts, engineers, officers."""
+    role: str = Field(default="", description="Job title or organizational role")
+
+class SystemEntity(BaseModel):
+    """A technology system, tool, platform, service, infrastructure, hardware, software, database, API, or code component."""
+    category: str = Field(default="", description="Category: software, hardware, cloud, network, etc.")
+
+class ThreatEntity(BaseModel):
+    """A threat, risk, vulnerability, attack technique, malware, threat actor group, or mitigation strategy."""
+    severity: str = Field(default="", description="Severity: critical, high, medium, low")
+
+class ComplianceEntity(BaseModel):
+    """A regulatory framework, compliance requirement, certification, legal standard, or audit requirement (GDPR, SOX, PCI, SEC, FINRA, etc.)."""
+    jurisdiction: str = Field(default="", description="Jurisdiction or scope")
+
+class OrganizationEntity(BaseModel):
+    """A company, firm, institution, department, team, board, committee, or organizational unit."""
+    org_type: str = Field(default="", description="Type: company, department, team, etc.")
+
+ENTITY_TYPES = {
+    "Person": PersonEntity,
+    "System": SystemEntity,
+    "Threat": ThreatEntity,
+    "Compliance": ComplianceEntity,
+    "Organization": OrganizationEntity,
+}
 
 # Separate event loops for reads vs writes so graph reads don't block on pushes
 _read_loop = asyncio.new_event_loop()
@@ -409,7 +443,7 @@ def push_dossier(project_id: str, dossier: dict) -> None:
 
     # Bulk push
     try:
-        _run_write(graphiti.add_episode_bulk(episodes, group_id=project_id))
+        _run_write(graphiti.add_episode_bulk(episodes, group_id=project_id, entity_types=ENTITY_TYPES))
         logger.info(f"Pushed {len(episodes)} dossier episodes for {project_id}")
     except Exception as e:
         logger.warning(f"Failed to push dossier for {project_id}: {e}")
@@ -494,7 +528,7 @@ def push_actions_bulk(project_id: str, actions: list[dict]) -> None:
 
     if episodes:
         try:
-            _run_write(graphiti.add_episode_bulk(episodes, group_id=project_id))
+            _run_write(graphiti.add_episode_bulk(episodes, group_id=project_id, entity_types=ENTITY_TYPES))
             logger.info(f"Pushed {len(episodes)} action episodes for {project_id}")
         except Exception as e:
             logger.warning(f"Failed to push action batch for {project_id}: {e}")
@@ -510,20 +544,38 @@ def get_graph_data(project_id: str) -> dict:
         graphiti = _get_graphiti(project_id)
         driver = graphiti.driver
 
-        # Get all entity nodes
+        # Get all entity nodes (including labels for LLM-based classification)
         node_results = _run_read(driver.execute_query(
-            "MATCH (n:Entity) RETURN n.uuid AS uuid, n.name AS name, n.summary AS summary, n.group_id AS group_id"
+            "MATCH (n:Entity) RETURN n.uuid AS uuid, n.name AS name, n.summary AS summary, n.labels AS labels, n.group_id AS group_id"
         ))
         raw_nodes = node_results[0] if node_results and node_results[0] else []
+
+        # Valid entity type labels (from our ENTITY_TYPES definitions)
+        _valid_labels = {"person", "system", "threat", "compliance", "organization"}
 
         nodes = []
         for row in raw_nodes:
             node_name = row.get("name", "Unknown")
+            summary = row.get("summary", "")
+
+            # Use LLM-assigned labels from Graphiti if available
+            labels = row.get("labels") or []
+            entity_type = None
+            for label in labels:
+                label_lower = label.lower()
+                if label_lower in _valid_labels:
+                    entity_type = label_lower
+                    break
+
+            # Fallback for nodes without LLM labels (old data)
+            if entity_type is None:
+                entity_type = _classify_node_fallback(node_name)
+
             nodes.append({
                 "id": row.get("uuid", str(len(nodes))),
                 "name": node_name,
-                "type": _classify_node(node_name, row.get("summary", "")),
-                "attributes": {"summary": row.get("summary", "")},
+                "type": entity_type,
+                "attributes": {"summary": summary},
             })
 
         # Get all edges (Kuzu models edges via RelatesToNode_ intermediary)
@@ -553,23 +605,33 @@ def sync_dossier(project_id: str, dossier: dict) -> None:
     push_dossier(project_id, dossier)
 
 
-def _classify_node(name: str, summary: str) -> str:
-    """Classify a node into D3 color-map types based on name and summary."""
-    text = (name + " " + summary).lower()
+def _classify_node_fallback(name: str) -> str:
+    """Simple fallback classifier for nodes without LLM labels (old data only).
 
-    if any(k in text for k in ["ciso", "ceo", "cto", "cro", "analyst", "engineer",
-                                "counsel", "officer", "director", "lead", "manager",
-                                "head of", "chief"]):
+    Only checks the node NAME — never the summary (which caused misclassification
+    because summaries mention people regardless of node type).
+    """
+    name_lower = name.lower()
+
+    # Person: only exact title matches (with word boundaries via spaces)
+    if any(f" {k} " in f" {name_lower} " for k in [
+        "ceo", "cto", "cfo", "coo", "ciso", "cro",
+    ]):
         return "person"
-    if any(k in text for k in ["risk", "threat", "ransomware", "breach", "attack",
-                                "vulnerability", "exploit"]):
-        return "threat"
-    if any(k in text for k in ["gdpr", "pci", "soc", "hipaa", "compliance",
-                                "regulation", "apra", "privacy"]):
+    if any(k in name_lower for k in ["chief ", "head of ", "general counsel", "president "]):
+        return "person"
+
+    # Organization
+    if any(k in name_lower for k in ["corporation", "inc.", "ltd.", "& co", "department"]):
+        return "organization"
+
+    # Compliance
+    if any(k in name_lower for k in ["gdpr", "pci", "sox", "hipaa", "ccpa", "finra", "sec ", "basel"]):
         return "compliance"
-    if any(k in text for k in ["company", "corporation", "inc.", "ltd.", "bank",
-                                "organization"]):
-        return "org"
+
+    # Threat
+    if any(k in name_lower for k in ["threat", "ransomware", "attack", "malware", "phishing", "exploit"]):
+        return "threat"
 
     return "system"
 

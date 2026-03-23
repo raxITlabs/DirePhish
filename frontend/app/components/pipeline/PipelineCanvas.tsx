@@ -233,9 +233,9 @@ function PipelineCanvasInner({
                   >
                     <span
                       className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: TYPE_COLORS[type] || TYPE_COLORS.default, opacity: isActive ? 1 : 0.3 }}
+                      style={{ backgroundColor: getTypeColor(type), opacity: isActive ? 1 : 0.3 }}
                     />
-                    {TYPE_LABELS[type] || type}
+                    {getTypeLabel(type)}
                     <span className="text-muted-foreground/40">{count}</span>
                   </button>
                 );
@@ -289,10 +289,10 @@ function PipelineCanvasInner({
               <div className="flex items-center gap-1.5 mt-0.5">
                 <div
                   className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: TYPE_COLORS[selectedNode.type] || TYPE_COLORS.default }}
+                  style={{ backgroundColor: getTypeColor(selectedNode.type) }}
                 />
                 <span className="text-[10px] font-mono text-muted-foreground uppercase">
-                  {TYPE_LABELS[selectedNode.type] || selectedNode.type}
+                  {getTypeLabel(selectedNode.type)}
                 </span>
               </div>
             </div>
@@ -332,30 +332,52 @@ export default function PipelineCanvas(props: PipelineCanvasProps) {
 }
 
 /* ── Constants ── */
-const TYPE_COLORS: Record<string, string> = {
+
+// Known types with assigned colors
+const KNOWN_TYPE_COLORS: Record<string, string> = {
   person: "var(--color-royal-azure-500)",
-  agent: "var(--color-royal-azure-500)",  // backward compat
+  organization: "var(--color-sandy-brown-500)",
   org: "var(--color-sandy-brown-500)",
+  agent: "var(--color-royal-azure-500)",
   threat: "var(--color-burnt-peach-500)",
   compliance: "var(--color-tuscan-sun-500)",
   system: "var(--color-verdigris-500)",
   event: "var(--color-tuscan-sun-600)",
-  location: "var(--color-royal-azure-400)",
-  document: "var(--color-burnt-peach-400)",
-  process: "var(--color-verdigris-400)",
   default: "var(--color-pitch-black-400)",
 };
 
-const TYPE_LABELS: Record<string, string> = {
+// Palette for unknown types — cycles through design system colors
+const DYNAMIC_PALETTE = [
+  "var(--color-royal-azure-400)",
+  "var(--color-tuscan-sun-600)",
+  "var(--color-burnt-peach-400)",
+  "var(--color-verdigris-400)",
+  "var(--color-sandy-brown-400)",
+  "var(--color-royal-azure-300)",
+];
+
+const _dynamicColorCache: Record<string, string> = {};
+
+function getTypeColor(type: string): string {
+  if (KNOWN_TYPE_COLORS[type]) return KNOWN_TYPE_COLORS[type];
+  if (_dynamicColorCache[type]) return _dynamicColorCache[type];
+  const idx = Object.keys(_dynamicColorCache).length % DYNAMIC_PALETTE.length;
+  _dynamicColorCache[type] = DYNAMIC_PALETTE[idx];
+  return _dynamicColorCache[type];
+}
+
+// Known labels — unknown types get auto-capitalized
+const KNOWN_TYPE_LABELS: Record<string, string> = {
   person: "Person",
-  agent: "Person",  // backward compat — knowledge entities, not sim agents
+  organization: "Organization",
   org: "Organization",
+  agent: "Person",
   threat: "Threat",
   compliance: "Compliance",
   system: "System",
   event: "Event",
-  location: "Location",
-  document: "Document",
-  process: "Process",
-  default: "Other",
 };
+
+function getTypeLabel(type: string): string {
+  return KNOWN_TYPE_LABELS[type] || type.charAt(0).toUpperCase() + type.slice(1);
+}

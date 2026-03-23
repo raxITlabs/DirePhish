@@ -3,31 +3,52 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 
-const TYPE_COLORS: Record<string, string> = {
+const KNOWN_TYPE_COLORS: Record<string, string> = {
   person: "var(--color-royal-azure-500)",
-  agent: "var(--color-royal-azure-500)",  // backward compat
+  organization: "var(--color-sandy-brown-500)",
   org: "var(--color-sandy-brown-500)",
+  agent: "var(--color-royal-azure-500)",
   threat: "var(--color-burnt-peach-500)",
   compliance: "var(--color-tuscan-sun-500)",
   system: "var(--color-verdigris-500)",
   event: "var(--color-tuscan-sun-600)",
-  location: "var(--color-royal-azure-400)",
-  document: "var(--color-burnt-peach-400)",
-  process: "var(--color-verdigris-400)",
   default: "var(--color-pitch-black-400)",
 };
 
-// Breathe glow colors — slightly transparent versions for drop-shadow
-const BREATHE_COLORS: Record<string, string> = {
+const DYNAMIC_PALETTE = [
+  "var(--color-royal-azure-400)",
+  "var(--color-tuscan-sun-600)",
+  "var(--color-burnt-peach-400)",
+  "var(--color-verdigris-400)",
+  "var(--color-sandy-brown-400)",
+];
+
+const _dynamicColorCache: Record<string, string> = {};
+
+function getTypeColor(type: string): string {
+  if (KNOWN_TYPE_COLORS[type]) return KNOWN_TYPE_COLORS[type];
+  if (_dynamicColorCache[type]) return _dynamicColorCache[type];
+  const idx = Object.keys(_dynamicColorCache).length % DYNAMIC_PALETTE.length;
+  _dynamicColorCache[type] = DYNAMIC_PALETTE[idx];
+  return _dynamicColorCache[type];
+}
+
+// Breathe glow — known types get specific glow, others get a generic one
+const KNOWN_BREATHE_COLORS: Record<string, string> = {
   person: "oklch(0.55 0.18 250 / 0.5)",
-  agent: "oklch(0.55 0.18 250 / 0.5)",  // backward compat
+  organization: "oklch(0.65 0.15 60 / 0.5)",
   org: "oklch(0.65 0.15 60 / 0.5)",
+  agent: "oklch(0.55 0.18 250 / 0.5)",
   threat: "oklch(0.6 0.2 30 / 0.6)",
   compliance: "oklch(0.65 0.12 85 / 0.5)",
   system: "oklch(0.6 0.15 170 / 0.5)",
   event: "oklch(0.7 0.12 85 / 0.5)",
   default: "oklch(0.5 0 0 / 0.3)",
 };
+
+function getBreatheColor(type: string): string {
+  return KNOWN_BREATHE_COLORS[type] || KNOWN_BREATHE_COLORS.default;
+}
 
 export interface GraphEntityData {
   name: string;
@@ -41,8 +62,8 @@ export interface GraphEntityData {
 
 function GraphEntityNode({ data }: NodeProps) {
   const d = data as unknown as GraphEntityData;
-  const color = TYPE_COLORS[d.entityType] || TYPE_COLORS.default;
-  const breatheColor = BREATHE_COLORS[d.entityType] || BREATHE_COLORS.default;
+  const color = getTypeColor(d.entityType);
+  const breatheColor = getBreatheColor(d.entityType);
   const initials = d.name
     .split(/[\s_-]+/)
     .slice(0, 2)

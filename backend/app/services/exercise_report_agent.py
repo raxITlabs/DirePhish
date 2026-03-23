@@ -171,9 +171,9 @@ def _query_graph_data(project_id: str) -> dict:
                 classified["compliance"].append(entry)
             elif node_type == "system":
                 classified["systems"].append(entry)
-            elif node_type == "agent":
+            elif node_type in ("person", "agent"):
                 classified["agents"].append(entry)
-            elif node_type == "org":
+            elif node_type in ("organization", "org"):
                 classified["organizations"].append(entry)
 
         # Extract key relationships
