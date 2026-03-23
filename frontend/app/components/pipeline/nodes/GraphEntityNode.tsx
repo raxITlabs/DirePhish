@@ -4,7 +4,8 @@ import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 
 const TYPE_COLORS: Record<string, string> = {
-  agent: "var(--color-royal-azure-500)",
+  person: "var(--color-royal-azure-500)",
+  agent: "var(--color-royal-azure-500)",  // backward compat
   org: "var(--color-sandy-brown-500)",
   threat: "var(--color-burnt-peach-500)",
   compliance: "var(--color-tuscan-sun-500)",
@@ -18,7 +19,8 @@ const TYPE_COLORS: Record<string, string> = {
 
 // Breathe glow colors — slightly transparent versions for drop-shadow
 const BREATHE_COLORS: Record<string, string> = {
-  agent: "oklch(0.55 0.18 250 / 0.5)",
+  person: "oklch(0.55 0.18 250 / 0.5)",
+  agent: "oklch(0.55 0.18 250 / 0.5)",  // backward compat
   org: "oklch(0.65 0.15 60 / 0.5)",
   threat: "oklch(0.6 0.2 30 / 0.6)",
   compliance: "oklch(0.65 0.12 85 / 0.5)",
