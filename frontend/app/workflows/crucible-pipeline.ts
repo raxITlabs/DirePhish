@@ -173,9 +173,13 @@ export async function cruciblePipeline(input: {
   let simIds: string[] = [];
   let companyName = "";
   let scenarioTitles: string[] = [];
+  const workflowStart = Date.now();
+  let stageStart = Date.now();
+  const stageDurations: Record<string, number> = {};
 
   try {
     // ─── STEP 1: Create project & start research ───
+    stageStart = Date.now();
     await emitProgress("research", "running", "Starting company research...");
 
     const createResult = await flaskApi<{ projectId: string }>(
@@ -200,7 +204,8 @@ export async function cruciblePipeline(input: {
       "scenarios_ready",
     ]);
 
-    await emitProgress("research", "completed", "Research complete");
+    stageDurations.research = Date.now() - stageStart;
+    await emitProgress("research", "completed", "Research complete", undefined, stageDurations.research);
 
     // Fetch company name from dossier for display metadata
     try {
@@ -213,6 +218,7 @@ export async function cruciblePipeline(input: {
     }
 
     // ─── STEP 2: Wait for dossier confirmation ───
+    stageStart = Date.now();
     const hook = createHook<DossierConfirmation>({
       token: `dossier-confirm-${projectId}`,
     });
@@ -226,14 +232,17 @@ export async function cruciblePipeline(input: {
     const confirmation = await hook;
 
     if (!confirmation.confirmed) {
-      await emitProgress("dossier_review", "failed", "Dossier rejected by user");
+      stageDurations.dossier_review = Date.now() - stageStart;
+      await emitProgress("dossier_review", "failed", "Dossier rejected by user", undefined, stageDurations.dossier_review);
       await closeProgress();
-      return { projectId, companyName, status: "cancelled" };
+      return { projectId, companyName, status: "cancelled", totalDurationMs: Date.now() - workflowStart, stageDurations };
     }
 
-    await emitProgress("dossier_review", "completed", "Dossier confirmed");
+    stageDurations.dossier_review = Date.now() - stageStart;
+    await emitProgress("dossier_review", "completed", "Dossier confirmed", undefined, stageDurations.dossier_review);
 
     // ─── STEP 3: Threat analysis ───
+    stageStart = Date.now();
     await emitProgress("threat_analysis", "running", "Analyzing threats...");
 
     // Check if threat analysis already started (auto-chained from research)
@@ -254,9 +263,11 @@ export async function cruciblePipeline(input: {
       await pollStatus(projectId, ["scenarios_ready"]);
     }
 
-    await emitProgress("threat_analysis", "completed", "Threat analysis complete");
+    stageDurations.threat_analysis = Date.now() - stageStart;
+    await emitProgress("threat_analysis", "completed", "Threat analysis complete", undefined, stageDurations.threat_analysis);
 
     // ─── STEP 4: Auto-select scenarios ───
+    stageStart = Date.now();
     await emitProgress("scenario_selection", "running", "Selecting scenarios...");
 
     const scenarioData = await flaskApi<{
@@ -282,13 +293,16 @@ export async function cruciblePipeline(input: {
       .map(s => `${s.title} (${Math.round(s.probability * 100)}%)`)
       .join(", ");
 
+    stageDurations.scenario_selection = Date.now() - stageStart;
     await emitProgress(
       "scenario_selection", "completed",
       `Selected ${selectedIds.length} scenarios`,
       selectedTitles,
+      stageDurations.scenario_selection,
     );
 
     // ─── STEP 5: Config expansion ───
+    stageStart = Date.now();
     await emitProgress("config_expansion", "running", "Generating simulation configs...");
 
     await flaskApi<{ status: string }>(
@@ -298,10 +312,12 @@ export async function cruciblePipeline(input: {
 
     await pollStatus(projectId, ["configs_ready"]);
 
+    stageDurations.config_expansion = Date.now() - stageStart;
     await emitProgress("config_expansion", "completed", "Configs generated",
-      `${selectedIds.length} scenario configs ready`);
+      `${selectedIds.length} scenario configs ready`, stageDurations.config_expansion);
 
     // ─── STEP 6: Launch simulations ───
+    stageStart = Date.now();
     await emitProgress("simulations", "running", "Launching simulations...");
 
     const launchResult = await flaskApi<{ sim_ids: string[] }>(
@@ -319,10 +335,12 @@ export async function cruciblePipeline(input: {
       await pollSimulation(simIds[i]);
     }
 
+    stageDurations.simulations = Date.now() - stageStart;
     await emitProgress("simulations", "completed",
-      `All ${simIds.length} simulations complete`);
+      `All ${simIds.length} simulations complete`, undefined, stageDurations.simulations);
 
     // ─── STEP 7: Exercise Report (unified) ───
+    stageStart = Date.now();
     await emitProgress("exercise_report", "running", "Generating exercise report...");
 
     await flaskApi<{ status: string }>(
@@ -332,10 +350,12 @@ export async function cruciblePipeline(input: {
 
     await pollExerciseReport(projectId);
 
-    await emitProgress("exercise_report", "completed", "Exercise report complete");
+    stageDurations.exercise_report = Date.now() - stageStart;
+    await emitProgress("exercise_report", "completed", "Exercise report complete", undefined, stageDurations.exercise_report);
 
     // ─── DONE ───
-    await emitProgress("complete", "completed", "Pipeline complete!");
+    const totalDurationMs = Date.now() - workflowStart;
+    await emitProgress("complete", "completed", "Pipeline complete!", undefined, totalDurationMs);
 
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
@@ -343,5 +363,6 @@ export async function cruciblePipeline(input: {
   }
 
   await closeProgress();
-  return { projectId, simIds, companyName, scenarioTitles, status: "complete" };
+  const totalDurationMs = Date.now() - workflowStart;
+  return { projectId, simIds, companyName, scenarioTitles, status: "complete", totalDurationMs, stageDurations };
 }
