@@ -567,9 +567,9 @@ def get_graph_data(project_id: str) -> dict:
                     entity_type = label_lower
                     break
 
-            # Fallback for nodes without LLM labels (old data)
+            # Fallback for nodes without LLM labels
             if entity_type is None:
-                entity_type = _classify_node_fallback(node_name)
+                entity_type = _classify_node_fallback(node_name, summary)
 
             nodes.append({
                 "id": row.get("uuid", str(len(nodes))),
@@ -605,33 +605,76 @@ def sync_dossier(project_id: str, dossier: dict) -> None:
     push_dossier(project_id, dossier)
 
 
-def _classify_node_fallback(name: str) -> str:
-    """Simple fallback classifier for nodes without LLM labels (old data only).
+def _classify_node_fallback(name: str, summary: str = "") -> str:
+    """Fallback classifier for nodes without Graphiti LLM labels.
 
-    Only checks the node NAME — never the summary (which caused misclassification
-    because summaries mention people regardless of node type).
+    Uses name + first sentence of summary for classification.
+    The first sentence pattern (e.g., "X is the CFO") is reliable for
+    disambiguation, unlike searching the full summary which causes false positives.
     """
     name_lower = name.lower()
+    # Only use first sentence of summary for classification
+    first_sentence = summary.split(".")[0].lower() if summary else ""
 
-    # Person: only exact title matches (with word boundaries via spaces)
+    # ─── Organization: check name for org indicators ───
+    if any(k in name_lower for k in ["corporation", "inc.", "ltd.", "& co"]):
+        return "organization"
+    if any(k in name_lower for k in ["department", "team", "division", "group",
+                                      "committee", "board of"]):
+        return "organization"
+    # Summary confirms it's an org
+    if first_sentence.startswith(f"{name_lower} is a ") and any(
+        k in first_sentence for k in ["company", "firm", "bank", "organization", "institution"]
+    ):
+        return "organization"
+
+    # ─── Compliance: regulations, standards, frameworks ───
+    if any(k in name_lower for k in ["gdpr", "pci", "sox", "hipaa", "ccpa", "finra",
+                                      "basel", "iso ", "nist", "regulation"]) \
+            or name_lower.endswith(" act"):
+        return "compliance"
+    if ("compliance requirement" in first_sentence or "certification" in first_sentence) \
+            and "mitigation" not in first_sentence:
+        return "compliance"
+
+    # ─── Threat: risks, attacks, mitigations, threat actors ───
+    if any(k in name_lower for k in ["threat", "ransomware", "attack", "malware",
+                                      "phishing", "exploit", "vulnerability",
+                                      "compromise", "breach", "espionage",
+                                      "insider ", "extortion", "leak"]):
+        return "threat"
+    if any(k in first_sentence for k in ["risk of", "mitigation for", "mitigation strategy"]):
+        return "threat"
+
+    # ─── Person: titles and names ───
+    # Exact C-suite title match (word boundary via spaces)
     if any(f" {k} " in f" {name_lower} " for k in [
         "ceo", "cto", "cfo", "coo", "ciso", "cro",
     ]):
         return "person"
-    if any(k in name_lower for k in ["chief ", "head of ", "general counsel", "president "]):
+    # Title phrases in name
+    if any(k in name_lower for k in ["chief ", "head of ", "general counsel",
+                                      "president ", "vice president", "director of",
+                                      "vp of", "svp ", "lead "]):
         return "person"
-
-    # Organization
-    if any(k in name_lower for k in ["corporation", "inc.", "ltd.", "& co", "department"]):
-        return "organization"
-
-    # Compliance
-    if any(k in name_lower for k in ["gdpr", "pci", "sox", "hipaa", "ccpa", "finra", "sec ", "basel"]):
-        return "compliance"
-
-    # Threat
-    if any(k in name_lower for k in ["threat", "ransomware", "attack", "malware", "phishing", "exploit"]):
-        return "threat"
+    # Summary confirms it's a person (first sentence only)
+    if any(k in first_sentence for k in [" is the ", "works in ", "reports to ",
+                                          "holds the title"]):
+        # But NOT if the name is clearly not a person or a known product/vendor
+        if not any(k in name_lower for k in [
+            "department", "team", "system", "tool", "platform", "service",
+            "code", "cluster", "network", "api", "log", "alert", "module",
+            "authentication", "encryption", "detection", "monitoring",
+            "architecture", "infrastructure", "pipeline", "sandbox",
+            "repository", "framework", "protocol", "governance",
+            "affairs", "planning", "reporting", "strategy",
+        ]):
+            # Check it's not a vendor/product (summary says "is a vendor/tool/platform")
+            if not any(k in first_sentence for k in [
+                "is a vendor", "is a tool", "is a platform", "is a service",
+                "is a product", "is a software", "is a cloud",
+            ]):
+                return "person"
 
     return "system"
 
