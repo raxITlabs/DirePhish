@@ -175,7 +175,14 @@ def launch_simulation(config: dict) -> str:
     def _monitor():
         proc.wait()
         if sim_id in _simulations:
-            _simulations[sim_id]["status"] = "completed" if proc.returncode == 0 else "failed"
+            if proc.returncode == 0:
+                _simulations[sim_id]["status"] = "completed"
+            else:
+                _simulations[sim_id]["status"] = "failed"
+                # Log subprocess stderr so failures aren't silently swallowed
+                stderr = proc.stderr.read().decode() if proc.stderr else ""
+                if stderr:
+                    logger.error(f"Simulation {sim_id} failed (exit {proc.returncode}):\n{stderr[-2000:]}")
 
     threading.Thread(target=_monitor, daemon=True).start()
     return sim_id

@@ -388,7 +388,7 @@ wheels = [
 [[package]]
 name = "crucible-sim"
 version = "0.1.0"
-source = { git = "https://github.com/raxITlabs/crucible.git#cf70d781e8bec768a9f744ae5b6be9121c051838" }
+source = { git = "https://github.com/raxITlabs/crucible.git#befe463e099fff8b27dda91f31faf9ba02b353dc" }
 dependencies = [
     { name = "jinja2" },
     { name = "pydantic" },
