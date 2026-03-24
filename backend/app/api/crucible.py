@@ -278,11 +278,33 @@ def project_graph(project_id):
         from ..services.firestore_memory import FirestoreMemory
         memory = FirestoreMemory()
 
-        nodes_docs = memory.db.collection("graph_nodes").where("sim_id", "==", project_id).get()
-        edges_docs = memory.db.collection("graph_edges").where("sim_id", "==", project_id).get()
+        def _read_graph(mem, pid):
+            """Read nodes + edges from Firestore, resolve edge name→id."""
+            n_docs = mem.db.collection("graph_nodes").where("sim_id", "==", pid).get()
+            e_docs = mem.db.collection("graph_edges").where("sim_id", "==", pid).get()
 
-        nodes = [{"id": doc.id, "name": d.get("name", ""), "type": d.get("entity_type", ""), "summary": d.get("summary", "")} for doc in nodes_docs for d in [doc.to_dict()]]
-        edges = [{"source": d.get("source", ""), "target": d.get("target", ""), "label": d.get("label", ""), "type": d.get("label", "")} for doc in edges_docs for d in [doc.to_dict()]]
+            nodes = [{
+                "id": doc.id,
+                "name": d.get("name", ""),
+                "type": d.get("entity_type", ""),
+                "attributes": {"summary": d.get("summary", "")},
+                "summary": d.get("summary", ""),
+            } for doc in n_docs for d in [doc.to_dict()]]
+
+            # Build name → node_id lookup for edge resolution
+            name_to_id = {n["name"]: n["id"] for n in nodes}
+
+            edges = []
+            for doc in e_docs:
+                d = doc.to_dict()
+                src = name_to_id.get(d.get("source", ""))
+                tgt = name_to_id.get(d.get("target", ""))
+                if src and tgt:
+                    edges.append({"source": src, "target": tgt, "label": d.get("label", ""), "type": d.get("label", "")})
+
+            return nodes, edges
+
+        nodes, edges = _read_graph(memory, project_id)
 
         # If no extracted graph yet, trigger extraction from dossier
         if not nodes:
@@ -290,11 +312,7 @@ def project_graph(project_id):
             if dossier:
                 _get_logger("crucible_api").info(f"No graph found for {project_id}, triggering extraction...")
                 memory.push_dossier(project_id, dossier)
-                # Re-read after extraction
-                nodes_docs = memory.db.collection("graph_nodes").where("sim_id", "==", project_id).get()
-                edges_docs = memory.db.collection("graph_edges").where("sim_id", "==", project_id).get()
-                nodes = [{"id": doc.id, "name": d.get("name", ""), "type": d.get("entity_type", ""), "summary": d.get("summary", "")} for doc in nodes_docs for d in [doc.to_dict()]]
-                edges = [{"source": d.get("source", ""), "target": d.get("target", ""), "label": d.get("label", ""), "type": d.get("label", "")} for doc in edges_docs for d in [doc.to_dict()]]
+                nodes, edges = _read_graph(memory, project_id)
 
         return jsonify({"data": {"nodes": nodes, "edges": edges}})
 
