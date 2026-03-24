@@ -95,15 +95,15 @@ export type DossierFormValues = z.infer<typeof dossierSchema>;
  */
 export type DossierForm = ReactFormExtendedApi<
   DossierFormValues,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined
 >;

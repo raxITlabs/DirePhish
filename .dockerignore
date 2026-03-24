@@ -21,3 +21,9 @@ frontend/dist
 frontend/.vite
 
 backend/uploads
+
+frontend/.next
+.stitch
+frontend-vue-backup
+.claude
+.superpowers

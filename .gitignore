@@ -24,6 +24,9 @@ ENV/
 dist/
 build/
 
+# Next.js build output
+frontend/.next/
+
 # Node.js
 node_modules/
 npm-debug.log*

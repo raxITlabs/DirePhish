@@ -98,7 +98,7 @@ export default function PipelineStagesPanel({
   }
 
   return (
-    <div className="w-[280px] shrink-0 flex flex-col overflow-hidden m-2 bg-card rounded-xl border border-border/20 shadow-sm">
+    <div className="w-64 sm:w-[280px] shrink-0 flex flex-col overflow-hidden m-2 bg-card rounded-xl border border-border/20 shadow-sm">
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-border/10">
         <div className="flex items-center justify-between mb-2">
@@ -119,7 +119,13 @@ export default function PipelineStagesPanel({
         </div>
         <p className="text-[11px] font-mono text-muted-foreground truncate">{statusLabel}</p>
         {/* Progress bar */}
-        <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
+        <div
+          className="mt-2 h-1 bg-muted rounded-full overflow-hidden"
+          role="progressbar"
+          aria-valuenow={Math.round(progress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
           <div
             className="h-full bg-primary rounded-full transition-all duration-700 ease-out"
             style={{ width: `${progress}%` }}
@@ -166,7 +172,8 @@ export default function PipelineStagesPanel({
                             : "text-muted-foreground/30"
                     }`}
                   >
-                    {STATUS_ICON[status]}
+                    <span aria-hidden="true">{STATUS_ICON[status]}</span>
+                    <span className="sr-only">{status}</span>
                   </span>
 
                   {/* Label + inline summary */}

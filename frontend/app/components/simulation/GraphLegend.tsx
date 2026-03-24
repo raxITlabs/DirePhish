@@ -5,16 +5,16 @@ import { Card } from "@/app/components/ui/card";
 import type { GraphNode } from "@/app/types";
 
 const TYPE_COLORS: Record<string, string> = {
-  agent: "#3b82f6",
-  org: "#f97316",
-  threat: "#ef4444",
-  compliance: "#a855f7",
-  system: "#22c55e",
-  event: "#eab308",
-  location: "#06b6d4",
-  document: "#ec4899",
-  process: "#8b5cf6",
-  default: "#6b7280",
+  agent: "var(--color-royal-azure-500)",
+  org: "var(--color-sandy-brown-500)",
+  threat: "var(--color-burnt-peach-500)",
+  compliance: "var(--color-royal-azure-400)",
+  system: "var(--color-verdigris-500)",
+  event: "var(--color-tuscan-sun-600)",
+  location: "var(--color-verdigris-400)",
+  document: "var(--color-burnt-peach-400)",
+  process: "var(--color-tuscan-sun-500)",
+  default: "var(--color-pitch-black-400)",
 };
 
 interface GraphLegendProps {

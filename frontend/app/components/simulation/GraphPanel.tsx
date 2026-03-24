@@ -65,6 +65,9 @@ function edgePairKey(source: string, target: string): string {
   return [source, target].sort().join("||");
 }
 
+const getCSSVar = (name: string) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
 export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -290,7 +293,7 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
       .data(links)
       .join("path")
       .attr("fill", "none")
-      .attr("stroke", "#d4d4d4")
+      .attr("stroke", getCSSVar('--border'))
       .attr("stroke-width", 1.5)
       .attr("cursor", "pointer")
       .on("click", (event, d) => {
@@ -306,7 +309,7 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
       .selectAll<SVGRectElement, SimLink>("rect")
       .data(links)
       .join("rect")
-      .attr("fill", "white")
+      .attr("fill", getCSSVar('--background'))
       .attr("rx", 2)
       .attr("opacity", 0.9)
       .attr("pointer-events", "none");
@@ -318,7 +321,7 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
       .text((d) => truncateName(d.label, 20))
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "central")
-      .attr("fill", "#737373")
+      .attr("fill", getCSSVar('--muted-foreground'))
       .attr("font-size", 10)
       .attr("pointer-events", "none");
 
@@ -337,11 +340,11 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
       .attr("stroke-width", 2)
       .attr("cursor", "pointer")
       .on("mouseover", function () {
-        d3.select(this).attr("stroke", "#f97316");
+        d3.select(this).attr("stroke", getCSSVar('--color-sandy-brown-500'));
       })
       .on("mouseout", function (_, d) {
         const isSelected = selectedNode && (d as SimNode).id === selectedNode.id;
-        d3.select(this).attr("stroke", isSelected ? "#f97316" : "transparent");
+        d3.select(this).attr("stroke", isSelected ? getCSSVar('--color-sandy-brown-500') : "transparent");
       })
       .on("dblclick", (event, d) => {
         event.stopPropagation();
@@ -356,7 +359,7 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
           d.name.toLowerCase().includes(q) ? 1 : 0.15
         )
         .attr("stroke", (d) =>
-          d.name.toLowerCase().includes(q) ? "#f97316" : "transparent"
+          d.name.toLowerCase().includes(q) ? getCSSVar('--color-sandy-brown-500') : "transparent"
         )
         .attr("stroke-width", (d) =>
           d.name.toLowerCase().includes(q) ? 3 : 2
@@ -423,7 +426,11 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
       .selectAll<SVGRectElement, SimNode>("rect")
       .data(nodes)
       .join("rect")
-      .attr("fill", "rgba(0, 0, 0, 0.6)")
+      .attr("fill", (() => {
+        const v = getCSSVar('--color-pitch-black-950');
+        // Insert alpha into oklch value: "oklch(L C H)" -> "oklch(L C H / 0.6)"
+        return v.replace(/\)$/, ' / 0.6)');
+      })())
       .attr("rx", 3)
       .attr("pointer-events", "none");
 
@@ -433,7 +440,7 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
       .join("text")
       .text((d) => truncateName(d.name))
       .attr("text-anchor", "middle")
-      .attr("fill", "#e5e5e5")
+      .attr("fill", getCSSVar('--color-pitch-black-200'))
       .attr("font-size", 10)
       .attr("font-weight", 500)
       .attr("pointer-events", "none");
@@ -575,16 +582,16 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
           d._originalEdge.target === selectedEdge.target &&
           d._originalEdge.label === selectedEdge.label
         ) {
-          return "#f97316";
+          return getCSSVar('--color-sandy-brown-500');
         }
         if (
           selectedNode &&
           ((d.source as SimNode).id === selectedNode.id ||
             (d.target as SimNode).id === selectedNode.id)
         ) {
-          return "#a3a3a3";
+          return getCSSVar('--color-pitch-black-400');
         }
-        return "#d4d4d4";
+        return getCSSVar('--border');
       })
       .attr("stroke-width", (d) => {
         if (

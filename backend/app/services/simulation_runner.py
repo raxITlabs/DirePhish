@@ -719,12 +719,12 @@ class SimulationRunner:
         
         Args:
             process: Process to terminate
-            simulation_id: Simulation ID（用于日志）
+            simulation_id: Simulation ID (for logging)
             timeout: Timeout for waiting for process to exit (seconds)
         """
         if IS_WINDOWS:
-            # Windows: 使用 taskkill 命令终止进程树
-            # /F = 强制终止, /T = 终止进程树（包括子进程）
+            # Windows: use taskkill to terminate the process tree
+            # /F = force terminate, /T = terminate process tree (including child processes)
             logger.info(f"Terminating process tree (Windows): simulation={simulation_id}, pid={process.pid}")
             try:
                 # First try graceful termination
@@ -764,7 +764,7 @@ class SimulationRunner:
                 process.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
                 # If not ended after timeout, force send SIGKILL
-                logger.warning(f"进程组未响应 SIGTERM，强制终止: {simulation_id}")
+                logger.warning(f"Process group did not respond to SIGTERM, force killing: {simulation_id}")
                 os.killpg(pgid, signal.SIGKILL)
                 process.wait(timeout=5)
     
@@ -829,10 +829,10 @@ class SimulationRunner:
         Read actions from a single action file
         
         Args:
-            file_path: 动作Log file path
+            file_path: Action log file path
             default_platform: Default platform (used when action record has no platform field)
             platform_filter: Filter by platform
-            agent_id: 过滤 Agent ID
+            agent_id: Filter by Agent ID
             round_num: Filter by round
         """
         if not os.path.exists(file_path):
@@ -908,23 +908,23 @@ class SimulationRunner:
         sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
         actions = []
         
-        # 读取 Twitter 动作文件（根据文件路径自动设置 platform 为 twitter）
+        # Read Twitter action file (platform auto-set to twitter based on file path)
         twitter_actions_log = os.path.join(sim_dir, "twitter", "actions.jsonl")
         if not platform or platform == "twitter":
             actions.extend(cls._read_actions_from_file(
                 twitter_actions_log,
-                default_platform="twitter",  # 自动填充 platform 字段
+                default_platform="twitter",  # Auto-fill platform field
                 platform_filter=platform,
                 agent_id=agent_id, 
                 round_num=round_num
             ))
         
-        # 读取 Reddit 动作文件（根据文件路径自动设置 platform 为 reddit）
+        # Read Reddit action file (platform auto-set to reddit based on file path)
         reddit_actions_log = os.path.join(sim_dir, "reddit", "actions.jsonl")
         if not platform or platform == "reddit":
             actions.extend(cls._read_actions_from_file(
                 reddit_actions_log,
-                default_platform="reddit",  # 自动填充 platform 字段
+                default_platform="reddit",  # Auto-fill platform field
                 platform_filter=platform,
                 agent_id=agent_id,
                 round_num=round_num
@@ -935,7 +935,7 @@ class SimulationRunner:
             actions_log = os.path.join(sim_dir, "actions.jsonl")
             actions = cls._read_actions_from_file(
                 actions_log,
-                default_platform=None,  # 旧格式文件中应该有 platform 字段
+                default_platform=None,  # Legacy format files should have a platform field
                 platform_filter=platform,
                 agent_id=agent_id,
                 round_num=round_num
@@ -1096,26 +1096,25 @@ class SimulationRunner:
     
     @classmethod
     def cleanup_simulation_logs(cls, simulation_id: str) -> Dict[str, Any]:
-        """
-        清理模拟的运行日志（用于强制重新开始模拟）
-        
-        会删除以下文件：
+        """Clean up simulation run logs (used to force-restart a simulation).
+
+        Deletes the following files:
         - run_state.json
         - twitter/actions.jsonl
         - reddit/actions.jsonl
         - simulation.log
         - stdout.log / stderr.log
-        - twitter_simulation.db（模拟数据库）
-        - reddit_simulation.db（模拟数据库）
-        - env_status.json（环境状态）
-        
-        注意：不会删除配置文件（simulation_config.json）和 profile 文件
-        
+        - twitter_simulation.db (simulation database)
+        - reddit_simulation.db (simulation database)
+        - env_status.json (environment status)
+
+        Note: Does not delete config files (simulation_config.json) or profile files.
+
         Args:
-            simulation_id: Simulation ID
-            
+            simulation_id: Simulation ID.
+
         Returns:
-            清理结果信息
+            Cleanup result information.
         """
         import shutil
         
@@ -1133,8 +1132,8 @@ class SimulationRunner:
             "simulation.log",
             "stdout.log",
             "stderr.log",
-            "twitter_simulation.db",  # Twitter 平台数据库
-            "reddit_simulation.db",   # Reddit 平台数据库
+            "twitter_simulation.db",  # Twitter platform database
+            "reddit_simulation.db",   # Reddit platform database
             "env_status.json",        # Environment status file
         ]
         
@@ -1239,7 +1238,7 @@ class SimulationRunner:
                     try:
                         sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
                         state_file = os.path.join(sim_dir, "state.json")
-                        logger.info(f"尝试更新 state.json: {state_file}")
+                        logger.info(f"Attempting to update state.json: {state_file}")
                         if os.path.exists(state_file):
                             with open(state_file, 'r', encoding='utf-8') as f:
                                 state_data = json.load(f)
@@ -1292,7 +1291,7 @@ class SimulationRunner:
             return
         
         # In Flask debug mode, only register cleanup in reloader subprocess (the process actually running the app)
-        # WERKZEUG_RUN_MAIN=true 表示是 reloader 子进程
+        # WERKZEUG_RUN_MAIN=true indicates the reloader subprocess
         # If not in debug mode, this env var won't exist, still need to register
         is_reloader_process = os.environ.get('WERKZEUG_RUN_MAIN') == 'true'
         is_debug_mode = os.environ.get('FLASK_DEBUG') == '1' or os.environ.get('WERKZEUG_RUN_MAIN') is not None
@@ -1354,16 +1353,14 @@ class SimulationRunner:
     
     @classmethod
     def get_running_simulations(cls) -> List[str]:
-        """
-        获取所有正在运行的Simulation ID列表
-        """
+        """Get a list of all currently running simulation IDs."""
         running = []
         for sim_id, process in cls._processes.items():
             if process.poll() is None:
                 running.append(sim_id)
         return running
     
-    # ============== Interview 功能 ==============
+    # ============== Interview Features ==============
     
     @classmethod
     def check_env_alive(cls, simulation_id: str) -> bool:
@@ -1374,7 +1371,7 @@ class SimulationRunner:
             simulation_id: Simulation ID
 
         Returns:
-            True 表示环境存活，False 表示环境已关闭
+            True if the environment is alive, False if it has been shut down
         """
         sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
         if not os.path.exists(sim_dir):
@@ -1434,7 +1431,7 @@ class SimulationRunner:
         Args:
             simulation_id: Simulation ID
             agent_id: Agent ID
-            prompt: 采访问题
+            prompt: Interview question
             platform: Specify platform (optional)
                 - "twitter": Interview Twitter platform only
                 - "reddit": Interview Reddit platform only
@@ -1455,9 +1452,9 @@ class SimulationRunner:
         ipc_client = SimulationIPCClient(sim_dir)
 
         if not ipc_client.check_env_alive():
-            raise ValueError(f"模拟环境未运行或已关闭，无法执行Interview: {simulation_id}")
+            raise ValueError(f"Simulation environment is not running or has been shut down, cannot perform interview: {simulation_id}")
 
-        logger.info(f"发送Interview命令: simulation_id={simulation_id}, agent_id={agent_id}, platform={platform}")
+        logger.info(f"Sending interview command: simulation_id={simulation_id}, agent_id={agent_id}, platform={platform}")
 
         response = ipc_client.send_interview(
             agent_id=agent_id,
@@ -1496,15 +1493,15 @@ class SimulationRunner:
 
         Args:
             simulation_id: Simulation ID
-            interviews: Interview list, each element contains {"agent_id": int, "prompt": str, "platform": str(可选)}
+            interviews: Interview list, each element contains {"agent_id": int, "prompt": str, "platform": str (optional)}
             platform: Default platform (optional, overridden by each interview item's platform)
-                - "twitter": 默认Interview Twitter platform only
-                - "reddit": 默认Interview Reddit platform only
+                - "twitter": Default to interview Twitter platform only
+                - "reddit": Default to interview Reddit platform only
                 - None: Interview both platforms for each Agent in dual-platform simulation
             timeout: Timeout (seconds)
 
         Returns:
-            批量Interview result dictionary
+            Batch interview result dictionary
 
         Raises:
             ValueError: Simulation not found or environment not running
@@ -1517,9 +1514,9 @@ class SimulationRunner:
         ipc_client = SimulationIPCClient(sim_dir)
 
         if not ipc_client.check_env_alive():
-            raise ValueError(f"模拟环境未运行或已关闭，无法执行Interview: {simulation_id}")
+            raise ValueError(f"Simulation environment is not running or has been shut down, cannot perform interview: {simulation_id}")
 
-        logger.info(f"发送批量Interview命令: simulation_id={simulation_id}, count={len(interviews)}, platform={platform}")
+        logger.info(f"Sending batch interview command: simulation_id={simulation_id}, count={len(interviews)}, platform={platform}")
 
         response = ipc_client.send_batch_interview(
             interviews=interviews,
@@ -1565,7 +1562,7 @@ class SimulationRunner:
             timeout: Timeout (seconds)
 
         Returns:
-            全局Interview result dictionary
+            Global interview result dictionary
         """
         sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
         if not os.path.exists(sim_dir):
@@ -1574,14 +1571,14 @@ class SimulationRunner:
         # Get all Agent info from config file
         config_path = os.path.join(sim_dir, "simulation_config.json")
         if not os.path.exists(config_path):
-            raise ValueError(f"模拟配置不存在: {simulation_id}")
+            raise ValueError(f"Simulation config not found: {simulation_id}")
 
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
 
         agent_configs = config.get("agent_configs", [])
         if not agent_configs:
-            raise ValueError(f"模拟配置中没有Agent: {simulation_id}")
+            raise ValueError(f"No agents found in simulation config: {simulation_id}")
 
         # Build batch interview list
         interviews = []
@@ -1593,7 +1590,7 @@ class SimulationRunner:
                     "prompt": prompt
                 })
 
-        logger.info(f"发送全局Interview命令: simulation_id={simulation_id}, agent_count={len(interviews)}, platform={platform}")
+        logger.info(f"Sending global interview command: simulation_id={simulation_id}, agent_count={len(interviews)}, platform={platform}")
 
         return cls.interview_agents_batch(
             simulation_id=simulation_id,
@@ -1629,25 +1626,25 @@ class SimulationRunner:
         if not ipc_client.check_env_alive():
             return {
                 "success": True,
-                "message": "环境已经关闭"
+                "message": "Environment is already shut down"
             }
         
-        logger.info(f"发送关闭环境命令: simulation_id={simulation_id}")
+        logger.info(f"Sending close environment command: simulation_id={simulation_id}")
         
         try:
             response = ipc_client.send_close_env(timeout=timeout)
             
             return {
                 "success": response.status.value == "completed",
-                "message": "环境关闭命令已发送",
+                "message": "Close environment command sent",
                 "result": response.result,
                 "timestamp": response.timestamp
             }
         except TimeoutError:
-            # 超时可能是因为环境正在关闭
+            # Timeout may occur because the environment is shutting down
             return {
                 "success": True,
-                "message": "环境关闭命令已发送（Waiting for response timed out，环境可能正在关闭）"
+                "message": "Close environment command sent (timed out waiting for response, environment may be shutting down)"
             }
     
     @classmethod
@@ -1726,7 +1723,7 @@ class SimulationRunner:
                 - "twitter": Get Twitter platform history only
                 - None: Get all history from both platforms
             agent_id: Specify Agent ID (optional, get only this Agent's history)
-            limit: 每个平台Return count limit
+            limit: Return count limit per platform
             
         Returns:
             Interview history record list

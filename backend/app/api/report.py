@@ -26,8 +26,8 @@ def generate_report():
     """
     Generate simulation analysis report (async task)
     
-    This is a time-consuming operation, the endpoint returns task_id immediately,
-    使用 GET /api/report/generate/status 查询进度
+    This is a time-consuming operation, the endpoint returns task_id immediately.
+    Use GET /api/report/generate/status to check progress.
     
     Request (JSON):
         {
@@ -42,7 +42,7 @@ def generate_report():
                 "simulation_id": "sim_xxxx",
                 "task_id": "task_xxxx",
                 "status": "generating",
-                "message": "报告生成任务已启动"
+                "message": "Report generation task started"
             }
         }
     """
@@ -58,7 +58,7 @@ def generate_report():
         
         force_regenerate = data.get('force_regenerate', False)
         
-        # 获取模拟信息
+        # Get simulation info
         manager = SimulationManager()
         state = manager.get_simulation(simulation_id)
         
@@ -83,7 +83,7 @@ def generate_report():
                     }
                 })
         
-        # 获取项目信息
+        # Get project info
         project = ProjectManager.get_project(state.project_id)
         if not project:
             return jsonify({
@@ -203,7 +203,7 @@ def get_generate_status():
     Request (JSON):
         {
             "task_id": "task_xxxx",         // Optional, task_id returned by generate
-            "simulation_id": "sim_xxxx"     // 可选，Simulation ID
+            "simulation_id": "sim_xxxx"     // Optional, Simulation ID
         }
     
     Returns:
@@ -314,7 +314,7 @@ def get_report(report_id: str):
 @report_bp.route('/by-simulation/<simulation_id>', methods=['GET'])
 def get_report_by_simulation(simulation_id: str):
     """
-    根据Simulation ID获取报告
+    Get report by Simulation ID.
     
     Returns:
         {
@@ -356,8 +356,8 @@ def list_reports():
     List all reports
     
     Query parameters:
-        simulation_id: 按Simulation ID过滤（可选）
-        limit: Return count limit（默认50）
+        simulation_id: Filter by Simulation ID (optional)
+        limit: Return count limit (default 50)
     
     Returns:
         {
@@ -474,7 +474,7 @@ def chat_with_report_agent():
     Request (JSON):
         {
             "simulation_id": "sim_xxxx",        // Required，Simulation ID
-            "message": "请解释一下舆情走向",    // Required，用户消息
+            "message": "Explain the sentiment trend",  // Required, user message
             "chat_history": [                   // Optional, chat history
                 {"role": "user", "content": "..."},
                 {"role": "assistant", "content": "..."}

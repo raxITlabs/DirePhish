@@ -149,7 +149,6 @@ function PipelineCanvasInner({
 
   // Sync ONLY when graph structure changes (new/removed nodes), NOT on position changes
   useEffect(() => {
-    console.log("[canvas] syncing nodes — graph structure changed:", layoutNodes.length);
     setRfNodes(layoutNodes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphKey]);
@@ -225,7 +224,8 @@ function PipelineCanvasInner({
                         return next;
                       });
                     }}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-mono transition-all ${
+                    aria-pressed={isActive}
+                    className={`flex items-center gap-1.5 px-2 py-1 min-h-11 rounded-md text-[10px] font-mono transition-all ${
                       isActive
                         ? "bg-card border border-border/30 text-foreground/80 shadow-sm"
                         : "bg-card/50 border border-border/10 text-muted-foreground/40 line-through"
@@ -242,7 +242,8 @@ function PipelineCanvasInner({
               })}
               <button
                 onClick={() => setShowEdgeLabels(prev => !prev)}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-mono transition-all ${
+                aria-pressed={showEdgeLabels}
+                className={`flex items-center gap-1.5 px-2 py-1 min-h-11 rounded-md text-[10px] font-mono transition-all ${
                   showEdgeLabels
                     ? "bg-card border border-primary/30 text-primary shadow-sm"
                     : "bg-card/50 border border-border/10 text-muted-foreground/40"
@@ -280,7 +281,7 @@ function PipelineCanvasInner({
           className="absolute z-30 w-[280px] bg-card rounded-xl border border-border/30 shadow-xl p-4"
           style={{
             left: Math.min(clickPos.x - 140, (typeof window !== "undefined" ? window.innerWidth : 1400) - 300),
-            top: Math.max(clickPos.y - 200, 10),
+            top: Math.min(Math.max(clickPos.y - 200, 10), (typeof window !== "undefined" ? window.innerHeight : 900) - 400),
           }}
         >
           <div className="flex items-center justify-between mb-2">
@@ -298,6 +299,7 @@ function PipelineCanvasInner({
             </div>
             <button
               onClick={() => onSelectNode(null)}
+              aria-label="Close"
               className="p-1 text-muted-foreground hover:text-foreground transition-colors"
             >
               ✕

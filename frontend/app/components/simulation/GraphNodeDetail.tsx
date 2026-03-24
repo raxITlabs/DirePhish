@@ -225,6 +225,7 @@ export default function GraphNodeDetail({
             variant="ghost"
             size="sm"
             onClick={onClose}
+            aria-label="Close"
             className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground text-xs"
           >
             ✕

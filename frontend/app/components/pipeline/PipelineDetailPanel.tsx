@@ -190,15 +190,28 @@ const SEVERITY_COLORS: Record<string, string> = {
 
 function ExerciseReportSummary({ projectId, message }: { projectId: string; message?: string }) {
   const [report, setReport] = useState<ExerciseReport | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
-    getExerciseReport(projectId).then((result) => {
-      if ("data" in result) setReport(result.data);
-    });
+    getExerciseReport(projectId)
+      .then((result) => {
+        if ("data" in result) setReport(result.data);
+      })
+      .catch((err) => {
+        setFetchError(err instanceof Error ? err.message : "Failed to load exercise report");
+      });
   }, [projectId]);
 
   const headline = report?.conclusions?.headline;
   const findings = report?.conclusions?.keyFindings;
+
+  if (fetchError) {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs font-mono text-destructive">{fetchError}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

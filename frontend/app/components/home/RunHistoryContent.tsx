@@ -116,7 +116,7 @@ export default function RunHistoryContent({ runs, onDelete }: RunHistoryContentP
 
   return (
     <>
-      <nav>
+      <nav aria-label="Run history">
         <h3 className="font-mono uppercase text-[10.5px] tracking-widest text-sidebar-foreground/50 px-3 mb-2">
           Runs
         </h3>
@@ -129,6 +129,7 @@ export default function RunHistoryContent({ runs, onDelete }: RunHistoryContentP
               <li key={run.runId} className="group">
                 <a
                   href={`/pipeline/${run.runId}`}
+                  aria-current={isActive ? "page" : undefined}
                   className={`block px-3 py-2.5 rounded-lg transition-colors ${
                     isActive
                       ? "text-sidebar-primary bg-sidebar-accent font-medium"

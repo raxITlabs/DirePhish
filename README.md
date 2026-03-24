@@ -91,17 +91,34 @@ npm run dev
 
 ### Docker
 
-Development (hot reload):
+Copy `.env.example` to `.env` and set your API keys before running either stack.
+
+**Development** (hot reload):
 
 ```bash
-docker compose up
+docker compose up --build
 ```
 
-Production (`next build` + `next start`, Flask via Gunicorn):
+**Production** (`next build` + `next start`, Flask via Gunicorn):
 
 ```bash
 docker compose -f docker-compose.prod.yml up --build
 ```
+
+Both stacks expose:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5001
+
+**Custom ports** — if 3000 or 5001 are already in use, set overrides in `.env`:
+
+```env
+HOST_PORT_FRONTEND=3010
+HOST_PORT_BACKEND=5010
+```
+
+**Data persistence** — workflow run history is stored in a named Docker volume
+(`workflow-data`). It survives `docker compose down` but is removed by
+`docker compose down -v`. Backend uploads are bind-mounted to `./backend/uploads`.
 
 ## Tech stack
 

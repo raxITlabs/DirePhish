@@ -149,59 +149,6 @@
   --severity-critical-border: oklch(82.61% 0.076 34.96);
 }
 
-.dark {
-  --background: oklch(18.77% 0.015 66.67);
-  --foreground: oklch(92.87% 0.015 70.88);
-  --card: oklch(22.46% 0.021 69.76);
-  --card-foreground: oklch(92.87% 0.015 70.88);
-  --popover: oklch(18.77% 0.015 66.67);
-  --popover-foreground: oklch(92.87% 0.015 70.88);
-  --primary: oklch(58.68% 0.163 269.27);
-  --primary-foreground: oklch(18.77% 0.015 66.67);
-  --secondary: oklch(79.86% 0.108 184.77);
-  --secondary-foreground: oklch(18.77% 0.015 66.67);
-  --muted: oklch(33.55% 0.037 66);
-  --muted-foreground: oklch(70.55% 0.062 66.54);
-  --accent: oklch(33.55% 0.037 66);
-  --accent-foreground: oklch(92.87% 0.015 70.88);
-  --destructive: oklch(67.03% 0.162 35.12);
-  --destructive-foreground: oklch(18.77% 0.015 66.67);
-  --border: oklch(33.55% 0.037 66);
-  --input: oklch(33.55% 0.037 66);
-  --ring: oklch(58.68% 0.163 269.27);
-  --chart-1: oklch(58.68% 0.163 269.27);
-  --chart-2: oklch(79.86% 0.108 184.77);
-  --chart-3: oklch(80.64% 0.133 87.58);
-  --chart-4: oklch(74.33% 0.150 56.44);
-  --chart-5: oklch(74.49% 0.119 35.29);
-  --sidebar: oklch(22.46% 0.021 69.76);
-  --sidebar-foreground: oklch(85.46% 0.030 67.41);
-  --sidebar-primary: oklch(58.68% 0.163 269.27);
-  --sidebar-primary-foreground: oklch(18.77% 0.015 66.67);
-  --sidebar-accent: oklch(33.55% 0.037 66);
-  --sidebar-accent-foreground: oklch(92.87% 0.015 70.88);
-  --sidebar-border: oklch(33.55% 0.037 66);
-  --sidebar-ring: oklch(58.68% 0.163 269.27);
-  --font-sans: Geist Mono, ui-monospace, monospace;
-  --font-serif: serif;
-  --font-mono: JetBrains Mono, monospace;
-  --radius: 0.75rem;
-  --shadow-x: 0px;
-  --shadow-y: 1px;
-  --shadow-blur: 4px;
-  --shadow-spread: 0px;
-  --shadow-opacity: 0.05;
-  --shadow-color: #000000;
-  --shadow-2xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
-  --shadow-xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
-  --shadow-sm: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
-  --shadow: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
-  --shadow-md: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 2px 4px -1px hsl(0 0% 0% / 0.05);
-  --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.05);
-  --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
-  --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
-}
-
 @theme inline {
   /* ── Palette utilities (e.g. text-royal-azure-500, bg-verdigris-200) ── */
   --color-pitch-black-50: var(--color-pitch-black-50);
@@ -359,7 +306,7 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
-.animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+.animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; will-change: transform; }
 
 /* Skeleton shimmer */
 @keyframes shimmer {
@@ -437,6 +384,7 @@
 
 .animate-slide-in-right {
   animation: slide-in-right 0.25s ease-out;
+  will-change: transform, opacity;
 }
 
 @media (prefers-reduced-motion: reduce) {
