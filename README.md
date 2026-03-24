@@ -86,8 +86,13 @@ Required:
 npm run dev
 ```
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5001
+- Frontend: https://direphish.localhost
+- Backend API: https://api.direphish.localhost
+
+> Requires [portless](https://github.com/nicepkg/portless) installed globally
+> (`npm install -g portless`). One-time setup: `portless proxy start --https`.
+> Without portless, the apps still work at `http://localhost:3000` and
+> `http://localhost:5001`.
 
 ### Docker
 
@@ -108,6 +113,14 @@ docker compose -f docker-compose.prod.yml up --build
 Both stacks expose:
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:5001
+
+**Portless URLs for Docker** — register the container ports with portless:
+
+```bash
+npm run docker:alias
+```
+
+Then access via https://direphish.localhost and https://api.direphish.localhost.
 
 **Custom ports** — if 3000 or 5001 are already in use, set overrides in `.env`:
 

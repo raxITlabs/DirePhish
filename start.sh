@@ -1,50 +1,115 @@
 #!/bin/bash
-# Start Crucible — Flask backend + Next.js frontend
-# Usage: ./start.sh
+# Start DirePhish
+#
+# Usage:
+#   ./start.sh           — bare metal (local dev with portless)
+#   ./start.sh docker     — Docker dev (hot reload)
+#   ./start.sh prod       — Docker prod (Gunicorn + next start)
+#   ./start.sh stop       — stop Docker containers + remove portless aliases
+#
+# Prerequisites: npm install -g portless
+# One-time setup: portless proxy start --https
 
 set -e
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BACKEND_DIR="$PROJECT_DIR/backend"
-FRONTEND_DIR="$PROJECT_DIR/frontend"
+cd "$PROJECT_DIR"
 
-cleanup() {
-  echo ""
-  echo "Shutting down..."
-  kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
-  wait $BACKEND_PID $FRONTEND_PID 2>/dev/null
-  echo "Done."
-}
-trap cleanup EXIT INT TERM
+MODE="${1:-dev}"
 
-# Start Flask backend
-echo "Starting Flask backend on port 5001..."
-cd "$BACKEND_DIR"
-uv run python -m flask --app app run --port 5001 &
-BACKEND_PID=$!
-
-# Wait for backend to be ready
-for i in $(seq 1 15); do
-  if curl -s http://localhost:5001/health > /dev/null 2>&1; then
-    echo "Backend ready."
-    break
+# Ensure portless proxy is running and clear stale aliases
+ensure_portless() {
+  if ! portless list &>/dev/null; then
+    echo "Starting portless proxy..."
+    portless proxy start --https
   fi
-  sleep 1
-done
+  # Remove stale aliases from previous runs
+  portless alias --remove direphish 2>/dev/null || true
+  portless alias --remove api.direphish 2>/dev/null || true
+}
 
-# Start Next.js frontend
-echo "Starting Next.js frontend on port 3000..."
-cd "$FRONTEND_DIR"
-pnpm dev &
-FRONTEND_PID=$!
+register_aliases() {
+  portless alias direphish 3000 --force
+  portless alias api.direphish 5001 --force
+}
 
-echo ""
-echo "==================================="
-echo "  Crucible is running"
-echo "  Frontend: http://localhost:3000"
-echo "  Backend:  http://localhost:5001"
-echo "  Press Ctrl+C to stop"
-echo "==================================="
-echo ""
+print_urls() {
+  echo ""
+  echo "==================================="
+  echo "  DirePhish is running ($1)"
+  echo "  Frontend: https://direphish.localhost:1355"
+  echo "  Backend:  https://api.direphish.localhost:1355"
+  echo "  Press Ctrl+C to stop"
+  echo "==================================="
+  echo ""
+}
 
-wait
+case "$MODE" in
+  dev)
+    ensure_portless
+
+    cleanup() {
+      echo ""
+      echo "Shutting down..."
+      kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
+      wait $BACKEND_PID $FRONTEND_PID 2>/dev/null
+      echo "Done."
+    }
+    trap cleanup EXIT INT TERM
+
+    echo "Starting Flask backend..."
+    cd "$PROJECT_DIR/backend"
+    portless api.direphish --app-port 5001 --force -- uv run python run.py &
+    BACKEND_PID=$!
+
+    for i in $(seq 1 15); do
+      if curl -s http://localhost:5001/health > /dev/null 2>&1; then
+        echo "Backend ready."
+        break
+      fi
+      sleep 1
+    done
+
+    echo "Starting Next.js frontend..."
+    cd "$PROJECT_DIR/frontend"
+    portless direphish --force -- pnpm dev &
+    FRONTEND_PID=$!
+
+    print_urls "bare metal"
+    wait
+    ;;
+
+  docker)
+    ensure_portless
+    docker compose up --build -d
+    echo "Waiting for containers..."
+    sleep 10
+    register_aliases
+    print_urls "Docker dev"
+    echo "Logs: docker compose logs -f"
+    ;;
+
+  prod)
+    ensure_portless
+    docker compose -f docker-compose.prod.yml up --build -d
+    echo "Waiting for containers..."
+    sleep 15
+    register_aliases
+    print_urls "Docker prod"
+    echo "Logs: docker compose -f docker-compose.prod.yml logs -f"
+    ;;
+
+  stop)
+    echo "Stopping containers..."
+    docker compose down 2>/dev/null || true
+    docker compose -f docker-compose.prod.yml down 2>/dev/null || true
+    portless alias --remove direphish 2>/dev/null || true
+    portless alias --remove api.direphish 2>/dev/null || true
+    echo "Stopped."
+    ;;
+
+  *)
+    echo "Usage: ./start.sh [dev|docker|prod|stop]"
+    exit 1
+    ;;
+esac

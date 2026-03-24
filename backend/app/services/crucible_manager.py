@@ -254,3 +254,56 @@ def _read_actions(path: Path) -> list[dict]:
                 except json.JSONDecodeError:
                     continue
     return actions
+
+
+def _rehydrate_simulations():
+    """Rebuild _simulations from disk for completed/failed sims that survived a restart."""
+    if not SIMULATIONS_DIR.exists():
+        return
+    for sim_dir in SIMULATIONS_DIR.iterdir():
+        if not sim_dir.is_dir():
+            continue
+        sim_id = sim_dir.name
+        if sim_id in _simulations:
+            continue
+        config_path = sim_dir / "config.json"
+        if not config_path.exists():
+            continue
+        try:
+            with open(config_path) as f:
+                config = json.load(f)
+            actions_path = sim_dir / "actions.jsonl"
+            actions = _read_actions(actions_path)
+            total_rounds = config.get("total_rounds", 5)
+            current_round = max((a.get("round", 0) for a in actions), default=0) if actions else 0
+            status = "completed" if actions else "unknown"
+
+            graph_id = None
+            project_id = config.get("project_id")
+            if not project_id and sim_id.startswith("proj_"):
+                project_id = sim_id.replace("_sim", "")
+            if project_id:
+                try:
+                    from . import project_manager
+                    proj = project_manager.get_project(project_id)
+                    if proj:
+                        graph_id = proj.get("graph_id")
+                except Exception:
+                    pass
+
+            _simulations[sim_id] = {
+                "sim_id": sim_id,
+                "status": status,
+                "current_round": current_round,
+                "total_rounds": total_rounds,
+                "action_count": len(actions) if actions else 0,
+                "graph_id": graph_id,
+            }
+        except Exception as e:
+            logger.warning(f"Failed to rehydrate simulation {sim_id}: {e}")
+
+    if _simulations:
+        logger.info(f"Rehydrated {len(_simulations)} simulation(s) from disk")
+
+
+_rehydrate_simulations()

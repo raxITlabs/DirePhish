@@ -7,10 +7,11 @@
     "setup:backend": "cd backend && uv sync",
     "setup:all": "npm run setup && npm run setup:backend",
     "dev": "concurrently --kill-others -n \"backend,frontend\" -c \"green,cyan\" \"npm run backend\" \"npm run frontend:wait\"",
-    "backend": "cd backend && uv run python run.py",
-    "frontend": "cd frontend && pnpm run dev",
-    "frontend:wait": "wait-on -t 120000 http-get://127.0.0.1:5001/health && cd frontend && pnpm run dev",
-    "build": "cd frontend && pnpm run build"
+    "backend": "cd backend && portless api.direphish --app-port 5001 --force -- uv run python run.py",
+    "frontend": "cd frontend && portless direphish --force -- pnpm run dev",
+    "frontend:wait": "wait-on -t 120000 http-get://127.0.0.1:5001/health && cd frontend && portless direphish --force -- pnpm run dev",
+    "build": "cd frontend && pnpm run build",
+    "docker:alias": "portless alias direphish 3000 --force && portless alias api.direphish 5001 --force"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
