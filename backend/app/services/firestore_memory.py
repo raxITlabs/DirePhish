@@ -43,8 +43,9 @@ logger = get_logger("firestore_memory")
 # Firestore batch write limit
 _FIRESTORE_BATCH_LIMIT = 500
 
-# Singleton Firestore client — avoids creating a new connection per FirestoreMemory instance
+# Singleton Firestore clients — avoids creating new connections per call
 _firestore_client = None
+_firestore_async_client = None
 
 
 def _get_db():
@@ -52,6 +53,15 @@ def _get_db():
     if _firestore_client is None:
         _firestore_client = firestore.Client()
     return _firestore_client
+
+
+def _get_async_db():
+    """Singleton async Firestore client for batch_search parallel queries."""
+    global _firestore_async_client
+    if _firestore_async_client is None:
+        from google.cloud.firestore_v1 import AsyncClient
+        _firestore_async_client = AsyncClient()
+    return _firestore_async_client
 
 
 class FirestoreMemory:
@@ -621,8 +631,8 @@ class FirestoreMemory:
         # Step 1: Batch embed all queries at once
         query_vecs = self.embedder.embed_batch(queries, task_type="RETRIEVAL_QUERY")
 
-        # Step 2: Run all find_nearest concurrently via async Firestore client
-        async_db = FirestoreAsyncClient()
+        # Step 2: Run all find_nearest concurrently via singleton async client
+        async_db = _get_async_db()
 
         async def _single_search(vec: list[float]) -> list[dict]:
             try:
