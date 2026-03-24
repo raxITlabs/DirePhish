@@ -43,9 +43,14 @@ logger = get_logger("firestore_memory")
 # Firestore batch write limit
 _FIRESTORE_BATCH_LIMIT = 500
 
-# Singleton Firestore clients — avoids creating new connections per call
+# Singleton Firestore sync client — thread-safe for reads
 _firestore_client = None
-_firestore_async_client = None
+
+# Thread pool for parallel Firestore queries (sync client + ThreadPoolExecutor)
+# This avoids gRPC AsyncClient deadlocks that occur after ~15 rounds.
+# See: googleapis/python-firestore#745, grpc/grpc#32480
+from concurrent.futures import ThreadPoolExecutor
+_firestore_pool = ThreadPoolExecutor(max_workers=16, thread_name_prefix="firestore")
 
 
 def _get_db():
@@ -53,15 +58,6 @@ def _get_db():
     if _firestore_client is None:
         _firestore_client = firestore.Client()
     return _firestore_client
-
-
-def _get_async_db():
-    """Singleton async Firestore client for batch_search parallel queries."""
-    global _firestore_async_client
-    if _firestore_async_client is None:
-        from google.cloud.firestore_v1 import AsyncClient
-        _firestore_async_client = AsyncClient()
-    return _firestore_async_client
 
 
 class FirestoreMemory:
@@ -602,17 +598,20 @@ class FirestoreMemory:
 
         return "From your memory of previous discussions:\n" + "\n".join(facts[:8])
 
-    def batch_search_sync(
+    async def batch_search(
         self,
         sim_id: str,
         queries: list[str],
         limit: int = 8,
     ) -> list[list[dict]]:
-        """Batch-embed all queries, then run sync Firestore vector searches.
+        """Batch-embed queries, then run Firestore vector searches in thread pool.
 
-        Uses batch embedding (1 API call for N queries) but runs Firestore
-        queries sequentially on the sync client. The async approach with
-        AsyncClient deadlocks after ~15 rounds due to gRPC channel issues.
+        Uses batch embedding (1 API call for N queries) then fans out
+        find_nearest queries to a ThreadPoolExecutor (16 workers). The sync
+        Firestore client is thread-safe for reads and avoids the gRPC
+        AsyncClient deadlocks that occur after ~15 rounds.
+
+        See: googleapis/python-firestore#745, grpc/grpc#32480
 
         Args:
             sim_id: Simulation identifier.
@@ -622,17 +621,21 @@ class FirestoreMemory:
         Returns:
             List of result lists (one per query), each containing episode dicts.
         """
+        import asyncio
+
         if not queries:
             return []
 
         # Step 1: Batch embed all queries at once (1 API call instead of N)
         query_vecs = self.embedder.embed_batch(queries, task_type="RETRIEVAL_QUERY")
 
-        # Step 2: Run find_nearest on sync client (stable, no gRPC deadlocks)
-        all_results = []
-        for vec in query_vecs:
+        # Step 2: Fan out sync find_nearest to thread pool (16 parallel, no gRPC deadlocks)
+        loop = asyncio.get_running_loop()
+        episodes_ref = self._episodes  # capture reference for threads
+
+        def _sync_search(vec: list[float]) -> list[dict]:
             try:
-                base = self._episodes.where("sim_id", "==", sim_id)
+                base = episodes_ref.where("sim_id", "==", sim_id)
                 docs = base.find_nearest(
                     vector_field="embedding",
                     query_vector=Vector(vec),
@@ -645,18 +648,18 @@ class FirestoreMemory:
                     data.pop("embedding", None)
                     data["id"] = doc.id
                     results.append(data)
-                all_results.append(results)
+                return results
             except Exception as e:
-                logger.warning(f"batch_search_sync query failed: {e}")
-                all_results.append([])
+                logger.warning(f"batch_search thread query failed: {e}")
+                return []
 
-        logger.debug(f"batch_search_sync sim={sim_id} {len(queries)} queries -> {sum(len(r) for r in all_results)} total hits")
-        return all_results
+        results = await asyncio.gather(*[
+            loop.run_in_executor(_firestore_pool, _sync_search, vec)
+            for vec in query_vecs
+        ])
 
-    # Keep async version as alias for backward compat but route to sync
-    async def batch_search(self, sim_id: str, queries: list[str], limit: int = 8) -> list[list[dict]]:
-        """Async wrapper around batch_search_sync for backward compatibility."""
-        return self.batch_search_sync(sim_id, queries, limit)
+        logger.debug(f"batch_search sim={sim_id} {len(queries)} queries -> {sum(len(r) for r in results)} total hits")
+        return list(results)
 
     # ──────────────────────────────────────────────────────────────────────
     # Report methods (replaces ZepToolsService)
