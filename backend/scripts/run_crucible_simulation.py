@@ -268,6 +268,73 @@ Respond with JSON only:
 
 
 # ---------------------------------------------------------------------------
+# Background writer (producer-consumer write queue)
+# ---------------------------------------------------------------------------
+
+async def _background_writer(
+    queue: asyncio.Queue,
+    actions_log_path: str,
+    all_actions: list,
+    summary_actions: list,
+    memory,
+    sim_id: str,
+    mc_console,
+):
+    """Background task: drains write queue, handles ALL file I/O + Firestore writes.
+
+    Single writer pattern — no locks needed.
+    """
+    pending_episodes = []
+
+    while True:
+        entry = await queue.get()
+
+        if entry is None:  # Poison pill — shutdown
+            # Flush remaining episodes
+            if memory and pending_episodes:
+                try:
+                    memory.add_episodes_bulk(sim_id, pending_episodes)
+                    if mc_console: mc_console.research_step(sim_id, f"Batch-wrote {len(pending_episodes)} episodes")
+                except Exception as e:
+                    if mc_console: mc_console.warning(f"Final episode flush failed: {e}")
+            queue.task_done()
+            break
+
+        if entry.get("_type") == "round_end":
+            # Flush episodes at round boundary
+            if memory and pending_episodes:
+                try:
+                    memory.add_episodes_bulk(sim_id, pending_episodes)
+                    if mc_console: mc_console.research_step(sim_id, f"Batch-wrote {len(pending_episodes)} episodes")
+                except Exception as e:
+                    if mc_console: mc_console.warning(f"Episode batch write failed: {e}")
+                pending_episodes = []
+            queue.task_done()
+            continue
+
+        if entry.get("_type") == "episode":
+            # Collect episode for batch write
+            pending_episodes.append({k: v for k, v in entry.items() if k != "_type"})
+            queue.task_done()
+            continue
+
+        # Regular action entry — update state + write JSONL
+        all_actions.append(entry)
+        summary_actions.append({
+            "round": entry.get("round"),
+            "agent": entry.get("agent"),
+            "world": entry.get("world"),
+            "action": entry.get("action"),
+        })
+
+        # Write to JSONL (single writer, no contention)
+        with open(actions_log_path, "a") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+        queue.task_done()
+
+
+# ---------------------------------------------------------------------------
 # Main simulation loop
 # ---------------------------------------------------------------------------
 
@@ -404,6 +471,12 @@ async def run_single_iteration(
     all_actions: list[dict] = []
     summary_actions: list[dict] = []
 
+    # Write queue — sim loop produces, background writer consumes (no sync I/O in event loop)
+    write_queue: asyncio.Queue = asyncio.Queue()
+    writer_task = asyncio.create_task(
+        _background_writer(write_queue, str(actions_log), all_actions, summary_actions, memory, sim_id, mc)
+    )
+
     # Conversation memory per world — agents see what others have said
     world_history: dict[str, list[str]] = {wc.name: [] for wc in world_configs}
 
@@ -460,7 +533,6 @@ async def run_single_iteration(
             # --- Pre-fetch ALL agent memories in parallel (Layer 3) ---
             # Includes both attackers and defenders so everyone benefits from batch fetch
             memory_cache: dict[str, str] = {}
-            pending_episodes: list[dict] = []
             if memory:
                 try:
                     agent_queries = [(a["name"], f"What has {a['name']} discussed?") for a in agent_profiles]
@@ -471,8 +543,6 @@ async def run_single_iteration(
                 except Exception as e:
                     if mc: mc.warning(f"Batch memory fetch failed: {e}")
 
-            # Shared state locks for parallel world execution
-            actions_lock = asyncio.Lock()
             active_agents = defender_agents if has_adversarial else agent_profiles
 
             # --- Attacker phase (runs before defenders) ---
@@ -588,20 +658,9 @@ async def run_single_iteration(
                             "args": action_args,
                             "result": result,
                         }
-                        all_actions.append(entry)
-                        summary_actions.append(
-                            {
-                                "round": round_num,
-                                "agent": agent["name"],
-                                "world": world_name,
-                                "action": action_name,
-                                "agent_type": "threat_actor",
-                            }
-                        )
 
-                        # Append to JSONL
-                        with open(actions_log, "a") as f:
-                            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                        # Non-blocking put to write queue (background writer handles I/O)
+                        await write_queue.put(entry)
 
                         # Collect episode for batch write (Layer 3)
                         episode_body = ""
@@ -609,7 +668,8 @@ async def run_single_iteration(
                             content = action_args.get("content", "")[:500]
                             episode_body = f"{agent['name']} ({agent['role']}) said in {world_name}: {content}"
                         if episode_body:
-                            pending_episodes.append({
+                            await write_queue.put({
+                                "_type": "episode",
                                 "content": episode_body,
                                 "agent": agent["name"],
                                 "world": world_name,
@@ -750,20 +810,8 @@ async def run_single_iteration(
                     "result": result,
                 }
 
-                # Thread-safe append to shared state
-                async with actions_lock:
-                    all_actions.append(entry)
-                    summary_actions.append(
-                        {
-                            "round": round_num,
-                            "agent": agent["name"],
-                            "world": world_name,
-                            "action": action_name,
-                        }
-                    )
-                    # Append to JSONL
-                    with open(actions_log, "a") as f:
-                        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                # Non-blocking put to write queue (background writer handles I/O)
+                await write_queue.put(entry)
 
                 # Collect episode for batch write (Layer 3)
                 episode_body = ""
@@ -775,15 +823,15 @@ async def run_single_iteration(
                     body_text = action_args.get("body", "")[:300]
                     episode_body = f"{agent['name']} ({agent['role']}) emailed about '{subj}': {body_text}"
                 if episode_body:
-                    async with actions_lock:
-                        pending_episodes.append({
-                            "content": episode_body,
-                            "agent": agent["name"],
-                            "world": world_name,
-                            "round": round_num,
-                            "action": action_name,
-                            "category": "action",
-                        })
+                    await write_queue.put({
+                        "_type": "episode",
+                        "content": episode_body,
+                        "agent": agent["name"],
+                        "world": world_name,
+                        "round": round_num,
+                        "action": action_name,
+                        "category": "action",
+                    })
 
             async def _run_world(world_name: str, agents_in_world: list[dict]) -> None:
                 """Run all agents in one world sequentially (they see each other's messages)."""
@@ -810,14 +858,9 @@ async def run_single_iteration(
                 if agents  # skip empty worlds
             ])
 
-            # Batch write all pending episodes at end of round (Layer 3)
-            if memory and pending_episodes:
-                try:
-                    memory.add_episodes_bulk(sim_id, pending_episodes)
-                    if mc: mc.research_step(sim_id, f"Batch-wrote {len(pending_episodes)} episodes")
-                except Exception as e:
-                    if mc: mc.warning(f"Batch episode write failed: {e}")
-                pending_episodes.clear()
+            # Signal round end — flushes episodes to Firestore
+            await write_queue.put({"_type": "round_end"})
+            await write_queue.join()  # Wait for all writes to complete before arbiter
 
             # --- Arbiter evaluation (end of round, after all agents have acted) ---
             if adaptive_enabled and round_num >= min_rounds:
@@ -859,6 +902,10 @@ async def run_single_iteration(
             checkpoint_path.write_text(json.dumps(checkpoint, ensure_ascii=False, default=str))
 
     finally:
+        # Shut down the background writer
+        await write_queue.put(None)  # Poison pill
+        await writer_task  # Wait for writer to finish
+
         await env.stop()
         env.close()
 
