@@ -273,49 +273,114 @@ def project_graph(project_id):
     if not project:
         return jsonify({"error": "Project not found"}), 404
 
-    # Build graph from dossier structure (Firestore stores flat episodes, not nodes/edges)
-    dossier = project_manager.get_dossier(project_id)
-    if not dossier:
+    # Build graph from Firestore episodes — query all dossier episodes for this project
+    try:
+        from ..services.firestore_memory import FirestoreMemory
+        memory = FirestoreMemory()
+
+        # Query all dossier episodes from Firestore
+        docs = (
+            memory._episodes
+            .where("sim_id", "==", project_id)
+            .where("category", "==", "dossier")
+            .get()
+        )
+        episodes = [doc.to_dict() for doc in docs]
+
+        if not episodes:
+            # Fallback: try to build from disk dossier
+            dossier = project_manager.get_dossier(project_id)
+            if not dossier:
+                return jsonify({"data": {"nodes": [], "edges": []}})
+            # Push dossier to Firestore for next time
+            memory.push_dossier(project_id, dossier)
+            docs = memory._episodes.where("sim_id", "==", project_id).where("category", "==", "dossier").get()
+            episodes = [doc.to_dict() for doc in docs]
+
+        nodes = []
+        edges = []
+        node_id = 0
+        node_map = {}  # name -> node_id for linking
+
+        for ep in episodes:
+            action = ep.get("action_name", "")
+            content = ep.get("action_summary", "")
+
+            if action == "company_profile":
+                # Parse company name from content
+                name = content.split(".")[0].replace("Company: ", "")
+                nid = f"n{node_id}"
+                nodes.append({"id": nid, "name": name, "type": "organization", "summary": content[:200]})
+                node_map["__company__"] = nid
+                node_id += 1
+
+            elif action.startswith("org_role_"):
+                # Parse person name from content (format: "Name (Title) works in...")
+                name = content.split(" works in")[0].split(" (")[0].strip()
+                title = ""
+                if "(" in content and ")" in content:
+                    title = content.split("(")[1].split(")")[0]
+                nid = f"n{node_id}"
+                nodes.append({"id": nid, "name": name, "type": "person", "summary": title})
+                node_map[name] = nid
+                if "__company__" in node_map:
+                    edges.append({"source": nid, "target": node_map["__company__"], "label": title or "works at", "type": "role"})
+                node_id += 1
+
+            elif action.startswith("system_"):
+                # Parse system name (format: "System: Name (category, criticality: X)")
+                name = content.replace("System: ", "").split(" (")[0].strip()
+                nid = f"n{node_id}"
+                nodes.append({"id": nid, "name": name, "type": "system", "summary": content[:200]})
+                node_map[name] = nid
+                if "__company__" in node_map:
+                    edges.append({"source": node_map["__company__"], "target": nid, "label": "uses", "type": "system"})
+                node_id += 1
+
+            elif action.startswith("risk_"):
+                # Parse risk name (format: "Risk: Name (likelihood: X, impact: Y)")
+                name = content.replace("Risk: ", "").split(" (")[0].strip()
+                nid = f"n{node_id}"
+                nodes.append({"id": nid, "name": name, "type": "risk", "summary": content[:200]})
+                node_map[name] = nid
+                if "__company__" in node_map:
+                    edges.append({"source": node_map["__company__"], "target": nid, "label": "faces", "type": "risk"})
+                # Link to affected systems mentioned in content
+                if "Affects:" in content:
+                    affected = content.split("Affects:")[1].split(".")[0].strip()
+                    for sys_name in [s.strip() for s in affected.split(",")]:
+                        if sys_name in node_map:
+                            edges.append({"source": nid, "target": node_map[sys_name], "label": "affects", "type": "risk"})
+                node_id += 1
+
+            elif action.startswith("event_"):
+                nid = f"n{node_id}"
+                # Shorter label from content
+                label = content.split(":")[1].split(".")[0].strip()[:60] if ":" in content else content[:60]
+                nodes.append({"id": nid, "name": label, "type": "event", "summary": content[:200]})
+                if "__company__" in node_map:
+                    edges.append({"source": node_map["__company__"], "target": nid, "label": "experienced", "type": "event"})
+                node_id += 1
+
+            elif action == "compliance":
+                nid = f"n{node_id}"
+                nodes.append({"id": nid, "name": "Compliance", "type": "compliance", "summary": content[:200]})
+                if "__company__" in node_map:
+                    edges.append({"source": node_map["__company__"], "target": nid, "label": "complies with", "type": "compliance"})
+                node_id += 1
+
+            elif action == "security_posture":
+                nid = f"n{node_id}"
+                nodes.append({"id": nid, "name": "Security Posture", "type": "security", "summary": content[:200]})
+                if "__company__" in node_map:
+                    edges.append({"source": node_map["__company__"], "target": nid, "label": "maintains", "type": "security"})
+                node_id += 1
+
+        return jsonify({"data": {"nodes": nodes, "edges": edges}})
+
+    except Exception as e:
+        logger.error(f"Graph build from Firestore failed: {e}")
         return jsonify({"data": {"nodes": [], "edges": []}})
-
-    nodes = []
-    edges = []
-    node_id = 0
-
-    # Company node (center)
-    company = dossier.get("company", {})
-    company_name = company.get("name", "Company")
-    nodes.append({"id": f"n{node_id}", "name": company_name, "type": "organization", "summary": company.get("description", "")})
-    company_node = f"n{node_id}"
-    node_id += 1
-
-    # People nodes from org roles
-    for role in dossier.get("org", {}).get("roles", []):
-        nid = f"n{node_id}"
-        nodes.append({"id": nid, "name": role.get("name", "Unknown"), "type": "person", "summary": f"{role.get('title', '')} — {role.get('responsibilities', '')}"})
-        edges.append({"source": nid, "target": company_node, "label": role.get("title", "works at"), "type": "role"})
-        node_id += 1
-
-    # System nodes
-    for system in dossier.get("systems", []):
-        nid = f"n{node_id}"
-        nodes.append({"id": nid, "name": system.get("name", "System"), "type": "system", "summary": system.get("description", "")})
-        edges.append({"source": company_node, "target": nid, "label": f"{system.get('category', 'uses')}", "type": "system"})
-        node_id += 1
-
-    # Risk nodes
-    for risk in dossier.get("risks", []):
-        nid = f"n{node_id}"
-        nodes.append({"id": nid, "name": risk.get("name", "Risk"), "type": "risk", "summary": risk.get("description", "")})
-        edges.append({"source": company_node, "target": nid, "label": f"impact: {risk.get('impact', 'unknown')}", "type": "risk"})
-        # Link risk to affected systems
-        for sys_name in risk.get("affectedSystems", []):
-            sys_node = next((n["id"] for n in nodes if n["name"] == sys_name), None)
-            if sys_node:
-                edges.append({"source": nid, "target": sys_node, "label": "affects", "type": "risk"})
-        node_id += 1
-
-    return jsonify({"data": {"nodes": nodes, "edges": edges}})
 
 
 @crucible_bp.route("/projects/<project_id>/generate-config", methods=["POST"])
