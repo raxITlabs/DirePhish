@@ -442,8 +442,8 @@ class FirestoreMemory:
             relationships = extraction.get("relationships", [])
 
             # Store nodes
-            graph_nodes = self._db.collection("graph_nodes")
-            batch = self._db.batch()
+            graph_nodes = self.db.collection("graph_nodes")
+            batch = self.db.batch()
             node_count = 0
             for entity in entities:
                 doc_ref = graph_nodes.document()
@@ -456,13 +456,13 @@ class FirestoreMemory:
                 node_count += 1
                 if node_count % 500 == 0:
                     batch.commit()
-                    batch = self._db.batch()
+                    batch = self.db.batch()
             if node_count % 500 != 0:
                 batch.commit()
 
             # Store edges
-            graph_edges = self._db.collection("graph_edges")
-            batch = self._db.batch()
+            graph_edges = self.db.collection("graph_edges")
+            batch = self.db.batch()
             edge_count = 0
             for rel in relationships:
                 doc_ref = graph_edges.document()
@@ -475,7 +475,7 @@ class FirestoreMemory:
                 edge_count += 1
                 if edge_count % 500 == 0:
                     batch.commit()
-                    batch = self._db.batch()
+                    batch = self.db.batch()
             if edge_count % 500 != 0:
                 batch.commit()
 

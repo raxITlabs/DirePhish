@@ -278,8 +278,8 @@ def project_graph(project_id):
         from ..services.firestore_memory import FirestoreMemory
         memory = FirestoreMemory()
 
-        nodes_docs = memory._db.collection("graph_nodes").where("sim_id", "==", project_id).get()
-        edges_docs = memory._db.collection("graph_edges").where("sim_id", "==", project_id).get()
+        nodes_docs = memory.db.collection("graph_nodes").where("sim_id", "==", project_id).get()
+        edges_docs = memory.db.collection("graph_edges").where("sim_id", "==", project_id).get()
 
         nodes = [{"id": doc.id, "name": d.get("name", ""), "type": d.get("entity_type", ""), "summary": d.get("summary", "")} for doc in nodes_docs for d in [doc.to_dict()]]
         edges = [{"source": d.get("source", ""), "target": d.get("target", ""), "label": d.get("label", ""), "type": d.get("label", "")} for doc in edges_docs for d in [doc.to_dict()]]
@@ -288,18 +288,18 @@ def project_graph(project_id):
         if not nodes:
             dossier = project_manager.get_dossier(project_id)
             if dossier:
-                logger.info(f"No graph found for {project_id}, triggering extraction...")
+                _get_logger("crucible_api").info(f"No graph found for {project_id}, triggering extraction...")
                 memory.push_dossier(project_id, dossier)
                 # Re-read after extraction
-                nodes_docs = memory._db.collection("graph_nodes").where("sim_id", "==", project_id).get()
-                edges_docs = memory._db.collection("graph_edges").where("sim_id", "==", project_id).get()
+                nodes_docs = memory.db.collection("graph_nodes").where("sim_id", "==", project_id).get()
+                edges_docs = memory.db.collection("graph_edges").where("sim_id", "==", project_id).get()
                 nodes = [{"id": doc.id, "name": d.get("name", ""), "type": d.get("entity_type", ""), "summary": d.get("summary", "")} for doc in nodes_docs for d in [doc.to_dict()]]
                 edges = [{"source": d.get("source", ""), "target": d.get("target", ""), "label": d.get("label", ""), "type": d.get("label", "")} for doc in edges_docs for d in [doc.to_dict()]]
 
         return jsonify({"data": {"nodes": nodes, "edges": edges}})
 
     except Exception as e:
-        logger.error(f"Graph read from Firestore failed: {e}")
+        _get_logger("crucible_api").error(f"Graph read from Firestore failed: {e}")
         return jsonify({"data": {"nodes": [], "edges": []}})
 
 
