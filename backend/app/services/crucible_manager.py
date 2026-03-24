@@ -107,7 +107,6 @@ def get_preset_config(preset_id: str) -> dict | None:
 
 _simulations: dict[str, dict] = {}
 _processes: dict[str, subprocess.Popen] = {}
-_pushed_action_counts: dict[str, int] = {}  # tracks how many actions have been pushed to Graphiti
 
 
 def list_all_simulations() -> list[dict]:
@@ -200,17 +199,11 @@ def get_simulation_status(sim_id: str) -> dict | None:
         state["action_count"] = len(actions)
         state["current_round"] = max(a.get("round", 0) for a in actions)
 
-        # Queue new actions for batched push to Graphiti
+        # Firestore writes happen in the sim runner itself now — no separate push needed.
+        # Report a static push status so the frontend sees graph data as always ready.
         graph_id = state.get("graph_id")
         if graph_id:
-            from . import graphiti_manager
-            already_pushed = _pushed_action_counts.get(sim_id, 0)
-            new_actions = actions[already_pushed:]
-            if new_actions:
-                graphiti_manager.enqueue_actions(graph_id, new_actions)
-                _pushed_action_counts[sim_id] = len(actions)
-            # Include push status so frontend knows when graph data is ready
-            state["graph_push"] = graphiti_manager.get_push_status(graph_id)
+            state["graph_push"] = {"pushing": False, "version": state["action_count"]}
 
     state["pressures"] = []
     state["recent_actions"] = actions[-10:] if actions else []

@@ -55,27 +55,51 @@ def create_app(config_class=Config):
     should_log_startup = not debug_mode or is_reloader_process
     
     if should_log_startup:
-        logger.info("=" * 50)
         logger.info("DirePhish Backend starting...")
-        logger.info("=" * 50)
     
     # Enable CORS
     CORS(app, resources={r"/api/*": {"origins": "*"}})
     
     # Register simulation process cleanup function (ensure all simulation processes are terminated when the server shuts down)
-    from .services.simulation_runner import SimulationRunner
-    SimulationRunner.register_cleanup()
-    if should_log_startup:
-        logger.info("Simulation process cleanup function registered")
+    try:
+        from .services.simulation_runner import SimulationRunner
+        SimulationRunner.register_cleanup()
+        if should_log_startup:
+            logger.info("Simulation process cleanup function registered")
+    except ImportError:
+        if should_log_startup:
+            logger.info("OASIS SimulationRunner not available (Zep deps removed)")
     
-    # Request logging middleware
+    # Suppress noisy Werkzeug request logs for polling endpoints
+    import logging as _logging
+    werkzeug_logger = _logging.getLogger('werkzeug')
+
+    class _QuietPollingFilter(_logging.Filter):
+        """Suppress repetitive polling endpoint logs."""
+        QUIET_PATHS = ('/health', '/api/crucible/simulations/', '/api/crucible/monte-carlo/')
+        QUIET_SUFFIXES = ('/status', '/actions', '/stream')
+
+        def filter(self, record: _logging.LogRecord) -> bool:
+            msg = record.getMessage()
+            # Suppress GET polling requests that spam the console
+            if 'GET' in msg:
+                for path in self.QUIET_PATHS:
+                    if path in msg:
+                        for suffix in self.QUIET_SUFFIXES:
+                            if suffix in msg:
+                                return False
+            return True
+
+    werkzeug_logger.addFilter(_QuietPollingFilter())
+
+    # Request logging middleware — only log meaningful requests
     @app.before_request
     def log_request():
         logger = get_logger('direphish.request')
         logger.debug(f"Request: {request.method} {request.path}")
         if request.content_type and 'json' in request.content_type:
             logger.debug(f"Request body: {request.get_json(silent=True)}")
-    
+
     @app.after_request
     def log_response(response):
         logger = get_logger('direphish.request')
@@ -97,7 +121,38 @@ def create_app(config_class=Config):
         return {'status': 'ok', 'service': 'DirePhish Backend'}
     
     if should_log_startup:
-        logger.info("DirePhish Backend startup complete")
-    
+        # Check feature availability
+        features = []
+        try:
+            from .services.firestore_memory import FirestoreMemory
+            features.append("Firestore Memory")
+        except Exception:
+            pass
+        try:
+            from .services.monte_carlo_engine import MonteCarloEngine
+            features.append("Monte Carlo Engine")
+        except Exception:
+            pass
+        try:
+            from .services.adversarial_agent import partition_agents
+            features.append("Adversarial Agents")
+        except Exception:
+            pass
+        try:
+            from .services.counterfactual_engine import CounterfactualEngine
+            features.append("Counterfactual Branching")
+        except Exception:
+            pass
+
+        from .utils.console import MissionControl
+        MissionControl.banner(
+            features=features,
+            gcp_project=Config.GCP_PROJECT_ID,
+            embedding_model=Config.GEMINI_EMBEDDING_MODEL,
+            embedding_dims=Config.GEMINI_EMBEDDING_DIMENSIONS,
+            max_workers=Config.MONTE_CARLO_MAX_WORKERS,
+            rpm_limit=Config.GEMINI_RPM_LIMIT,
+        )
+
     return app
 

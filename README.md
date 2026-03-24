@@ -80,6 +80,48 @@ Required:
 - `LLM_API_KEY` — Google Gemini API key
 - `LLM_MODEL_NAME` — model identifier (e.g., `gemini-2.5-flash`)
 
+### Google Cloud setup (for Monte Carlo + advanced features)
+
+Monte Carlo simulation, Firestore vector memory, and stress testing require a
+GCP project with Firestore enabled. One-time setup:
+
+```bash
+# 1. Install gcloud CLI (if not already installed)
+brew install google-cloud-sdk
+
+# 2. Authenticate
+gcloud auth login
+gcloud auth application-default login
+
+# 3. Create or select a GCP project
+gcloud projects create direphish-sim --name="DirePhish Simulation"
+# OR use an existing project:
+gcloud config set project YOUR_PROJECT_ID
+
+# 4. Enable the Firestore API
+gcloud services enable firestore.googleapis.com
+
+# 5. Create Firestore database (must be Native mode, not Datastore)
+gcloud firestore databases create --location=us-east1 --type=firestore-native
+
+# 6. Create vector search indexes (takes 2-5 minutes)
+cd backend && bash scripts/create_firestore_indexes.sh
+
+# 7. Add to your .env
+echo "GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID" >> ../.env
+```
+
+Check index status: `gcloud firestore indexes composite list` — all should
+show `READY` before running simulations.
+
+Optional tuning in `.env`:
+```env
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001   # embedding model
+GEMINI_EMBEDDING_DIMENSIONS=768                # vector dimensions
+MONTE_CARLO_MAX_WORKERS=3                      # concurrent sim iterations
+GEMINI_RPM_LIMIT=60                            # API rate limit (free: 30, paid: 1500)
+```
+
 ### Run
 
 ```bash
@@ -140,10 +182,41 @@ HOST_PORT_BACKEND=5010
 | Frontend | Next.js 16, React 19, Tailwind CSS 4, shadcn/ui |
 | Backend | Flask, Python 3.11+ |
 | Models | Google Gemini with grounded search |
-| Simulation | [Crucible](https://github.com/raxITlabs/crucible) (enterprise IR) + CAMEL-AI OASIS |
-| Knowledge graph | Graphiti + Kuzu (local) |
+| Simulation | [Crucible](https://github.com/raxITlabs/crucible) (enterprise IR) + Monte Carlo engine |
+| Memory | Google Cloud Firestore Vector Search (replaces local Graphiti/Kuzu) |
+| Embeddings | Gemini Embedding API (768-dim vectors) |
 | Orchestration | Vercel WDK (durable workflows) |
 | Observability | OpenTelemetry |
+
+## Monte Carlo simulation
+
+Run the same threat scenario 50-100 times with controlled variation to get
+probabilistic threat intelligence instead of a single narrative.
+
+**Graduated test mode** — start small, scale up:
+
+| Mode | Iterations | Workers | Cost estimate |
+|------|-----------|---------|---------------|
+| Test | 3 | 1 (sequential) | ~$0.30 |
+| Quick | 10 | 2 | ~$1.00 |
+| Standard | 50 | 3 | ~$5.00 |
+| Deep | 100+ | 3 | ~$10.00+ |
+
+Must complete a test run before unlocking standard/deep. Cost tracking at
+every level with hard spend limits.
+
+**What you get:**
+- Outcome probability distribution (73% contained, 18% escalated, 9% breach)
+- Mean time to containment with standard deviation
+- Decision divergence analysis — which round and which agent's choice matters most
+- Agent consistency scores — who behaves predictably vs erratically under pressure
+- Cost extrapolation from test runs to estimate larger batches
+
+**Advanced simulation features:**
+- **Adversarial agent** — live threat actor LLM playing against defenders with asymmetric information
+- **Adaptive depth** — simulations run until resolved (not a fixed timer), governed by an arbiter LLM
+- **Counterfactual branching** — fork any sim from any round, change one decision, compare outcomes
+- **Stress testing** — 11 automatic config mutations (remove agents, add insiders, kill comms, halve timers) with resilience scoring
 
 ## Links
 

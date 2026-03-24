@@ -27,6 +27,9 @@ dependencies = [
     "opentelemetry-api>=1.40.0",
     "opentelemetry-sdk>=1.40.0",
     "opentelemetry-exporter-otlp-proto-http>=1.40.0",
+    # Firestore Vector Search (replaces Graphiti + Zep for simulation memory)
+    "google-cloud-firestore>=2.16.0",
+    "google-genai>=1.0.0",
 ]
 
 [project.optional-dependencies]

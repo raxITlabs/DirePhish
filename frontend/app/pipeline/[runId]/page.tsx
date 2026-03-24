@@ -42,6 +42,8 @@ const STEP_ORDER = [
   { id: "scenario_selection", label: "Scenario Selection" },
   { id: "config_expansion", label: "Config Generation" },
   { id: "simulations", label: "Simulations" },
+  { id: "monte_carlo", label: "Monte Carlo Analysis" },
+  { id: "counterfactual", label: "Counterfactual Analysis" },
   { id: "exercise_report", label: "Exercise Report" },
 ];
 

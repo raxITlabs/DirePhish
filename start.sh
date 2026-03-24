@@ -72,8 +72,19 @@ case "$MODE" in
 
     echo "Starting Next.js frontend..."
     cd "$PROJECT_DIR/frontend"
-    portless direphish --force -- pnpm dev &
+    # Redirect Next.js stdout to log file to prevent request log spam
+    # Errors (stderr) still show in terminal
+    mkdir -p "$PROJECT_DIR/frontend/.next"
+    portless direphish --force -- pnpm dev > "$PROJECT_DIR/frontend/.next/dev.log" 2>&1 &
     FRONTEND_PID=$!
+    # Wait for Next.js to be ready
+    for i in $(seq 1 15); do
+      if [ -f "$PROJECT_DIR/frontend/.next/dev.log" ] && grep -q "Ready in" "$PROJECT_DIR/frontend/.next/dev.log" 2>/dev/null; then
+        echo "Frontend ready."
+        break
+      fi
+      sleep 1
+    done
 
     print_urls "bare metal"
     wait

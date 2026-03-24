@@ -30,17 +30,19 @@ if _env_path.exists():
 
 from openai import OpenAI
 
-# Graphiti imports for agent memory
+# Firestore memory (replaces Graphiti)
 try:
-    from graphiti_core import Graphiti
-    from graphiti_core.driver.kuzu_driver import KuzuDriver
-    from graphiti_core.llm_client.gemini_client import GeminiClient
-    from graphiti_core.llm_client.config import LLMConfig
-    from graphiti_core.embedder.gemini import GeminiEmbedder, GeminiEmbedderConfig
-    from graphiti_core.nodes import EpisodeType
-    HAS_GRAPHITI = True
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from app.services.firestore_memory import FirestoreMemory
+    HAS_FIRESTORE = True
 except ImportError:
-    HAS_GRAPHITI = False
+    HAS_FIRESTORE = False
+
+try:
+    from app.utils.console import MissionControl as mc
+except ImportError:
+    mc = None  # Fallback for direct script execution
 
 import crucible
 from crucible import (
@@ -106,6 +108,7 @@ def _call_llm(
     system_message: str,
     user_message: str,
     tools: list[dict],
+    temperature: float = 0.7,
 ) -> tuple[str, dict, dict]:
     """Call the LLM and return (action_name, action_args, usage).
 
@@ -119,6 +122,7 @@ def _call_llm(
         ],
         tools=tools,
         tool_choice="auto",
+        temperature=temperature,
     )
 
     usage = {}
@@ -159,47 +163,183 @@ def _evaluate_condition(condition: dict, actions: list[dict]) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Graphiti helper
+# Firestore memory helper
 # ---------------------------------------------------------------------------
 
-async def _get_agent_memory(graphiti, agent_name: str, world_name: str, project_id: str) -> str:
-    """Query Graphiti for agent-specific context."""
-    if not graphiti:
+def _get_agent_memory_sync(memory: "FirestoreMemory | None", sim_id: str, agent_name: str, world_name: str) -> str:
+    """Query Firestore for agent-specific context."""
+    if not memory:
         return ""
     try:
-        query = f"What has {agent_name} discussed and what decisions have been made in {world_name}?"
-        edges = await graphiti.search(
-            query=query,
-            group_ids=[project_id] if project_id else None,
-            num_results=8,
-        )
-        if not edges:
-            return ""
-        facts = []
-        for edge in edges:
-            if edge.fact:
-                facts.append(f"- {edge.fact}")
-        if not facts:
-            return ""
-        return "From your memory of previous discussions:\n" + "\n".join(facts[:8])
+        return memory.get_agent_memory(sim_id, agent_name, world_name)
     except Exception:
         return ""
+
+
+# ---------------------------------------------------------------------------
+# Arbiter (Adaptive Depth)
+# ---------------------------------------------------------------------------
+
+def _arbiter_evaluate(
+    client: OpenAI,
+    model: str,
+    all_actions: list[dict],
+    round_num: int,
+    total_rounds: int,
+    active_events: list[str],
+    config: dict,
+    temperature: float = 0.3,
+) -> dict:
+    """Evaluate whether the simulation should continue.
+
+    Returns: {"continue": bool, "reason": str, "stop_condition": str|None, "inject_complication": str|None}
+    """
+    # Build concise summary of last 3 rounds
+    recent_rounds = [a for a in all_actions if a.get("round", 0) > round_num - 3]
+    recent_summary = []
+    for a in recent_rounds[-15:]:  # cap to 15 entries
+        recent_summary.append(
+            f"R{a.get('round')} {a.get('agent')} in {a.get('world')}: {a.get('action')}"
+        )
+
+    # Stagnation score: unique action types / total actions in last 3 rounds
+    recent_action_types = [a.get("action", "") for a in recent_rounds]
+    stagnation_score = (
+        len(set(recent_action_types)) / len(recent_action_types)
+        if recent_action_types
+        else 1.0
+    )
+
+    # Active pressures from config
+    active_pressures = [p.get("name", p.get("type", "")) for p in config.get("pressures", [])]
+
+    prompt = f"""You are a simulation arbiter. Decide whether a cybersecurity tabletop simulation should CONTINUE or STOP.
+
+Current state:
+- Round: {round_num} / {total_rounds} (max)
+- Stagnation score: {stagnation_score:.2f} (lower = more repetitive; <0.3 is very stagnant)
+- Active pressures: {', '.join(active_pressures) or 'none'}
+- Active events: {', '.join(active_events) or 'none'}
+
+Last 3 rounds of actions:
+{chr(10).join(recent_summary) or '(no actions yet)'}
+
+Stop conditions (use these exact labels):
+- "contained": Defenders have identified AND isolated the threat AND started communications
+- "stagnant": Agents are repeating the same actions (stagnation score < 0.3 for multiple rounds)
+- "catastrophic": Data exfiltration confirmed AND no containment AND regulatory deadline pressure expired
+
+You may also inject a complication to keep the simulation interesting (a new event that changes the situation).
+
+Respond with JSON only:
+{{"continue": true/false, "reason": "brief explanation", "stop_condition": null or "contained"/"stagnant"/"catastrophic", "inject_complication": null or "description of new event"}}"""
+
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You are a simulation arbiter. Respond with valid JSON only."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=temperature,
+        )
+        raw = response.choices[0].message.content or ""
+        # Strip markdown fences if present
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+        if raw.endswith("```"):
+            raw = raw[:-3]
+        raw = raw.strip()
+        result = json.loads(raw)
+        # Ensure required keys
+        result.setdefault("continue", True)
+        result.setdefault("reason", "")
+        result.setdefault("stop_condition", None)
+        result.setdefault("inject_complication", None)
+        return result
+    except (json.JSONDecodeError, Exception) as e:
+        print(f"  ⚠ Arbiter parse error: {e}, defaulting to continue")
+        return {"continue": True, "reason": f"parse error: {e}", "stop_condition": None, "inject_complication": None}
 
 
 # ---------------------------------------------------------------------------
 # Main simulation loop
 # ---------------------------------------------------------------------------
 
-async def run_simulation(config_path: str, output_dir: str) -> None:
-    """Run the full Crucible simulation from a JSON config file."""
-    config = json.loads(Path(config_path).read_text())
+async def run_single_iteration(
+    config: dict,
+    output_dir: str,
+    client: "OpenAI | None" = None,
+    model: str | None = None,
+    cost_tracker: "CostTracker | None" = None,
+    memory: "FirestoreMemory | None" = None,
+    temperature_override: float | None = None,
+    iteration_id: str | None = None,
+) -> dict:
+    """Run a single simulation iteration. Returns IterationResult dict.
+
+    Accepts pre-created dependencies for Monte Carlo orchestration.
+    When called standalone (e.g. via ``run_simulation``), dependencies are
+    created automatically from environment variables.
+    """
+    from app.utils.cost_tracker import CostTracker
+
+    start_time = time.time()
+    if mc:
+        mc.phase("SIMULATION", iteration_id or config.get("simulation_id", ""))
+
+    # --- Dependency defaults (backward compat) --------------------------------
+    if client is None:
+        client = OpenAI(
+            api_key=os.environ.get("LLM_API_KEY", ""),
+            base_url=os.environ.get("LLM_BASE_URL"),
+        )
+    if model is None:
+        model = os.environ.get("LLM_MODEL_NAME", "gpt-4o-mini")
 
     sim_id = config["simulation_id"]
+
+    if cost_tracker is None:
+        cost_tracker = CostTracker(sim_id)
+        # Load existing costs from research phase if available
+        config_project_id = config.get("project_id")
+        if config_project_id:
+            research_costs_path = os.path.join("uploads", "crucible_projects", config_project_id, "costs.json")
+            if os.path.exists(research_costs_path):
+                with open(research_costs_path) as _f:
+                    prev = json.load(_f)
+                    cost_tracker.entries = prev.get("entries", [])
+
+    if memory is None and HAS_FIRESTORE:
+        try:
+            memory = FirestoreMemory(cost_tracker=cost_tracker)
+            if mc: mc.research_step(sim_id, "Firestore memory enabled")
+        except Exception as e:
+            if mc: mc.warning(f"Firestore memory unavailable: {e}")
+            memory = None
+
+    # Resolve effective temperature
+    effective_temperature = temperature_override or config.get("_temperature_override", 0.7)
+
     total_rounds = config["total_rounds"]
     hours_per_round = config.get("hours_per_round", 1.0)
     worlds_cfg = config["worlds"]
     pressures_cfg = config["pressures"]
     agent_profiles = config["agent_profiles"]
+
+    # Partition agents into attackers and defenders
+    from app.services.adversarial_agent import (
+        partition_agents,
+        build_adversarial_system_prompt,
+        build_defender_observation,
+        detect_defender_actions,
+        attacker_actions_to_injects,
+    )
+    attacker_agents, defender_agents = partition_agents(agent_profiles)
+    has_adversarial = len(attacker_agents) > 0
+    if has_adversarial:
+        if mc: mc.research_step(sim_id, f"Adversarial mode: {len(attacker_agents)} attacker(s), {len(defender_agents)} defender(s)")
 
     # Prepare output directory
     out = Path(output_dir)
@@ -231,65 +371,6 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
         world_participants=world_participants,
     )
 
-    # OpenAI client from env vars
-    client = OpenAI(
-        api_key=os.environ.get("LLM_API_KEY", ""),
-        base_url=os.environ.get("LLM_BASE_URL"),
-    )
-    model = os.environ.get("LLM_MODEL_NAME", "gpt-4o-mini")
-
-    # Cost tracking
-    from app.utils.cost_tracker import CostTracker
-    cost_tracker = CostTracker(sim_id)
-    # Load existing costs from research phase if available
-    config_project_id = config.get("project_id")
-    if config_project_id:
-        research_costs_path = os.path.join("uploads", "crucible_projects", config_project_id, "costs.json")
-        if os.path.exists(research_costs_path):
-            with open(research_costs_path) as _f:
-                prev = json.load(_f)
-                cost_tracker.entries = prev.get("entries", [])
-
-    # Initialize Graphiti for agent memory (if project has a graph)
-    graphiti = None
-    project_id = None
-    if HAS_GRAPHITI and sim_id.startswith("proj_"):
-        project_id = sim_id.replace("_sim", "")
-        # DB path relative to backend dir
-        _backend_dir = Path(__file__).parent.parent
-        graphiti_db = str(_backend_dir / "data" / "graphiti" / f"{project_id}.kuzu")
-        # Also check relative to cwd
-        if not Path(graphiti_db).exists():
-            graphiti_db = str(Path("data") / "graphiti" / f"{project_id}.kuzu")
-        if Path(graphiti_db).exists():
-            try:
-                kuzu_driver = KuzuDriver(db=graphiti_db)
-                llm_client_g = GeminiClient(
-                    config=LLMConfig(
-                        api_key=os.environ.get("LLM_API_KEY", ""),
-                        model=os.environ.get("LLM_MODEL_NAME", "gemini-2.0-flash"),
-                    )
-                )
-                embedder_g = GeminiEmbedder(
-                    config=GeminiEmbedderConfig(
-                        api_key=os.environ.get("LLM_API_KEY", ""),
-                        embedding_model="gemini-embedding-2-preview",
-                    )
-                )
-                from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
-                cross_encoder_g = GeminiRerankerClient(
-                    config=LLMConfig(
-                        api_key=os.environ.get("LLM_API_KEY", ""),
-                        model=os.environ.get("LLM_MODEL_NAME", "gemini-3.1-flash-lite-preview"),
-                    )
-                )
-                graphiti = Graphiti(graph_driver=kuzu_driver, llm_client=llm_client_g, embedder=embedder_g, cross_encoder=cross_encoder_g)
-                await graphiti.build_indices_and_constraints()
-                print(f"  Graphiti memory enabled (project: {project_id})")
-            except Exception as e:
-                print(f"  Graphiti memory unavailable: {e}")
-                graphiti = None
-
     # Pre-build tools per world
     tools_per_world: dict[str, list[dict]] = {}
     for wc in world_configs:
@@ -320,8 +401,20 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
     # Track active events for context
     active_events: list[str] = []
 
+    # Adaptive depth configuration
+    adaptive_cfg = config.get("adaptive_depth", {})
+    adaptive_enabled = adaptive_cfg.get("enabled", False)
+    min_rounds = adaptive_cfg.get("min_rounds", 3)
+    max_rounds = adaptive_cfg.get("max_rounds", total_rounds)  # fallback to config total_rounds
+    stagnation_threshold = adaptive_cfg.get("stagnation_threshold", 0.3)
+    stagnation_count = 0
+    last_verdict: dict = {"continue": True}
+
     try:
-        for round_num in range(1, total_rounds + 1):
+        round_num = 0
+        while round_num < (max_rounds if adaptive_enabled else total_rounds):
+            round_num += 1
+            round_cost_before = cost_tracker.total_cost() if cost_tracker else 0
             # Check for scheduled injects this round
             if round_num in scheduled_events:
                 for event in scheduled_events[round_num]:
@@ -339,14 +432,165 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                         world_history[wn].append(
                             f"🚨 [SYSTEM ALERT] {inject_text}"
                         )
-                    print(f"\n🚨 INJECT: {inject_text}")
+                    if mc: mc.inject(inject_text)
 
             # Tick pressure engine each round
             env.pressure_engine.tick()
 
-            print(f"\n=== Round {round_num}/{total_rounds} ===")
+            if mc: mc.round_header(sim_id, round_num, max_rounds if adaptive_enabled else total_rounds)
 
-            for agent in agent_profiles:
+            # --- Attacker phase (runs before defenders) ---
+            if has_adversarial:
+                for agent in attacker_agents:
+                    # Get worlds this attacker can ACT in (c2_world from config)
+                    attacker_action_worlds = [agent.get("c2_world", "c2_channel")]
+                    # Get worlds this attacker can OBSERVE
+                    observable = agent.get("observable_worlds", [])
+
+                    # Build observation of defender channels
+                    defender_obs = build_defender_observation(world_history, observable)
+
+                    # Detect if defenders are onto us
+                    detection_signals = detect_defender_actions(all_actions)
+
+                    # Build attacker system prompt
+                    atk_system_msg = build_adversarial_system_prompt(
+                        agent, defender_obs, round_num, total_rounds
+                    )
+
+                    # Append detection signals to system prompt if any
+                    if detection_signals:
+                        atk_system_msg += (
+                            "\n\n== DETECTION WARNING ==\n"
+                            "Defenders may be aware of your presence. Signals:\n"
+                            + "\n".join(f"- {s}" for s in detection_signals[-5:])
+                        )
+
+                    # For each world the attacker can act in
+                    for world_name in attacker_action_worlds:
+                        if world_name not in tools_per_world:
+                            continue  # C2 world not configured, skip silently
+
+                        # Build user message for attacker
+                        atk_history_text = ""
+                        if world_history.get(world_name):
+                            recent = world_history[world_name][-20:]
+                            atk_history_text = "\n\nRecent C2 channel activity:\n" + "\n".join(recent)
+
+                        atk_user_msg = (
+                            f"Round {round_num}/{total_rounds}. You are in your C2 channel ({world_name}).{atk_history_text}\n\n"
+                            f"Based on defender activity and your objectives, what action do you take? "
+                            f"Act in character as {agent['name']} ({agent['role']})."
+                        )
+
+                        # Query Firestore for agent memory context
+                        if memory:
+                            memory_text = _get_agent_memory_sync(memory, sim_id, agent["name"], world_name)
+                            if memory_text:
+                                atk_user_msg = atk_user_msg + f"\n\n{memory_text}"
+
+                        # Call LLM
+                        tools = tools_per_world[world_name]
+                        loop = asyncio.get_event_loop()
+                        action_name, action_args, llm_usage = await loop.run_in_executor(
+                            None, _call_llm, client, model, atk_system_msg, atk_user_msg, tools, effective_temperature
+                        )
+                        if llm_usage and cost_tracker:
+                            cost_tracker.track_llm("simulation", model, llm_usage.get("input_tokens", 0), llm_usage.get("output_tokens", 0), f"round_{round_num}_{agent['name']}_{world_name}")
+
+                        if mc: mc.agent_action(agent['name'], world_name, action_name, json.dumps(action_args, ensure_ascii=False)[:80], is_attacker=True)
+
+                        # Send action through the world's channel
+                        channel = env.worlds[world_name]["channel"]
+                        action_payload = {
+                            "action": action_name,
+                            "agent_id": agent["name"],
+                            **action_args,
+                        }
+                        msg_id = await channel.write_to_receive_queue(action_payload)
+                        try:
+                            response = await asyncio.wait_for(
+                                channel.read_from_send_queue(msg_id),
+                                timeout=30.0,
+                            )
+                        except asyncio.TimeoutError:
+                            if mc: mc.warning(f"[{agent['name']}] {world_name}: channel timeout")
+                            response = {"status": "timeout", "message": "Channel did not respond"}
+                        result = response[1] if isinstance(response, tuple) else response
+
+                        # Record in conversation history
+                        if action_name == "send_message":
+                            content = action_args.get("content", "")[:200]
+                            world_history[world_name].append(
+                                f"[{agent['name']} ({agent['role']})] {content}"
+                            )
+                        elif action_name != "do_nothing":
+                            world_history[world_name].append(
+                                f"[{agent['name']}] {action_name}: {json.dumps(action_args, ensure_ascii=False)[:150]}"
+                            )
+
+                        # Log entry — tagged with agent_type for filtering
+                        entry = {
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "simulation_id": sim_id,
+                            "round": round_num,
+                            "agent": agent["name"],
+                            "role": agent["role"],
+                            "agent_type": "threat_actor",
+                            "world": world_name,
+                            "action": action_name,
+                            "args": action_args,
+                            "result": result,
+                        }
+                        all_actions.append(entry)
+                        summary_actions.append(
+                            {
+                                "round": round_num,
+                                "agent": agent["name"],
+                                "world": world_name,
+                                "action": action_name,
+                                "agent_type": "threat_actor",
+                            }
+                        )
+
+                        # Append to JSONL
+                        with open(actions_log, "a") as f:
+                            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+                        # Push action to Firestore memory
+                        if memory:
+                            try:
+                                episode_body = ""
+                                if action_name in ("send_message", "reply_in_thread"):
+                                    content = action_args.get("content", "")[:500]
+                                    episode_body = f"{agent['name']} ({agent['role']}) said in {world_name}: {content}"
+                                if episode_body:
+                                    memory.add_episode(
+                                        sim_id=sim_id,
+                                        content=episode_body,
+                                        agent=agent["name"],
+                                        world=world_name,
+                                        round_num=round_num,
+                                        action=action_name,
+                                        category="action",
+                                    )
+                            except Exception as e:
+                                if mc: mc.warning(f"Firestore push failed: {e}")
+
+                # Convert attacker actions this round to defender-visible injects
+                attacker_round_actions = [
+                    a for a in all_actions
+                    if a.get("round") == round_num and a.get("agent_type") == "threat_actor"
+                ]
+                new_injects = attacker_actions_to_injects(attacker_round_actions, round_num)
+                for inject in new_injects:
+                    active_events.append(inject)
+                    for wn in world_history:
+                        world_history[wn].append(f"🚨 [SYSTEM ALERT] {inject}")
+                    if mc: mc.inject(inject)
+
+            # --- Defender phase (existing logic, uses defender_agents in adversarial mode) ---
+            for agent in (defender_agents if has_adversarial else agent_profiles):
                 # Filter worlds: use agent's "worlds" list or env participant filtering
                 agent_world_names = agent.get("worlds")  # explicit list from config
                 for wc in world_configs:
@@ -398,9 +642,9 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                         f"Act in character as {agent['name']} ({agent['role']})."
                     )
 
-                    # Query Graphiti for agent memory context
-                    if graphiti and project_id:
-                        memory_text = await _get_agent_memory(graphiti, agent["name"], world_name, project_id)
+                    # Query Firestore for agent memory context
+                    if memory:
+                        memory_text = _get_agent_memory_sync(memory, sim_id, agent["name"], world_name)
                         if memory_text:
                             user_msg = user_msg + f"\n\n{memory_text}"
 
@@ -408,15 +652,12 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                     tools = tools_per_world[world_name]
                     loop = asyncio.get_event_loop()
                     action_name, action_args, llm_usage = await loop.run_in_executor(
-                        None, _call_llm, client, model, system_msg, user_msg, tools
+                        None, _call_llm, client, model, system_msg, user_msg, tools, effective_temperature
                     )
                     if llm_usage and cost_tracker:
                         cost_tracker.track_llm("simulation", model, llm_usage.get("input_tokens", 0), llm_usage.get("output_tokens", 0), f"round_{round_num}_{agent['name']}_{world_name}")
 
-                    print(
-                        f"  [{agent['name']}] {world_name}: "
-                        f"{action_name}({json.dumps(action_args, ensure_ascii=False)[:120]})"
-                    )
+                    if mc: mc.agent_action(agent['name'], world_name, action_name, json.dumps(action_args, ensure_ascii=False)[:80], is_attacker=False)
 
                     # Send action directly through the world's channel
                     channel = env.worlds[world_name]["channel"]
@@ -432,7 +673,7 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                             timeout=30.0,
                         )
                     except asyncio.TimeoutError:
-                        print(f"  [{agent['name']}] {world_name}: channel response timed out, skipping")
+                        if mc: mc.warning(f"[{agent['name']}] {world_name}: channel timeout")
                         response = {"status": "timeout", "message": "Channel did not respond"}
                     result = response[1] if isinstance(response, tuple) else response
 
@@ -484,8 +725,8 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                     with open(actions_log, "a") as f:
                         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
-                    # Push action to Graphiti as temporal episode
-                    if graphiti and project_id:
+                    # Push action to Firestore memory
+                    if memory:
                         try:
                             episode_body = ""
                             if action_name in ("send_message", "reply_in_thread"):
@@ -496,22 +737,65 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
                                 body_text = action_args.get("body", "")[:300]
                                 episode_body = f"{agent['name']} ({agent['role']}) emailed about '{subj}': {body_text}"
                             if episode_body:
-                                await graphiti.add_episode(
-                                    name=f"{agent['name'].replace(' ', '_')}_r{round_num}_{action_name}",
-                                    episode_body=episode_body,
-                                    source=EpisodeType.message,
-                                    source_description=f"Round {round_num} — {world_name}",
-                                    reference_time=datetime.now(timezone.utc),
-                                    group_id=project_id,
+                                memory.add_episode(
+                                    sim_id=sim_id,
+                                    content=episode_body,
+                                    agent=agent["name"],
+                                    world=world_name,
+                                    round_num=round_num,
+                                    action=action_name,
+                                    category="action",
                                 )
                         except Exception as e:
-                            print(f"  (Graphiti push failed: {e})")
+                            if mc: mc.warning(f"Firestore push failed: {e}")
+
+            # --- Arbiter evaluation (end of round, after all agents have acted) ---
+            if adaptive_enabled and round_num >= min_rounds:
+                loop = asyncio.get_event_loop()
+                last_verdict = await loop.run_in_executor(
+                    None, _arbiter_evaluate,
+                    client, model, all_actions, round_num, max_rounds,
+                    active_events, config, 0.3,
+                )
+
+                if cost_tracker:
+                    # Track arbiter LLM call cost (approximate)
+                    cost_tracker.track_llm("arbiter", model, 500, 100, f"arbiter_round_{round_num}")
+
+                if not last_verdict["continue"]:
+                    if mc: mc.arbiter(last_verdict['reason'], stop=True)
+                    break
+
+                if last_verdict.get("inject_complication"):
+                    complication = last_verdict["inject_complication"]
+                    active_events.append(complication)
+                    for wn in world_history:
+                        world_history[wn].append(f"🚨 [SYSTEM ALERT] {complication}")
+                    if mc: mc.arbiter(f"Injected: {complication[:60]}")
+
+            # Round cost summary
+            if mc and cost_tracker:
+                round_cost = cost_tracker.total_cost() - round_cost_before
+                mc.round_cost(round_cost, cost_tracker.total_cost())
+
+            # Save round checkpoint (for counterfactual branching)
+            checkpoint = {
+                "round": round_num,
+                "all_actions": all_actions.copy(),
+                "world_history": {k: list(v) for k, v in world_history.items()},
+                "active_events": list(active_events),
+            }
+            checkpoint_dir = out / "checkpoints"
+            checkpoint_dir.mkdir(exist_ok=True)
+            checkpoint_path = checkpoint_dir / f"round_{round_num}.json"
+            checkpoint_path.write_text(json.dumps(checkpoint, ensure_ascii=False, default=str))
 
     finally:
         await env.stop()
         env.close()
 
     # Write summary
+    completed_at = datetime.now(timezone.utc).isoformat()
     summary = {
         "simulation_id": sim_id,
         "total_rounds": total_rounds,
@@ -520,17 +804,41 @@ async def run_simulation(config_path: str, output_dir: str) -> None:
         "worlds": [w["name"] for w in worlds_cfg],
         "total_actions": len(all_actions),
         "actions_summary": summary_actions,
-        "completed_at": datetime.now(timezone.utc).isoformat(),
+        "completed_at": completed_at,
+        "adaptive_depth": {
+            "enabled": adaptive_enabled,
+            "stopped_at_round": round_num,
+            "max_rounds": max_rounds if adaptive_enabled else total_rounds,
+            "stop_reason": last_verdict.get("stop_condition") if adaptive_enabled and not last_verdict.get("continue", True) else None,
+        } if adaptive_enabled else None,
     }
     summary_path = out / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False))
     cost_tracker.save(str(out))
-    print(f"\nSimulation complete. Summary: {summary_path} | Cost: ${cost_tracker.total_cost():.4f}")
+    if mc: mc.sim_complete(sim_id, round_num, cost_tracker.total_cost(), time.time() - start_time)
+
+    # Return IterationResult for Monte Carlo orchestration
+    return {
+        "iteration_id": iteration_id or sim_id,
+        "seed": config.get("_variation_seed", 0),
+        "total_rounds": round_num,
+        "total_actions": len(all_actions),
+        "cost_usd": cost_tracker.total_cost() if cost_tracker else 0,
+        "variation_description": config.get("_variation_description", ""),
+        "completed_at": completed_at,
+        "output_dir": output_dir,
+    }
 
 
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
+async def run_simulation(config_path: str, output_dir: str) -> None:
+    """CLI entrypoint -- reads config from file, creates own clients."""
+    config = json.loads(Path(config_path).read_text())
+    await run_single_iteration(config, output_dir)
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run a Crucible simulation")

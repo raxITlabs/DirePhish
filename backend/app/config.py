@@ -32,11 +32,21 @@ class Config:
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
     
-    # Zep configuration
+    # Zep configuration (deprecated — replaced by Firestore)
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
 
-    # Graphiti (local knowledge graph)
+    # Graphiti (deprecated — replaced by Firestore)
     GRAPHITI_DB_PATH = os.environ.get('GRAPHITI_DB_PATH', os.path.join(os.path.dirname(__file__), '../data/graphiti'))
+
+    # Google Cloud / Firestore Vector Search
+    GCP_PROJECT_ID = os.environ.get('GOOGLE_CLOUD_PROJECT', '')
+    FIRESTORE_DATABASE = os.environ.get('FIRESTORE_DATABASE', '(default)')
+    GEMINI_EMBEDDING_MODEL = os.environ.get('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-001')
+    GEMINI_EMBEDDING_DIMENSIONS = int(os.environ.get('GEMINI_EMBEDDING_DIMENSIONS', '768'))
+
+    # Monte Carlo configuration
+    MONTE_CARLO_MAX_WORKERS = int(os.environ.get('MONTE_CARLO_MAX_WORKERS', '3'))
+    GEMINI_RPM_LIMIT = int(os.environ.get('GEMINI_RPM_LIMIT', '60'))
 
     # Cloudflare Browser Rendering (web crawling)
     CLOUDFLARE_ACCOUNT_ID = os.environ.get('CLOUDFLARE_ACCOUNT_ID')

@@ -19,6 +19,7 @@ from ..utils.llm_client import LLMClient
 from ..utils.file_parser import FileParser
 from ..utils.cost_tracker import CostTracker
 from ..utils.logger import get_logger
+from ..utils.console import MissionControl
 from . import project_manager
 
 logger = get_logger("research_agent")
@@ -32,6 +33,7 @@ def run_research(project_id: str) -> None:
 
 def _research_pipeline(project_id: str) -> None:
     """Execute research steps sequentially with progress tracking."""
+    MissionControl.phase("RESEARCH", project_id)
     research_log = {"project_id": project_id, "steps": []}
     cost_tracker = CostTracker(project_id)
 
@@ -49,12 +51,15 @@ def _research_pipeline(project_id: str) -> None:
         project_manager.update_project(project_id, progress=5, progress_message="Scraping company website...")
         project = project_manager.get_project(project_id)
         url = project["company_url"]
+        MissionControl.research_step(project_id, f"Crawling {url}...")
         scraped_text = _scrape_website(url)
         _log_step("scrape", input_url=url, output_chars=len(scraped_text),
                   preview=scraped_text[:500])
+        MissionControl.research_step(project_id, f"Fetched {len(scraped_text)} chars via scrape")
 
         # Step 2: Web search
         project_manager.update_project(project_id, progress=25, progress_message="Searching for company intelligence...")
+        MissionControl.research_step(project_id, "Gemini grounded search...")
         search_results = _web_search(scraped_text, cost_tracker)
         _log_step("web_search", output_chars=len(search_results),
                   preview=search_results[:500])
@@ -69,6 +74,7 @@ def _research_pipeline(project_id: str) -> None:
 
         # Step 4: LLM synthesis
         project_manager.update_project(project_id, progress=55, progress_message="Synthesizing company dossier...")
+        MissionControl.research_step(project_id, "Synthesizing dossier...")
         user_context = project.get("user_context", "")
         _log_step("synthesis_input",
                   scraped_chars=len(scraped_text),
@@ -84,10 +90,15 @@ def _research_pipeline(project_id: str) -> None:
                   events=len(dossier.get("recentEvents", [])),
                   has_security_posture=bool(dossier.get("securityPosture")))
 
-        # Step 5: Push to Graphiti
-        project_manager.update_project(project_id, progress=85, progress_message="Building knowledge graph...")
-        from . import graphiti_manager
-        graphiti_manager.push_dossier(project_id, dossier)
+        # Step 5: Push dossier to Firestore memory
+        project_manager.update_project(project_id, progress=85, progress_message="Indexing dossier...")
+        try:
+            from .firestore_memory import FirestoreMemory
+            memory = FirestoreMemory(cost_tracker=cost_tracker)
+            memory.push_dossier(project_id, dossier)
+            MissionControl.research_step(project_id, "Indexed to Firestore", cost=cost_tracker.total_cost())
+        except Exception as e:
+            logger.warning(f"[{project_id}] Firestore dossier push failed (non-fatal): {e}")
         graph_id = project_id
 
         # Save research log and costs

@@ -12,7 +12,8 @@ from ..config import Config
 from ..utils.llm_client import LLMClient
 from ..utils.cost_tracker import CostTracker
 from ..utils.logger import get_logger
-from . import project_manager, graphiti_manager
+from . import project_manager
+from .firestore_memory import FirestoreMemory
 
 logger = get_logger("crucible_report_agent")
 
@@ -128,40 +129,40 @@ def _generate_report(sim_id: str) -> None:
 
 
 def _query_graph_for_report(project_id: str, config: dict, actions: list[dict]) -> dict:
-    """Query Graphiti for evidence to enrich the report."""
+    """Query FirestoreMemory for evidence to enrich the report."""
     context = {"key_facts": [], "agent_facts": {}, "temporal_facts": []}
 
     try:
-        graphiti = graphiti_manager._get_graphiti(project_id)
+        memory = FirestoreMemory()
 
         # Key facts about the overall situation
-        key_edges = graphiti_manager._run_async(graphiti.search(
-            query="What were the major events, decisions, and outcomes?",
-            group_ids=[project_id],
-            num_results=15,
-        ))
-        context["key_facts"] = [e.fact for e in (key_edges or []) if e.fact]
+        key_episodes = memory.search(
+            project_id,
+            "What were the major events, decisions, and outcomes?",
+            limit=15,
+        )
+        context["key_facts"] = [ep["action_summary"] for ep in key_episodes if ep.get("action_summary")]
 
         # Per-agent facts
         for agent in config.get("agent_profiles", []):
             name = agent["name"]
-            agent_edges = graphiti_manager._run_async(graphiti.search(
-                query=f"What did {name} do and contribute?",
-                group_ids=[project_id],
-                num_results=8,
-            ))
-            context["agent_facts"][name] = [e.fact for e in (agent_edges or []) if e.fact]
+            agent_episodes = memory.search(
+                project_id,
+                f"What did {name} do and contribute?",
+                limit=8,
+            )
+            context["agent_facts"][name] = [ep["action_summary"] for ep in agent_episodes if ep.get("action_summary")]
 
         # Temporal analysis — what changed over time
-        temporal_edges = graphiti_manager._run_async(graphiti.search(
-            query="How did the team's approach and understanding change over time?",
-            group_ids=[project_id],
-            num_results=10,
-        ))
-        context["temporal_facts"] = [e.fact for e in (temporal_edges or []) if e.fact]
+        temporal_episodes = memory.search(
+            project_id,
+            "How did the team's approach and understanding change over time?",
+            limit=10,
+        )
+        context["temporal_facts"] = [ep["action_summary"] for ep in temporal_episodes if ep.get("action_summary")]
 
     except Exception as e:
-        logger.warning(f"Graph query failed for report: {e}")
+        logger.warning(f"FirestoreMemory query failed for report: {e}")
 
     return context
 

@@ -20,6 +20,19 @@ from ..services.crucible_manager import (
 
 crucible_bp = Blueprint("crucible", __name__)
 
+SIMULATIONS_DIR = Path(__file__).parent.parent.parent / "uploads" / "simulations"
+
+
+@crucible_bp.route("/simulations/<sim_id>/config", methods=["GET"])
+def get_simulation_config(sim_id):
+    """Return a simulation's config.json for reuse (e.g., Monte Carlo)."""
+    config_path = SIMULATIONS_DIR / sim_id / "config.json"
+    if not config_path.exists():
+        return jsonify({"error": f"Config not found for simulation '{sim_id}'"}), 404
+    with open(config_path) as f:
+        config = json.load(f)
+    return jsonify({"data": config})
+
 
 @crucible_bp.route("/presets", methods=["GET"])
 def presets():
@@ -94,12 +107,8 @@ def simulation_graph(sim_id):
     if not status:
         return jsonify({"error": f"Simulation '{sim_id}' not found"}), 404
 
-    # If this simulation has a Graphiti graph (from research pipeline), use it
-    graph_id = status.get("graph_id")
-    if graph_id:
-        data = graphiti_manager.get_graph_data(graph_id)
-        if data.get("nodes"):
-            return jsonify({"data": data})
+    # Firestore doesn't have a native graph view — skip to config-based fallback
+    # (FirestoreMemory stores flat episodes, not nodes/edges)
 
     # Fallback: build static graph from config
     config_path = Path(__file__).parent.parent.parent / "uploads" / "simulations" / sim_id / "config.json"
@@ -188,7 +197,7 @@ def get_simulation_costs(sim_id):
 from ..services import project_manager
 from ..services.research_agent import run_research
 from ..services.config_generator import run_config_generation
-from ..services import graphiti_manager
+from ..services.firestore_memory import FirestoreMemory
 
 
 @crucible_bp.route("/projects", methods=["POST"])
@@ -248,11 +257,11 @@ def update_dossier(project_id):
 
     project_manager.save_dossier(project_id, dossier)
 
-    # Sync to Graphiti
+    # Sync to Firestore memory
     try:
-        graphiti_manager.sync_dossier(project_id, dossier)
+        FirestoreMemory().push_dossier(project_id, dossier)
     except Exception as e:
-        return jsonify({"error": f"Graphiti sync failed: {e}"}), 500
+        return jsonify({"error": f"Firestore sync failed: {e}"}), 500
 
     return jsonify({"data": {"status": "updated"}})
 
@@ -264,12 +273,8 @@ def project_graph(project_id):
     if not project:
         return jsonify({"error": "Project not found"}), 404
 
-    graph_id = project.get("graph_id")
-    if not graph_id:
-        return jsonify({"data": {"nodes": [], "edges": []}})
-
-    data = graphiti_manager.get_graph_data(graph_id)
-    return jsonify({"data": data})
+    # Firestore stores flat episodes, not a node/edge graph — return empty graph
+    return jsonify({"data": {"nodes": [], "edges": []}})
 
 
 @crucible_bp.route("/projects/<project_id>/generate-config", methods=["POST"])
@@ -400,3 +405,298 @@ def get_exercise_report(project_id):
     with open(report_path) as f:
         report = json.load(f)
     return jsonify({"data": report})
+
+
+# ─── Monte Carlo Endpoints ───
+
+from ..services.monte_carlo_engine import MonteCarloEngine, MonteCarloMode
+from ..utils.logger import get_logger as _get_logger
+
+_mc_logger = _get_logger("monte_carlo_api")
+
+
+@crucible_bp.route("/monte-carlo/estimate", methods=["POST"])
+def monte_carlo_estimate():
+    """Estimate cost for a Monte Carlo batch."""
+    data = request.get_json()
+    if not data or "config" not in data:
+        return jsonify({"error": "config is required"}), 400
+
+    mode = data.get("mode", "test")
+    try:
+        MonteCarloMode(mode)
+    except ValueError:
+        return jsonify({"error": f"Invalid mode '{mode}'. Must be one of: test, quick, standard, deep"}), 400
+
+    custom_iterations = data.get("custom_iterations")
+    try:
+        estimate = MonteCarloEngine.estimate_cost(
+            config=data["config"],
+            mode=mode,
+            custom_iterations=custom_iterations,
+        )
+    except Exception as e:
+        _mc_logger.error("Cost estimation failed: %s", e)
+        return jsonify({"error": f"Estimation failed: {e}"}), 500
+
+    return jsonify({"data": estimate})
+
+
+@crucible_bp.route("/monte-carlo/launch", methods=["POST"])
+def monte_carlo_launch():
+    """Launch a Monte Carlo batch."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body required"}), 400
+
+    project_id = data.get("project_id")
+    config = data.get("config")
+    mode = data.get("mode", "test")
+
+    if not project_id:
+        return jsonify({"error": "project_id is required"}), 400
+    if not config:
+        return jsonify({"error": "config is required"}), 400
+
+    try:
+        MonteCarloMode(mode)
+    except ValueError:
+        return jsonify({"error": f"Invalid mode '{mode}'. Must be one of: test, quick, standard, deep"}), 400
+
+    cost_limit_usd = data.get("cost_limit_usd", 5.0)
+    variation_params = data.get("variation_params")
+    custom_iterations = data.get("custom_iterations")
+
+    try:
+        batch_id = MonteCarloEngine.launch_batch(
+            project_id=project_id,
+            base_config=config,
+            mode=mode,
+            cost_limit_usd=cost_limit_usd,
+            variation_params=variation_params,
+            custom_iterations=custom_iterations,
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        _mc_logger.error("Launch failed: %s", e)
+        return jsonify({"error": f"Launch failed: {e}"}), 500
+
+    return jsonify({"data": {"batchId": batch_id}}), 201
+
+
+@crucible_bp.route("/monte-carlo/<batch_id>/status", methods=["GET"])
+def monte_carlo_status(batch_id):
+    """Get batch progress."""
+    status = MonteCarloEngine.get_batch_status(batch_id)
+    if not status:
+        return jsonify({"error": f"Batch '{batch_id}' not found"}), 404
+    return jsonify({"data": status})
+
+
+@crucible_bp.route("/monte-carlo/<batch_id>/results", methods=["GET"])
+def monte_carlo_results(batch_id):
+    """Get aggregate results."""
+    results = MonteCarloEngine.get_batch_results(batch_id)
+    if results is None:
+        return jsonify({"error": f"Batch '{batch_id}' not found"}), 404
+
+    # Also try to load aggregation from disk
+    batch_status = MonteCarloEngine.get_batch_status(batch_id)
+    aggregation = None
+    if batch_status:
+        agg_path = (
+            Path(__file__).parent.parent.parent / "uploads" / "crucible_projects"
+            / batch_status["project_id"] / "monte_carlo" / batch_id / "aggregation.json"
+        )
+        if agg_path.exists():
+            with open(agg_path) as f:
+                aggregation = json.load(f)
+
+    return jsonify({"data": {
+        "batch_id": batch_id,
+        "iteration_results": results,
+        "aggregation": aggregation,
+    }})
+
+
+@crucible_bp.route("/monte-carlo/<batch_id>/costs", methods=["GET"])
+def monte_carlo_costs(batch_id):
+    """Get per-iteration cost breakdown."""
+    costs = MonteCarloEngine.get_batch_costs(batch_id)
+    if not costs:
+        return jsonify({"data": {"batch_id": batch_id, "total_cost_usd": 0, "phases": {}, "entries": []}}), 200
+    return jsonify({"data": costs})
+
+
+@crucible_bp.route("/monte-carlo/<batch_id>/stop", methods=["POST"])
+def monte_carlo_stop(batch_id):
+    """Stop running batch."""
+    result = MonteCarloEngine.stop_batch(batch_id)
+    if result == "not_found":
+        return jsonify({"error": f"Batch '{batch_id}' not found"}), 404
+    return jsonify({"data": {"status": result}})
+
+
+# ─── Counterfactual Branching Endpoints ───
+
+from ..services.counterfactual_engine import CounterfactualEngine
+
+_cf_logger = _get_logger("counterfactual_api")
+
+
+@crucible_bp.route("/simulations/<sim_id>/decision-points", methods=["POST"])
+def simulation_decision_points(sim_id):
+    """Identify critical decision points in a completed simulation."""
+    sim_dir = Path(__file__).parent.parent.parent / "uploads" / "simulations" / sim_id
+    config_path = sim_dir / "config.json"
+    actions_path = sim_dir / "actions.jsonl"
+
+    if not config_path.exists() or not actions_path.exists():
+        return jsonify({"error": f"Simulation '{sim_id}' data not found"}), 404
+
+    with open(config_path) as f:
+        config = json.load(f)
+
+    actions = []
+    with open(actions_path) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                actions.append(json.loads(line))
+
+    try:
+        points = CounterfactualEngine.identify_decision_points(sim_id, actions, config)
+    except Exception as e:
+        _cf_logger.error("Decision point identification failed: %s", e)
+        return jsonify({"error": f"Analysis failed: {e}"}), 500
+
+    return jsonify({"data": {"decision_points": points}})
+
+
+@crucible_bp.route("/simulations/<sim_id>/checkpoints", methods=["GET"])
+def simulation_checkpoints(sim_id):
+    """List available round checkpoints."""
+    checkpoints = CounterfactualEngine.list_checkpoints(sim_id)
+    return jsonify({"data": {"checkpoints": checkpoints}})
+
+
+@crucible_bp.route("/simulations/<sim_id>/fork", methods=["POST"])
+def simulation_fork(sim_id):
+    """Fork a simulation from a checkpoint with modifications."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body required"}), 400
+
+    fork_round = data.get("fork_round")
+    modifications = data.get("modifications")
+
+    if fork_round is None or modifications is None:
+        return jsonify({"error": "fork_round and modifications are required"}), 400
+
+    try:
+        result = CounterfactualEngine.fork_from_checkpoint(
+            original_sim_id=sim_id,
+            fork_round=fork_round,
+            modifications=modifications,
+        )
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        _cf_logger.error("Fork failed: %s", e)
+        return jsonify({"error": f"Fork failed: {e}"}), 500
+
+    # Launch the forked simulation
+    try:
+        fork_sim_id = CounterfactualEngine.launch_fork(result)
+        result["sim_id"] = fork_sim_id
+    except Exception as e:
+        _cf_logger.warning("Fork created but launch failed: %s", e)
+        result["sim_id"] = None
+        result["launch_error"] = str(e)
+
+    return jsonify({"data": result}), 201
+
+
+@crucible_bp.route("/simulations/<sim_id>/branches", methods=["GET"])
+def simulation_branches(sim_id):
+    """List branches and optionally compare outcomes."""
+    branches = CounterfactualEngine.list_branches(sim_id)
+
+    compare = request.args.get("compare", "false").lower() == "true"
+    if compare and branches:
+        branch_ids = [b["branch_id"] for b in branches]
+        comparison = CounterfactualEngine.compare_branches(sim_id, branch_ids)
+        return jsonify({"data": {"branches": branches, "comparison": comparison}})
+
+    return jsonify({"data": {"branches": branches}})
+
+
+# ─── Stress Testing Endpoints ───
+
+from ..services.config_mutator import ConfigMutator
+
+_stress_logger = _get_logger("stress_test_api")
+
+
+@crucible_bp.route("/projects/<project_id>/stress-test", methods=["POST"])
+def launch_stress_test(project_id):
+    """Generate stress test matrix and launch as Monte Carlo batch."""
+    project = project_manager.get_project(project_id)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    data = request.get_json() or {}
+    config = data.get("config")
+
+    # If no config provided, try loading the project's generated config
+    if not config:
+        config = project_manager.get_config(project_id)
+    if not config:
+        return jsonify({"error": "No config available — provide one or generate first"}), 400
+
+    # Generate stress matrix
+    try:
+        matrix = ConfigMutator.generate_stress_matrix(config)
+    except Exception as e:
+        _stress_logger.error("Stress matrix generation failed: %s", e)
+        return jsonify({"error": f"Matrix generation failed: {e}"}), 500
+
+    cost_limit_usd = data.get("cost_limit_usd", 10.0)
+
+    # Launch each mutation as a Monte Carlo iteration
+    sim_ids = []
+    labels = []
+    for mutated_config, label in matrix:
+        try:
+            sim_id = launch_simulation(mutated_config)
+            sim_ids.append(sim_id)
+            labels.append(label)
+        except Exception as e:
+            _stress_logger.warning("Failed to launch mutation '%s': %s", label, e)
+
+    # Track stress test metadata on the project
+    project_manager.update_project(
+        project_id,
+        stress_test={
+            "sim_ids": sim_ids,
+            "labels": labels,
+            "total_variants": len(matrix),
+            "launched": len(sim_ids),
+        },
+    )
+
+    _stress_logger.info(
+        "Launched stress test for project %s: %d/%d variants",
+        project_id,
+        len(sim_ids),
+        len(matrix),
+    )
+
+    return jsonify({"data": {
+        "project_id": project_id,
+        "total_variants": len(matrix),
+        "launched": len(sim_ids),
+        "sim_ids": sim_ids,
+        "labels": labels,
+    }}), 201

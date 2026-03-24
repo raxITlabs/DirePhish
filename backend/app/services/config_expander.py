@@ -231,6 +231,7 @@ def _expand_single_scenario(
         "cascading_effects": cascading.get("cascading_effects", {}),
         "threat_actor_profile": scenario.get("title", ""),
     }
+    config = _inject_adversarial_and_adaptive(config)
     return config
 
 
@@ -525,3 +526,74 @@ REQUIREMENTS:
 - Enough rounds to fit all injects with breathing room for response"""
 
     return llm.chat_json([{"role": "user", "content": prompt}])
+
+
+def _inject_adversarial_and_adaptive(config: dict) -> dict:
+    """Inject adversarial threat actor agent, C2 world, and adaptive depth into any config.
+
+    Called after the main config expansion (or on an existing config for Monte Carlo reuse).
+    Does NOT require an LLM call — uses the threat_actor_profile field to template the agent.
+    """
+    import copy
+    config = copy.deepcopy(config)
+
+    threat_profile_name = config.get("threat_actor_profile", "Unknown Threat Actor")
+
+    # Skip if already has a threat actor
+    existing_ta = [a for a in config.get("agent_profiles", []) if a.get("agent_type") == "threat_actor"]
+    if existing_ta:
+        # Just ensure adaptive depth
+        if "adaptive_depth" not in config:
+            config["adaptive_depth"] = {"enabled": True, "min_rounds": 3, "max_rounds": 30}
+        return config
+
+    # Determine observable worlds (all existing slack-type worlds)
+    observable = [w["name"] for w in config.get("worlds", []) if w.get("type") in ("slack", "email")]
+
+    # Build adversarial agent
+    threat_actor = {
+        "agent_type": "threat_actor",
+        "name": f"{threat_profile_name} Operator",
+        "role": "threat_actor",
+        "persona": (
+            f"You are an operator for {threat_profile_name}. You are methodical, patient, "
+            f"and adapt your tactics when detected. Your primary objective is to achieve your "
+            f"mission goals while avoiding detection as long as possible."
+        ),
+        "threat_profile": {
+            "actor_type": "nation_state" if "apt" in threat_profile_name.lower() else "cybercriminal",
+            "sophistication": "advanced",
+            "objectives": ["data_exfiltration", "persistence"],
+            "stealth_priority": 0.7,
+        },
+        "c2_world": "c2-channel",
+        "observable_worlds": observable[:3],  # Max 3 channels to observe
+        "adaptive_triggers": [
+            {
+                "condition": {"keywords": ["isolate", "block", "quarantine", "contain"]},
+                "response": "pivot_to_backup_access",
+            },
+            {
+                "condition": {"keywords": ["forensics", "IOC", "indicator"]},
+                "response": "activate_anti_forensics",
+            },
+        ],
+    }
+    config["agent_profiles"].append(threat_actor)
+
+    # Add C2 world
+    c2_world = {
+        "type": "slack",
+        "name": "c2-channel",
+        "participants": ["threat_actor"],
+    }
+    config["worlds"].append(c2_world)
+
+    # Enable adaptive depth
+    config["adaptive_depth"] = {
+        "enabled": True,
+        "min_rounds": 3,
+        "max_rounds": 30,
+    }
+
+    return config

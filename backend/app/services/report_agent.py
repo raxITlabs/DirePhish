@@ -21,13 +21,8 @@ from enum import Enum
 from ..config import Config
 from ..utils.llm_client import LLMClient
 from ..utils.logger import get_logger
-from .zep_tools import (
-    ZepToolsService, 
-    SearchResult, 
-    InsightForgeResult, 
-    PanoramaResult,
-    InterviewResult
-)
+from .firestore_memory import FirestoreMemory
+from .memory_types import SearchResult, InsightForgeResult, PanoramaResult, InterviewResult
 
 logger = get_logger('direphish.report_agent')
 
@@ -353,7 +348,7 @@ class ReportConsoleLogger:
         # Add to report_agent related loggers
         loggers_to_attach = [
             'direphish.report_agent',
-            'direphish.zep_tools',
+            'direphish.firestore_memory',
         ]
         
         for logger_name in loggers_to_attach:
@@ -369,7 +364,7 @@ class ReportConsoleLogger:
         if self._file_handler:
             loggers_to_detach = [
                 'direphish.report_agent',
-                'direphish.zep_tools',
+                'direphish.firestore_memory',
             ]
             
             for logger_name in loggers_to_detach:
@@ -886,7 +881,7 @@ class ReportAgent:
         simulation_id: str,
         simulation_requirement: str,
         llm_client: Optional[LLMClient] = None,
-        zep_tools: Optional[ZepToolsService] = None
+        memory: Optional[FirestoreMemory] = None
     ):
         """
         Initialize Report Agent.
@@ -896,14 +891,14 @@ class ReportAgent:
             simulation_id: Simulation ID
             simulation_requirement: Simulation requirement description
             llm_client: LLM client (optional)
-            zep_tools: Zep tools service (optional)
+            memory: FirestoreMemory service (optional)
         """
         self.graph_id = graph_id
         self.simulation_id = simulation_id
         self.simulation_requirement = simulation_requirement
         
         self.llm = llm_client or LLMClient()
-        self.zep_tools = zep_tools or ZepToolsService()
+        self.memory = memory or FirestoreMemory()
         
         # Tool definitions
         self.tools = self._define_tools()
@@ -970,8 +965,8 @@ class ReportAgent:
             if tool_name == "insight_forge":
                 query = parameters.get("query", "")
                 ctx = parameters.get("report_context", "") or report_context
-                result = self.zep_tools.insight_forge(
-                    graph_id=self.graph_id,
+                result = self.memory.insight_forge(
+                    sim_id=self.simulation_id,
                     query=query,
                     simulation_requirement=self.simulation_requirement,
                     report_context=ctx
@@ -984,8 +979,8 @@ class ReportAgent:
                 include_expired = parameters.get("include_expired", True)
                 if isinstance(include_expired, str):
                     include_expired = include_expired.lower() in ['true', '1', 'yes']
-                result = self.zep_tools.panorama_search(
-                    graph_id=self.graph_id,
+                result = self.memory.panorama_search(
+                    sim_id=self.simulation_id,
                     query=query,
                     include_expired=include_expired
                 )
@@ -997,8 +992,8 @@ class ReportAgent:
                 limit = parameters.get("limit", 10)
                 if isinstance(limit, str):
                     limit = int(limit)
-                result = self.zep_tools.quick_search(
-                    graph_id=self.graph_id,
+                result = self.memory.quick_search(
+                    sim_id=self.simulation_id,
                     query=query,
                     limit=limit
                 )
@@ -1011,7 +1006,7 @@ class ReportAgent:
                 if isinstance(max_agents, str):
                     max_agents = int(max_agents)
                 max_agents = min(max_agents, 10)
-                result = self.zep_tools.interview_agents(
+                result = self.memory.interview_agents(
                     simulation_id=self.simulation_id,
                     interview_requirement=interview_topic,
                     simulation_requirement=self.simulation_requirement,
@@ -1027,13 +1022,13 @@ class ReportAgent:
                 return self._execute_tool("quick_search", parameters, report_context)
             
             elif tool_name == "get_graph_statistics":
-                result = self.zep_tools.get_graph_statistics(self.graph_id)
+                result = self.memory.get_graph_statistics(self.simulation_id)
                 return json.dumps(result, ensure_ascii=False, indent=2)
             
             elif tool_name == "get_entity_summary":
                 entity_name = parameters.get("entity_name", "")
-                result = self.zep_tools.get_entity_summary(
-                    graph_id=self.graph_id,
+                result = self.memory.get_entity_summary(
+                    sim_id=self.simulation_id,
                     entity_name=entity_name
                 )
                 return json.dumps(result, ensure_ascii=False, indent=2)
@@ -1046,8 +1041,8 @@ class ReportAgent:
             
             elif tool_name == "get_entities_by_type":
                 entity_type = parameters.get("entity_type", "")
-                nodes = self.zep_tools.get_entities_by_type(
-                    graph_id=self.graph_id,
+                nodes = self.memory.get_entities_by_type(
+                    sim_id=self.simulation_id,
                     entity_type=entity_type
                 )
                 result = [n.to_dict() for n in nodes]
@@ -1154,8 +1149,8 @@ class ReportAgent:
             progress_callback("planning", 0, "Analyzing simulation requirements...")
 
         # First get simulation context
-        context = self.zep_tools.get_simulation_context(
-            graph_id=self.graph_id,
+        context = self.memory.get_simulation_context(
+            sim_id=self.simulation_id,
             simulation_requirement=self.simulation_requirement
         )
         

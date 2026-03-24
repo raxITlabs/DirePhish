@@ -65,6 +65,10 @@ function getInlineSummary(
       return state?.message || "Reports generated";
     case "comparative":
       return state?.message || "Analysis complete";
+    case "monte_carlo":
+      return state?.detail ? `MC: ${state.detail}` : "Monte Carlo complete";
+    case "counterfactual":
+      return state?.detail ? state.detail : "Counterfactual complete";
     case "exercise_report":
       return state?.message || "Exercise report complete";
     default:

@@ -159,6 +159,23 @@ async function pollExerciseReport(projectId: string): Promise<void> {
   throw new Error("Exercise report timed out");
 }
 
+// --- Step: poll Monte Carlo batch status ---
+
+async function pollMonteCarlo(batchId: string): Promise<void> {
+  "use step";
+  for (let i = 0; i < 360; i++) {
+    const res = await fetch(`${API_BASE}/api/crucible/monte-carlo/${batchId}/status`);
+    const json = await res.json();
+    const status = json.data?.status as string;
+    if (status === "completed") return;
+    if (["failed", "cost_exceeded", "stopped"].includes(status)) {
+      throw new Error(`Monte Carlo batch ${batchId} ${status}: ${json.data?.error || ""}`);
+    }
+    await new Promise(r => setTimeout(r, 5000));
+  }
+  throw new Error(`Monte Carlo batch ${batchId} timed out`);
+}
+
 // ============================================================
 // THE PIPELINE WORKFLOW
 // ============================================================
@@ -319,17 +336,117 @@ export async function cruciblePipeline(input: {
     await emitProgress("simulations", "running",
       `Running ${simIds.length} simulations...`, simIds.join(", "));
 
-    for (let i = 0; i < simIds.length; i++) {
-      await emitProgress("simulations", "running",
-        `Simulation ${i + 1}/${simIds.length} running...`, simIds[i]);
-      await pollSimulation(simIds[i]);
-    }
+    await Promise.all(simIds.map((id, i) =>
+      (async () => {
+        await emitProgress("simulations", "running",
+          `Simulation ${i + 1}/${simIds.length} running...`, id);
+        await pollSimulation(id);
+      })()
+    ));
 
     stageDurations.simulations = Date.now() - stageStart;
     await emitProgress("simulations", "completed",
       `All ${simIds.length} simulations complete`, undefined, stageDurations.simulations);
 
-    // ─── STEP 7: Exercise Report (unified) ───
+    // ─── STEP 7: Monte Carlo analysis ───
+    stageStart = Date.now();
+    await emitProgress("monte_carlo", "running", "Launching Monte Carlo analysis (10 iterations)...");
+
+    let mcBatchId = "";
+    let mcResults: Record<string, unknown> = {};
+    try {
+      // Get config from first sim for MC reuse
+      const simConfig = await flaskApi<Record<string, unknown>>(
+        `/api/crucible/simulations/${simIds[0]}/config`,
+      );
+
+      // Launch MC QUICK mode (10 iterations)
+      const mcLaunch = await flaskApi<{ batch_id: string }>(
+        "/api/crucible/monte-carlo/launch",
+        { method: "POST", body: JSON.stringify({
+          project_id: projectId,
+          config: simConfig,
+          mode: "quick",
+          cost_limit_usd: 25.0,
+        })},
+      );
+      mcBatchId = mcLaunch.batch_id;
+
+      await emitProgress("monte_carlo", "running",
+        "Running 10 Monte Carlo iterations...", mcBatchId);
+      await pollMonteCarlo(mcBatchId);
+
+      mcResults = await flaskApi<Record<string, unknown>>(
+        `/api/crucible/monte-carlo/${mcBatchId}/results`,
+      );
+
+      stageDurations.monte_carlo = Date.now() - stageStart;
+      await emitProgress("monte_carlo", "completed",
+        "Monte Carlo analysis complete",
+        JSON.stringify({ batchId: mcBatchId, iterations: 10 }),
+        stageDurations.monte_carlo);
+    } catch (mcError) {
+      stageDurations.monte_carlo = Date.now() - stageStart;
+      const msg = mcError instanceof Error ? mcError.message : String(mcError);
+      await emitProgress("monte_carlo", "failed",
+        `Monte Carlo failed: ${msg}`, undefined, stageDurations.monte_carlo);
+      // Non-fatal — continue pipeline
+    }
+
+    // ─── STEP 8: Counterfactual analysis ───
+    stageStart = Date.now();
+    await emitProgress("counterfactual", "running", "Analyzing critical decisions...");
+
+    let branchIds: string[] = [];
+    try {
+      // Identify decision points on first sim
+      const decisions = await flaskApi<{ decision_points: Array<{
+        round: number; agent: string; criticality: string;
+        suggested_modification: Record<string, unknown>;
+      }> }>(
+        `/api/crucible/simulations/${simIds[0]}/decision-points`,
+        { method: "POST" },
+      );
+
+      const topDecisions = (decisions.decision_points || [])
+        .filter(d => d.criticality === "high")
+        .slice(0, 2);
+
+      await emitProgress("counterfactual", "running",
+        `Found ${topDecisions.length} critical decisions, forking...`);
+
+      // Fork and launch top 2
+      for (const decision of topDecisions) {
+        try {
+          const fork = await flaskApi<{ branch_id: string; sim_id?: string }>(
+            `/api/crucible/simulations/${simIds[0]}/fork`,
+            { method: "POST", body: JSON.stringify({
+              fork_round: decision.round,
+              modifications: decision.suggested_modification || {},
+            })},
+          );
+          if (fork.sim_id) {
+            branchIds.push(fork.sim_id);
+            await pollSimulation(fork.sim_id);
+          }
+        } catch {
+          // Individual fork failure is non-fatal
+        }
+      }
+
+      stageDurations.counterfactual = Date.now() - stageStart;
+      await emitProgress("counterfactual", "completed",
+        `Analyzed ${topDecisions.length} decisions, ${branchIds.length} branches complete`,
+        undefined, stageDurations.counterfactual);
+    } catch (cfError) {
+      stageDurations.counterfactual = Date.now() - stageStart;
+      const msg = cfError instanceof Error ? cfError.message : String(cfError);
+      await emitProgress("counterfactual", "failed",
+        `Counterfactual failed: ${msg}`, undefined, stageDurations.counterfactual);
+      // Non-fatal — continue to report
+    }
+
+    // ─── STEP 9: Exercise Report (unified) ───
     stageStart = Date.now();
     await emitProgress("exercise_report", "running", "Generating exercise report...");
 

@@ -70,6 +70,12 @@ def _get_model_pricing(model_name: str) -> tuple:
     return MODEL_PRICING["default"]
 
 
+# ─── Firestore Pricing ───
+# Reads: $0.03/100K, Writes: $0.09/100K
+FIRESTORE_READ_PER_100K = 0.03
+FIRESTORE_WRITE_PER_100K = 0.09
+
+
 def _get_embedding_pricing(model_name: str) -> float:
     """Get per-1M-token cost for an embedding model."""
     for prefix, price in EMBEDDING_PRICING.items():
@@ -147,6 +153,27 @@ class CostTracker:
             "description": description,
         })
 
+    def track_firestore(
+        self,
+        phase: str,
+        reads: int = 0,
+        writes: int = 0,
+        description: str = "",
+    ):
+        """Track Firestore read/write operations."""
+        cost = (
+            reads * FIRESTORE_READ_PER_100K / 100_000
+            + writes * FIRESTORE_WRITE_PER_100K / 100_000
+        )
+        self.entries.append({
+            "type": "firestore",
+            "phase": phase,
+            "reads": reads,
+            "writes": writes,
+            "cost_usd": round(cost, 6),
+            "description": description,
+        })
+
     def total_cost(self) -> float:
         return round(sum(e["cost_usd"] for e in self.entries), 6)
 
@@ -165,6 +192,9 @@ class CostTracker:
                     "search_cost_usd": 0.0,
                     "embedding_tokens": 0,
                     "embedding_cost_usd": 0.0,
+                    "firestore_reads": 0,
+                    "firestore_writes": 0,
+                    "firestore_cost_usd": 0.0,
                     "cost_usd": 0.0,
                 }
             p = phases[phase]
@@ -180,6 +210,10 @@ class CostTracker:
             elif entry["type"] == "embedding":
                 p["embedding_tokens"] += entry.get("input_tokens", 0)
                 p["embedding_cost_usd"] += entry.get("cost_usd", 0)
+            elif entry["type"] == "firestore":
+                p["firestore_reads"] += entry.get("reads", 0)
+                p["firestore_writes"] += entry.get("writes", 0)
+                p["firestore_cost_usd"] += entry.get("cost_usd", 0)
 
         # Round costs
         for p in phases.values():
@@ -187,6 +221,7 @@ class CostTracker:
             p["llm_cost_usd"] = round(p["llm_cost_usd"], 6)
             p["search_cost_usd"] = round(p["search_cost_usd"], 6)
             p["embedding_cost_usd"] = round(p["embedding_cost_usd"], 6)
+            p["firestore_cost_usd"] = round(p["firestore_cost_usd"], 6)
 
         return {
             "sim_id": self.sim_id,

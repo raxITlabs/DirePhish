@@ -11,7 +11,10 @@ from flask import request, jsonify, send_file
 from . import report_bp
 from ..config import Config
 from ..services.report_agent import ReportAgent, ReportManager, ReportStatus
-from ..services.simulation_manager import SimulationManager
+try:
+    from ..services.simulation_manager import SimulationManager
+except ImportError:
+    SimulationManager = None
 from ..models.project import ProjectManager
 from ..models.task import TaskManager, TaskStatus
 from ..utils.logger import get_logger
@@ -952,11 +955,11 @@ def search_graph_tool():
                 "error": "Please provide graph_id and query"
             }), 400
         
-        from ..services.zep_tools import ZepToolsService
-        
-        tools = ZepToolsService()
-        result = tools.search_graph(
-            graph_id=graph_id,
+        from ..services.firestore_memory import FirestoreMemory
+
+        memory = FirestoreMemory()
+        result = memory.quick_search(
+            sim_id=graph_id,
             query=query,
             limit=limit
         )
@@ -996,10 +999,10 @@ def get_graph_statistics_tool():
                 "error": "Please provide graph_id"
             }), 400
         
-        from ..services.zep_tools import ZepToolsService
-        
-        tools = ZepToolsService()
-        result = tools.get_graph_statistics(graph_id)
+        from ..services.firestore_memory import FirestoreMemory
+
+        memory = FirestoreMemory()
+        result = memory.get_graph_statistics(graph_id)
         
         return jsonify({
             "success": True,
