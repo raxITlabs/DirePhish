@@ -33,15 +33,15 @@ def main():
         print("\nPlease check the configuration in your .env file")
         sys.exit(1)
     
-    # 创建应用
+    # Create application
     app = create_app()
     
-    # 获取运行配置
+    # Get runtime configuration
     host = os.environ.get('FLASK_HOST', '0.0.0.0')
     port = int(os.environ.get('FLASK_PORT', 5001))
     debug = Config.DEBUG
     
-    # 启动服务
+    # Start server
     app.run(host=host, port=port, debug=debug, threaded=True)
 
 

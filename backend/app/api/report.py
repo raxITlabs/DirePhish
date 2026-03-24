@@ -485,9 +485,9 @@ def chat_with_report_agent():
         {
             "success": true,
             "data": {
-                "response": "Agent回复...",
-                "tool_calls": [调用的工具列表],
-                "sources": [信息来源]
+                "response": "Agent response...",
+                "tool_calls": ["list of tool calls"],
+                "sources": ["information sources"]
             }
         }
     """
@@ -572,9 +572,9 @@ def get_report_progress(report_id: str):
             "data": {
                 "status": "generating",
                 "progress": 45,
-                "message": "Generating section: 关键发现",
-                "current_section": "关键发现",
-                "completed_sections": ["执行摘要", "模拟背景"],
+                "message": "Generating section: Key Findings",
+                "current_section": "Key Findings",
+                "completed_sections": ["Executive Summary", "Simulation Background"],
                 "updated_at": "2025-12-09T..."
             }
         }
@@ -618,7 +618,7 @@ def get_report_sections(report_id: str):
                     {
                         "filename": "section_01.md",
                         "section_index": 1,
-                        "content": "## 执行摘要\\n\\n..."
+                        "content": "## Executive Summary\\n\\n..."
                     },
                     ...
                 ],
@@ -663,7 +663,7 @@ def get_single_section(report_id: str, section_index: int):
             "success": true,
             "data": {
                 "filename": "section_01.md",
-                "content": "## 执行摘要\\n\\n..."
+                "content": "## Executive Summary\\n\\n..."
             }
         }
     """
@@ -774,7 +774,7 @@ def get_agent_log(report_id: str):
                         "report_id": "report_xxxx",
                         "action": "tool_call",
                         "stage": "generating",
-                        "section_title": "执行摘要",
+                        "section_title": "Executive Summary",
                         "section_index": 1,
                         "details": {
                             "tool_name": "insight_forge",
@@ -862,8 +862,8 @@ def get_console_log(report_id: str):
             "success": true,
             "data": {
                 "logs": [
-                    "[19:46:14] INFO: 搜索完成: 找到 15 条相关事实",
-                    "[19:46:14] INFO: 图谱搜索: graph_id=xxx, query=...",
+                    "[19:46:14] INFO: Search complete: found 15 relevant facts",
+                    "[19:46:14] INFO: Graph search: graph_id=xxx, query=...",
                     ...
                 ],
                 "total_lines": 100,
