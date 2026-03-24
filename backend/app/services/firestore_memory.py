@@ -400,17 +400,36 @@ class FirestoreMemory:
 
         llm = LLMClient()
         prompt = (
-            "Extract all entities and relationships from this company intelligence dossier.\n\n"
+            "Extract ALL entities and ALL relationships from this company intelligence dossier.\n\n"
             "Entity types:\n"
-            "- person: Named individuals (executives, employees, analysts)\n"
-            "- system: Technology systems, tools, platforms, databases, APIs\n"
+            "- person: Named individuals (executives, employees, analysts, engineers, officers)\n"
+            "- system: Technology systems, tools, platforms, databases, APIs, services\n"
             "- threat: Threats, risks, vulnerabilities, attack techniques, threat actor groups\n"
-            "- compliance: Regulatory frameworks, certifications, legal standards (GDPR, SOX, PCI)\n"
-            "- organization: Companies, departments, teams, committees\n"
-            "- event: Incidents, breaches, acquisitions, regulatory actions\n\n"
-            "Relationship labels should describe how entities are connected, e.g.:\n"
-            "reports_to, manages, uses, depends_on, threatens, affects, mitigates, "
-            "complies_with, member_of, located_in, experienced\n\n"
+            "- compliance: Regulatory frameworks, certifications, legal standards\n"
+            "- organization: Companies, departments, teams, committees, business units\n"
+            "- event: Incidents, breaches, acquisitions, regulatory actions, product launches\n\n"
+            "CRITICAL — Extract MANY relationships. A good extraction has 2-3x more relationships than entities.\n"
+            "For EVERY person, extract:\n"
+            "  - reports_to: who they report to\n"
+            "  - manages/operates: which systems or teams they manage\n"
+            "  - responsible_for: which compliance areas or security domains they own\n"
+            "  - member_of: which organization/department they belong to\n"
+            "For EVERY system, extract:\n"
+            "  - depends_on: other systems it depends on\n"
+            "  - managed_by: which person/team operates it\n"
+            "  - protected_by: which security systems protect it\n"
+            "For EVERY threat, extract:\n"
+            "  - threatens: which systems it targets\n"
+            "  - mitigated_by: which systems or controls mitigate it\n"
+            "  - detected_by: which security tools detect it\n"
+            "For EVERY event, extract:\n"
+            "  - affected: which systems were affected\n"
+            "  - involved: which people responded or were involved\n"
+            "  - exploited: which threat/vulnerability was exploited\n"
+            "For EVERY compliance framework, extract:\n"
+            "  - applies_to: which systems or data it governs\n"
+            "  - owned_by: which person is responsible\n\n"
+            "Be thorough. Extract EVERY relationship you can infer from the text.\n\n"
             "DOSSIER:\n"
             f"{combined_text}"
         )
@@ -418,11 +437,17 @@ class FirestoreMemory:
         try:
             response_text = llm.chat(
                 messages=[
-                    {"role": "system", "content": "You are an entity extraction system. Extract all entities and relationships from the provided text. Return valid JSON matching the schema."},
+                    {"role": "system", "content": (
+                        "You are an expert knowledge graph extraction system for cybersecurity threat simulation. "
+                        "Extract ALL entities and ALL relationships. Be exhaustive — every person should connect to "
+                        "systems they manage, threats they respond to, and people they report to. Every system should "
+                        "connect to threats that target it and people who operate it. Aim for at least 2 relationships "
+                        "per entity. Return valid JSON matching the schema."
+                    )},
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.1,
-                max_tokens=4096,
+                max_tokens=8192,
                 response_format=self._GRAPH_SCHEMA,
             )
 
