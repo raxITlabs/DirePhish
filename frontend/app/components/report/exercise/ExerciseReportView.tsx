@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
-import { Download, Info } from "lucide-react";
+import { ArrowLeft, Download, Info } from "lucide-react";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/app/components/ui/button";
@@ -236,10 +237,19 @@ export default function ExerciseReportView({ report }: ExerciseReportViewProps) 
               </p>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={handleDownload} className="shrink-0">
-            <Download size={14} className="mr-1" />
-            Download
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              <Download size={14} className="mr-1" />
+              Download
+            </Button>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center gap-1 rounded-md border border-input bg-background px-3 h-8 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              <ArrowLeft size={14} />
+              Home
+            </Link>
+          </div>
         </div>
         <ExerciseKPIStrip report={report} />
       </div>

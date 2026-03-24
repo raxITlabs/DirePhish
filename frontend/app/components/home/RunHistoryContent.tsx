@@ -17,6 +17,7 @@ import {
 interface RunHistoryContentProps {
   runs: PipelineRun[];
   onDelete?: (runId: string) => void;
+  heading?: string;
 }
 
 function getDisplayName(run: PipelineRun): string {
@@ -80,7 +81,7 @@ function getRelativeTime(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-export default function RunHistoryContent({ runs, onDelete }: RunHistoryContentProps) {
+export default function RunHistoryContent({ runs, onDelete, heading }: RunHistoryContentProps) {
   const [deleteTarget, setDeleteTarget] = useState<PipelineRun | null>(null);
 
   if (runs.length === 0) {
@@ -118,7 +119,7 @@ export default function RunHistoryContent({ runs, onDelete }: RunHistoryContentP
     <>
       <nav aria-label="Run history">
         <h3 className="font-mono uppercase text-[10.5px] tracking-widest text-sidebar-foreground/50 px-3 mb-2">
-          Runs
+          {heading ?? "Runs"}
         </h3>
         <ul className="space-y-0.5">
           {runs.map((run) => {

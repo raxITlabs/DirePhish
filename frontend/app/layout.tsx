@@ -32,9 +32,9 @@ export default function RootLayout({
     >
       <body className="h-full font-sans">
         <GlobalHeader />
-        <div className="relative" style={{ height: "calc(100svh - 3rem)" }}>
+        <div className="flex" style={{ height: "calc(100svh - 3rem)" }}>
           <AppSidebar />
-          <main className="absolute inset-0 overflow-auto">{children}</main>
+          <main className="flex-1 min-w-0 overflow-auto">{children}</main>
         </div>
       </body>
     </html>
