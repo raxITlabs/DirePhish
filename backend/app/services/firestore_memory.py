@@ -602,16 +602,17 @@ class FirestoreMemory:
 
         return "From your memory of previous discussions:\n" + "\n".join(facts[:8])
 
-    async def batch_search(
+    def batch_search_sync(
         self,
         sim_id: str,
         queries: list[str],
         limit: int = 8,
     ) -> list[list[dict]]:
-        """Run N vector searches in parallel using Firestore AsyncClient.
+        """Batch-embed all queries, then run sync Firestore vector searches.
 
-        Embeds all queries in a single batch call, then fires all
-        ``find_nearest`` queries concurrently via ``asyncio.gather``.
+        Uses batch embedding (1 API call for N queries) but runs Firestore
+        queries sequentially on the sync client. The async approach with
+        AsyncClient deadlocks after ~15 rounds due to gRPC channel issues.
 
         Args:
             sim_id: Simulation identifier.
@@ -621,24 +622,18 @@ class FirestoreMemory:
         Returns:
             List of result lists (one per query), each containing episode dicts.
         """
-        import asyncio
-
-        from google.cloud.firestore_v1 import AsyncClient as FirestoreAsyncClient
-
         if not queries:
             return []
 
-        # Step 1: Batch embed all queries at once
+        # Step 1: Batch embed all queries at once (1 API call instead of N)
         query_vecs = self.embedder.embed_batch(queries, task_type="RETRIEVAL_QUERY")
 
-        # Step 2: Run all find_nearest concurrently via singleton async client
-        async_db = _get_async_db()
-
-        async def _single_search(vec: list[float]) -> list[dict]:
+        # Step 2: Run find_nearest on sync client (stable, no gRPC deadlocks)
+        all_results = []
+        for vec in query_vecs:
             try:
-                col = async_db.collection("sim_episodes")
-                base = col.where("sim_id", "==", sim_id)
-                docs = await base.find_nearest(
+                base = self._episodes.where("sim_id", "==", sim_id)
+                docs = base.find_nearest(
                     vector_field="embedding",
                     query_vector=Vector(vec),
                     distance_measure=DistanceMeasure.COSINE,
@@ -650,14 +645,18 @@ class FirestoreMemory:
                     data.pop("embedding", None)
                     data["id"] = doc.id
                     results.append(data)
-                return results
+                all_results.append(results)
             except Exception as e:
-                logger.warning(f"batch_search single query failed: {e}")
-                return []
+                logger.warning(f"batch_search_sync query failed: {e}")
+                all_results.append([])
 
-        all_results = await asyncio.gather(*[_single_search(v) for v in query_vecs])
-        logger.debug(f"batch_search sim={sim_id} {len(queries)} queries -> {sum(len(r) for r in all_results)} total hits")
-        return list(all_results)
+        logger.debug(f"batch_search_sync sim={sim_id} {len(queries)} queries -> {sum(len(r) for r in all_results)} total hits")
+        return all_results
+
+    # Keep async version as alias for backward compat but route to sync
+    async def batch_search(self, sim_id: str, queries: list[str], limit: int = 8) -> list[list[dict]]:
+        """Async wrapper around batch_search_sync for backward compatibility."""
+        return self.batch_search_sync(sim_id, queries, limit)
 
     # ──────────────────────────────────────────────────────────────────────
     # Report methods (replaces ZepToolsService)
