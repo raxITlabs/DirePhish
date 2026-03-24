@@ -273,113 +273,33 @@ def project_graph(project_id):
     if not project:
         return jsonify({"error": "Project not found"}), 404
 
-    # Build graph from Firestore episodes — query all dossier episodes for this project
+    # Read LLM-extracted graph from Firestore (graph_nodes + graph_edges collections)
     try:
         from ..services.firestore_memory import FirestoreMemory
         memory = FirestoreMemory()
 
-        # Query all dossier episodes from Firestore
-        docs = (
-            memory._episodes
-            .where("sim_id", "==", project_id)
-            .where("category", "==", "dossier")
-            .get()
-        )
-        episodes = [doc.to_dict() for doc in docs]
+        nodes_docs = memory._db.collection("graph_nodes").where("sim_id", "==", project_id).get()
+        edges_docs = memory._db.collection("graph_edges").where("sim_id", "==", project_id).get()
 
-        if not episodes:
-            # Fallback: try to build from disk dossier
+        nodes = [{"id": doc.id, "name": d.get("name", ""), "type": d.get("entity_type", ""), "summary": d.get("summary", "")} for doc in nodes_docs for d in [doc.to_dict()]]
+        edges = [{"source": d.get("source", ""), "target": d.get("target", ""), "label": d.get("label", ""), "type": d.get("label", "")} for doc in edges_docs for d in [doc.to_dict()]]
+
+        # If no extracted graph yet, trigger extraction from dossier
+        if not nodes:
             dossier = project_manager.get_dossier(project_id)
-            if not dossier:
-                return jsonify({"data": {"nodes": [], "edges": []}})
-            # Push dossier to Firestore for next time
-            memory.push_dossier(project_id, dossier)
-            docs = memory._episodes.where("sim_id", "==", project_id).where("category", "==", "dossier").get()
-            episodes = [doc.to_dict() for doc in docs]
-
-        nodes = []
-        edges = []
-        node_id = 0
-        node_map = {}  # name -> node_id for linking
-
-        for ep in episodes:
-            action = ep.get("action_name", "")
-            content = ep.get("action_summary", "")
-
-            if action == "company_profile":
-                # Parse company name from content
-                name = content.split(".")[0].replace("Company: ", "")
-                nid = f"n{node_id}"
-                nodes.append({"id": nid, "name": name, "type": "organization", "summary": content[:200]})
-                node_map["__company__"] = nid
-                node_id += 1
-
-            elif action.startswith("org_role_"):
-                # Parse person name from content (format: "Name (Title) works in...")
-                name = content.split(" works in")[0].split(" (")[0].strip()
-                title = ""
-                if "(" in content and ")" in content:
-                    title = content.split("(")[1].split(")")[0]
-                nid = f"n{node_id}"
-                nodes.append({"id": nid, "name": name, "type": "person", "summary": title})
-                node_map[name] = nid
-                if "__company__" in node_map:
-                    edges.append({"source": nid, "target": node_map["__company__"], "label": title or "works at", "type": "role"})
-                node_id += 1
-
-            elif action.startswith("system_"):
-                # Parse system name (format: "System: Name (category, criticality: X)")
-                name = content.replace("System: ", "").split(" (")[0].strip()
-                nid = f"n{node_id}"
-                nodes.append({"id": nid, "name": name, "type": "system", "summary": content[:200]})
-                node_map[name] = nid
-                if "__company__" in node_map:
-                    edges.append({"source": node_map["__company__"], "target": nid, "label": "uses", "type": "system"})
-                node_id += 1
-
-            elif action.startswith("risk_"):
-                # Parse risk name (format: "Risk: Name (likelihood: X, impact: Y)")
-                name = content.replace("Risk: ", "").split(" (")[0].strip()
-                nid = f"n{node_id}"
-                nodes.append({"id": nid, "name": name, "type": "risk", "summary": content[:200]})
-                node_map[name] = nid
-                if "__company__" in node_map:
-                    edges.append({"source": node_map["__company__"], "target": nid, "label": "faces", "type": "risk"})
-                # Link to affected systems mentioned in content
-                if "Affects:" in content:
-                    affected = content.split("Affects:")[1].split(".")[0].strip()
-                    for sys_name in [s.strip() for s in affected.split(",")]:
-                        if sys_name in node_map:
-                            edges.append({"source": nid, "target": node_map[sys_name], "label": "affects", "type": "risk"})
-                node_id += 1
-
-            elif action.startswith("event_"):
-                nid = f"n{node_id}"
-                # Shorter label from content
-                label = content.split(":")[1].split(".")[0].strip()[:60] if ":" in content else content[:60]
-                nodes.append({"id": nid, "name": label, "type": "event", "summary": content[:200]})
-                if "__company__" in node_map:
-                    edges.append({"source": node_map["__company__"], "target": nid, "label": "experienced", "type": "event"})
-                node_id += 1
-
-            elif action == "compliance":
-                nid = f"n{node_id}"
-                nodes.append({"id": nid, "name": "Compliance", "type": "compliance", "summary": content[:200]})
-                if "__company__" in node_map:
-                    edges.append({"source": node_map["__company__"], "target": nid, "label": "complies with", "type": "compliance"})
-                node_id += 1
-
-            elif action == "security_posture":
-                nid = f"n{node_id}"
-                nodes.append({"id": nid, "name": "Security Posture", "type": "security", "summary": content[:200]})
-                if "__company__" in node_map:
-                    edges.append({"source": node_map["__company__"], "target": nid, "label": "maintains", "type": "security"})
-                node_id += 1
+            if dossier:
+                logger.info(f"No graph found for {project_id}, triggering extraction...")
+                memory.push_dossier(project_id, dossier)
+                # Re-read after extraction
+                nodes_docs = memory._db.collection("graph_nodes").where("sim_id", "==", project_id).get()
+                edges_docs = memory._db.collection("graph_edges").where("sim_id", "==", project_id).get()
+                nodes = [{"id": doc.id, "name": d.get("name", ""), "type": d.get("entity_type", ""), "summary": d.get("summary", "")} for doc in nodes_docs for d in [doc.to_dict()]]
+                edges = [{"source": d.get("source", ""), "target": d.get("target", ""), "label": d.get("label", ""), "type": d.get("label", "")} for doc in edges_docs for d in [doc.to_dict()]]
 
         return jsonify({"data": {"nodes": nodes, "edges": edges}})
 
     except Exception as e:
-        logger.error(f"Graph build from Firestore failed: {e}")
+        logger.error(f"Graph read from Firestore failed: {e}")
         return jsonify({"data": {"nodes": [], "edges": []}})
 
 

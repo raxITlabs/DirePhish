@@ -321,7 +321,170 @@ class FirestoreMemory:
 
         count = self.add_episodes_bulk(project_id, episodes)
         logger.info(f"Pushed {count} dossier episodes for project={project_id}")
+
+        # Extract knowledge graph via Gemini structured output
+        try:
+            text_chunks = [ep["content"] for ep in episodes]
+            self.extract_and_store_graph(project_id, text_chunks)
+        except Exception as e:
+            logger.warning(f"Graph extraction failed for {project_id} (non-fatal): {e}")
+
         return count
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Knowledge Graph Extraction (replaces Graphiti LLM entity extraction)
+    # ──────────────────────────────────────────────────────────────────────
+
+    # JSON schema for Gemini structured output — entity + relationship extraction
+    _GRAPH_SCHEMA = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "graph_extraction",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "entities": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "entity_type": {
+                                    "type": "string",
+                                    "enum": ["person", "system", "threat", "compliance", "organization", "event"],
+                                },
+                                "summary": {"type": "string"},
+                            },
+                            "required": ["name", "entity_type", "summary"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    "relationships": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "source": {"type": "string"},
+                                "target": {"type": "string"},
+                                "label": {"type": "string"},
+                            },
+                            "required": ["source", "target", "label"],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                "required": ["entities", "relationships"],
+                "additionalProperties": False,
+            },
+        },
+    }
+
+    def extract_and_store_graph(self, sim_id: str, text_chunks: List[str]) -> Dict[str, int]:
+        """Use Gemini structured output to extract entities + relationships from text.
+
+        Calls the LLM with a JSON schema to classify entities (person, system, threat,
+        compliance, organization, event) and extract relationships between them.
+        Stores results in graph_nodes and graph_edges Firestore collections.
+
+        Returns:
+            {"nodes": N, "edges": M} count of extracted items.
+        """
+        from ..utils.llm_client import LLMClient
+        import json as _json
+
+        combined_text = "\n\n".join(text_chunks)
+        # Truncate if very long (keep under ~8K tokens for efficiency)
+        if len(combined_text) > 30000:
+            combined_text = combined_text[:30000]
+
+        llm = LLMClient()
+        prompt = (
+            "Extract all entities and relationships from this company intelligence dossier.\n\n"
+            "Entity types:\n"
+            "- person: Named individuals (executives, employees, analysts)\n"
+            "- system: Technology systems, tools, platforms, databases, APIs\n"
+            "- threat: Threats, risks, vulnerabilities, attack techniques, threat actor groups\n"
+            "- compliance: Regulatory frameworks, certifications, legal standards (GDPR, SOX, PCI)\n"
+            "- organization: Companies, departments, teams, committees\n"
+            "- event: Incidents, breaches, acquisitions, regulatory actions\n\n"
+            "Relationship labels should describe how entities are connected, e.g.:\n"
+            "reports_to, manages, uses, depends_on, threatens, affects, mitigates, "
+            "complies_with, member_of, located_in, experienced\n\n"
+            "DOSSIER:\n"
+            f"{combined_text}"
+        )
+
+        try:
+            response_text = llm.chat(
+                messages=[
+                    {"role": "system", "content": "You are an entity extraction system. Extract all entities and relationships from the provided text. Return valid JSON matching the schema."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.1,
+                max_tokens=4096,
+                response_format=self._GRAPH_SCHEMA,
+            )
+
+            # Track cost
+            if self.cost_tracker:
+                # Approximate tokens
+                input_tokens = int(len(combined_text) / 4)
+                output_tokens = int(len(response_text) / 4)
+                self.cost_tracker.track_llm(
+                    "graph_extraction", llm.model,
+                    input_tokens, output_tokens,
+                    f"extract_graph_{sim_id}",
+                )
+
+            extraction = _json.loads(response_text)
+            entities = extraction.get("entities", [])
+            relationships = extraction.get("relationships", [])
+
+            # Store nodes
+            graph_nodes = self._db.collection("graph_nodes")
+            batch = self._db.batch()
+            node_count = 0
+            for entity in entities:
+                doc_ref = graph_nodes.document()
+                batch.set(doc_ref, {
+                    "sim_id": sim_id,
+                    "name": entity["name"],
+                    "entity_type": entity["entity_type"],
+                    "summary": entity.get("summary", ""),
+                })
+                node_count += 1
+                if node_count % 500 == 0:
+                    batch.commit()
+                    batch = self._db.batch()
+            if node_count % 500 != 0:
+                batch.commit()
+
+            # Store edges
+            graph_edges = self._db.collection("graph_edges")
+            batch = self._db.batch()
+            edge_count = 0
+            for rel in relationships:
+                doc_ref = graph_edges.document()
+                batch.set(doc_ref, {
+                    "sim_id": sim_id,
+                    "source": rel["source"],
+                    "target": rel["target"],
+                    "label": rel["label"],
+                })
+                edge_count += 1
+                if edge_count % 500 == 0:
+                    batch.commit()
+                    batch = self._db.batch()
+            if edge_count % 500 != 0:
+                batch.commit()
+
+            logger.info(f"Extracted graph for {sim_id}: {node_count} nodes, {edge_count} edges")
+            return {"nodes": node_count, "edges": edge_count}
+
+        except Exception as e:
+            logger.error(f"Graph extraction LLM call failed for {sim_id}: {e}")
+            return {"nodes": 0, "edges": 0}
 
     # ──────────────────────────────────────────────────────────────────────
     # Read methods — simulation (replaces Graphiti search)
