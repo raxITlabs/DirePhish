@@ -20,7 +20,7 @@ logger = get_logger("embedding_client")
 
 MODEL = "gemini-embedding-001"
 OUTPUT_DIMENSIONALITY = 768
-MAX_BATCH_SIZE = 100
+MAX_BATCH_SIZE = 250
 
 
 class GeminiEmbeddingClient:

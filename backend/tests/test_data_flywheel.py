@@ -5,7 +5,8 @@ from unittest.mock import MagicMock, patch
 def _make_mock_firestore_memory():
     """Create a FirestoreMemory instance with mocked Firestore client and embedder."""
     with patch("app.services.firestore_memory.firestore") as mock_fs_module, \
-         patch("app.services.firestore_memory.GeminiEmbeddingClient"):
+         patch("app.services.firestore_memory.GeminiEmbeddingClient"), \
+         patch("app.services.firestore_memory._firestore_client", None):
         # Mock the Firestore client
         mock_client = MagicMock()
         mock_fs_module.Client.return_value = mock_client

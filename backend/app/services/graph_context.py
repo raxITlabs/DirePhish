@@ -7,11 +7,20 @@ Graph data is keyed by project_id stored in the `sim_id` field.
 Pure data formatting — no LLM calls.
 """
 
-from google.cloud import firestore
-
 from ..utils.logger import get_logger
 
 logger = get_logger("graph_context")
+
+# Singleton Firestore client — avoids creating a new connection per GraphContext instance
+_firestore_client = None
+
+
+def _get_db():
+    global _firestore_client
+    if _firestore_client is None:
+        from google.cloud import firestore
+        _firestore_client = firestore.Client()
+    return _firestore_client
 
 
 class GraphContext:
@@ -25,15 +34,15 @@ class GraphContext:
         self.project_id = project_id
         self._nodes: list[dict] | None = None
         self._edges: list[dict] | None = None
-        self._db = firestore.Client()
 
     def _load(self):
         """Load graph_nodes + graph_edges from Firestore. Cached after first call."""
         if self._nodes is not None:
             return
         try:
-            n_docs = self._db.collection("graph_nodes").where("sim_id", "==", self.project_id).get()
-            e_docs = self._db.collection("graph_edges").where("sim_id", "==", self.project_id).get()
+            db = _get_db()
+            n_docs = db.collection("graph_nodes").where("sim_id", "==", self.project_id).get()
+            e_docs = db.collection("graph_edges").where("sim_id", "==", self.project_id).get()
             self._nodes = [doc.to_dict() for doc in n_docs]
             self._edges = [doc.to_dict() for doc in e_docs]
             logger.info(f"Loaded graph for {self.project_id}: {len(self._nodes)} nodes, {len(self._edges)} edges")

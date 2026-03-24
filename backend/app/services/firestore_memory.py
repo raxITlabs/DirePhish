@@ -43,6 +43,16 @@ logger = get_logger("firestore_memory")
 # Firestore batch write limit
 _FIRESTORE_BATCH_LIMIT = 500
 
+# Singleton Firestore client — avoids creating a new connection per FirestoreMemory instance
+_firestore_client = None
+
+
+def _get_db():
+    global _firestore_client
+    if _firestore_client is None:
+        _firestore_client = firestore.Client()
+    return _firestore_client
+
 
 class FirestoreMemory:
     """Unified memory layer backed by Google Cloud Firestore with vector search.
@@ -57,7 +67,7 @@ class FirestoreMemory:
     # ──────────────────────────────────────────────────────────────────────
 
     def __init__(self, cost_tracker: Optional[CostTracker] = None):
-        self.db = firestore.Client()
+        self.db = _get_db()
         self.embedder = GeminiEmbeddingClient(cost_tracker=cost_tracker)
         self.cost_tracker = cost_tracker
         self._llm_client: Optional[LLMClient] = None
@@ -581,6 +591,63 @@ class FirestoreMemory:
             return ""
 
         return "From your memory of previous discussions:\n" + "\n".join(facts[:8])
+
+    async def batch_search(
+        self,
+        sim_id: str,
+        queries: list[str],
+        limit: int = 8,
+    ) -> list[list[dict]]:
+        """Run N vector searches in parallel using Firestore AsyncClient.
+
+        Embeds all queries in a single batch call, then fires all
+        ``find_nearest`` queries concurrently via ``asyncio.gather``.
+
+        Args:
+            sim_id: Simulation identifier.
+            queries: List of natural-language query strings.
+            limit: Maximum results per query.
+
+        Returns:
+            List of result lists (one per query), each containing episode dicts.
+        """
+        import asyncio
+
+        from google.cloud.firestore_v1 import AsyncClient as FirestoreAsyncClient
+
+        if not queries:
+            return []
+
+        # Step 1: Batch embed all queries at once
+        query_vecs = self.embedder.embed_batch(queries, task_type="RETRIEVAL_QUERY")
+
+        # Step 2: Run all find_nearest concurrently via async Firestore client
+        async_db = FirestoreAsyncClient()
+
+        async def _single_search(vec: list[float]) -> list[dict]:
+            try:
+                col = async_db.collection("sim_episodes")
+                base = col.where("sim_id", "==", sim_id)
+                docs = await base.find_nearest(
+                    vector_field="embedding",
+                    query_vector=Vector(vec),
+                    distance_measure=DistanceMeasure.COSINE,
+                    limit=limit,
+                ).get()
+                results = []
+                for doc in docs:
+                    data = doc.to_dict()
+                    data.pop("embedding", None)
+                    data["id"] = doc.id
+                    results.append(data)
+                return results
+            except Exception as e:
+                logger.warning(f"batch_search single query failed: {e}")
+                return []
+
+        all_results = await asyncio.gather(*[_single_search(v) for v in query_vecs])
+        logger.debug(f"batch_search sim={sim_id} {len(queries)} queries -> {sum(len(r) for r in all_results)} total hits")
+        return list(all_results)
 
     # ──────────────────────────────────────────────────────────────────────
     # Report methods (replaces ZepToolsService)

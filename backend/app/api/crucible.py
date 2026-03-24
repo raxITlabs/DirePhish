@@ -3,6 +3,7 @@ Flask blueprint for Crucible simulation API.
 All endpoints under /api/crucible/*
 """
 import json
+import time as _time
 import uuid
 from pathlib import Path
 
@@ -194,6 +195,10 @@ def get_simulation_costs(sim_id):
 
 # --- Project endpoints (generative pipeline) ---
 
+# Graph endpoint TTL cache
+_graph_cache: dict = {}  # {project_id: (timestamp, data)}
+_GRAPH_CACHE_TTL = 30  # seconds
+
 from ..services import project_manager
 from ..services.research_agent import run_research
 from ..services.config_generator import run_config_generation
@@ -273,6 +278,13 @@ def project_graph(project_id):
     if not project:
         return jsonify({"error": "Project not found"}), 404
 
+    # Check TTL cache first
+    cached = _graph_cache.get(project_id)
+    if cached:
+        ts, data = cached
+        if _time.time() - ts < _GRAPH_CACHE_TTL:
+            return jsonify({"data": data})
+
     # Read LLM-extracted graph from Firestore (graph_nodes + graph_edges collections)
     try:
         from ..services.firestore_memory import FirestoreMemory
@@ -314,7 +326,9 @@ def project_graph(project_id):
                 memory.push_dossier(project_id, dossier)
                 nodes, edges = _read_graph(memory, project_id)
 
-        return jsonify({"data": {"nodes": nodes, "edges": edges}})
+        result = {"nodes": nodes, "edges": edges}
+        _graph_cache[project_id] = (_time.time(), result)
+        return jsonify({"data": result})
 
     except Exception as e:
         _get_logger("crucible_api").error(f"Graph read from Firestore failed: {e}")

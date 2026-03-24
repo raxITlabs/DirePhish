@@ -273,10 +273,10 @@ async def _run_batch(
     sys.path.insert(0, str(Path(__file__).parent.parent.parent))
     from scripts.run_crucible_simulation import run_single_iteration
 
-    # Shared dependencies
-    from openai import OpenAI
+    # Shared dependencies — use AsyncOpenAI for parallel sim runner
+    from openai import AsyncOpenAI
 
-    shared_client = OpenAI(api_key=Config.LLM_API_KEY, base_url=Config.LLM_BASE_URL)
+    shared_client = AsyncOpenAI(api_key=Config.LLM_API_KEY, base_url=Config.LLM_BASE_URL)
     shared_model = Config.LLM_MODEL_NAME
 
     from .firestore_memory import FirestoreMemory
