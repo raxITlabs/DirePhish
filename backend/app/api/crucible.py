@@ -273,8 +273,49 @@ def project_graph(project_id):
     if not project:
         return jsonify({"error": "Project not found"}), 404
 
-    # Firestore stores flat episodes, not a node/edge graph — return empty graph
-    return jsonify({"data": {"nodes": [], "edges": []}})
+    # Build graph from dossier structure (Firestore stores flat episodes, not nodes/edges)
+    dossier = project_manager.get_dossier(project_id)
+    if not dossier:
+        return jsonify({"data": {"nodes": [], "edges": []}})
+
+    nodes = []
+    edges = []
+    node_id = 0
+
+    # Company node (center)
+    company = dossier.get("company", {})
+    company_name = company.get("name", "Company")
+    nodes.append({"id": f"n{node_id}", "name": company_name, "type": "organization", "summary": company.get("description", "")})
+    company_node = f"n{node_id}"
+    node_id += 1
+
+    # People nodes from org roles
+    for role in dossier.get("org", {}).get("roles", []):
+        nid = f"n{node_id}"
+        nodes.append({"id": nid, "name": role.get("name", "Unknown"), "type": "person", "summary": f"{role.get('title', '')} — {role.get('responsibilities', '')}"})
+        edges.append({"source": nid, "target": company_node, "label": role.get("title", "works at"), "type": "role"})
+        node_id += 1
+
+    # System nodes
+    for system in dossier.get("systems", []):
+        nid = f"n{node_id}"
+        nodes.append({"id": nid, "name": system.get("name", "System"), "type": "system", "summary": system.get("description", "")})
+        edges.append({"source": company_node, "target": nid, "label": f"{system.get('category', 'uses')}", "type": "system"})
+        node_id += 1
+
+    # Risk nodes
+    for risk in dossier.get("risks", []):
+        nid = f"n{node_id}"
+        nodes.append({"id": nid, "name": risk.get("name", "Risk"), "type": "risk", "summary": risk.get("description", "")})
+        edges.append({"source": company_node, "target": nid, "label": f"impact: {risk.get('impact', 'unknown')}", "type": "risk"})
+        # Link risk to affected systems
+        for sys_name in risk.get("affectedSystems", []):
+            sys_node = next((n["id"] for n in nodes if n["name"] == sys_name), None)
+            if sys_node:
+                edges.append({"source": nid, "target": sys_node, "label": "affects", "type": "risk"})
+        node_id += 1
+
+    return jsonify({"data": {"nodes": nodes, "edges": edges}})
 
 
 @crucible_bp.route("/projects/<project_id>/generate-config", methods=["POST"])
