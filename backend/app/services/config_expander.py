@@ -191,11 +191,11 @@ def _expand_single_scenario(
     _track("cascading_pressures")
 
     # Call 6: Timed Injects
-    events = _generate_timed_injects(llm, scenario, attack_path, cascading, threat_context)
+    events = _generate_timed_injects(llm, scenario, attack_path, cascading, threat_context, project_id)
     _track("timed_injects")
 
     # Call 7: Agent Personas
-    agents = _generate_agent_personas(llm, dossier, scenario, cascading, threat_context)
+    agents = _generate_agent_personas(llm, dossier, scenario, cascading, threat_context, project_id)
     _track("agent_personas")
 
     # Normalize agent profiles — LLM sometimes uses "role_id" instead of "role"
@@ -295,7 +295,8 @@ REQUIREMENTS:
 
 
 def _generate_timed_injects(llm: LLMClient, scenario: dict, attack_path: dict | None,
-                            cascading: dict, threat_context: str = "") -> list[dict]:
+                            cascading: dict, threat_context: str = "",
+                            project_id: str = "") -> list[dict]:
     """Call 6: Generate 6-10 timed injects with conditional branching."""
     kill_chain = attack_path.get("kill_chain", []) if attack_path else []
     effects = cascading.get("cascading_effects", {})
@@ -348,11 +349,21 @@ REQUIREMENTS:
 - Ground inject descriptions in specific threat actor techniques and vulnerability gaps from the threat intelligence above
 - Inject alerts should reference specific systems, tools, and MITRE techniques that the threat actors are known to use"""
 
+    try:
+        from .graph_context import GraphContext
+        graph_ctx = GraphContext(project_id)
+        sys_deps = graph_ctx.system_dependencies()
+        if sys_deps:
+            prompt += f"\n\nSystem architecture (for realistic lateral movement paths):\n{sys_deps}"
+    except Exception:
+        pass
+
     return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
 
 
 def _generate_agent_personas(llm: LLMClient, dossier: dict, scenario: dict,
-                              cascading: dict, threat_context: str = "") -> list[dict]:
+                              cascading: dict, threat_context: str = "",
+                              project_id: str = "") -> list[dict]:
     """Call 7: Select roles and generate rich personas for this scenario."""
     org = dossier.get("org", {})
     roles = org.get("roles", [])
@@ -431,6 +442,16 @@ REQUIREMENTS:
 - incident_memory should be scenario-specific, not generic
 - Ensure agents represent the affected teams identified in the threat analysis above
 - Personas should reference awareness of specific threat actors and vulnerability gaps where relevant"""
+
+    # Add organizational context from knowledge graph
+    try:
+        from .graph_context import GraphContext
+        graph_ctx = GraphContext(project_id)
+        org_context = graph_ctx.org_hierarchy()
+        if org_context:
+            prompt += f"\n\nOrganizational structure from knowledge graph:\n{org_context}"
+    except Exception:
+        pass  # Graph context is optional
 
     return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
 
@@ -579,6 +600,15 @@ def _inject_adversarial_and_adaptive(config: dict) -> dict:
             },
         ],
     }
+    try:
+        from .graph_context import GraphContext
+        graph_ctx = GraphContext(config.get("project_id", ""))
+        atk_ctx = graph_ctx.attacker_context()
+        if atk_ctx:
+            threat_actor["persona"] += f"\n\nTarget intelligence:\n{atk_ctx}"
+    except Exception:
+        pass
+
     config["agent_profiles"].append(threat_actor)
 
     # Add C2 world

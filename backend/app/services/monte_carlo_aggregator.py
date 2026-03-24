@@ -168,6 +168,18 @@ def aggregate_batch(results: list[IterationResult]) -> BatchAggregation:
     if not results:
         raise ValueError("Cannot aggregate an empty results list")
 
+    # Try to get system criticality scores from knowledge graph
+    system_scores = {}
+    try:
+        if results and results[0].actions:
+            sim_id = results[0].actions[0].get("simulation_id", "")
+            project_id = sim_id.replace("_sim", "").rsplit("_scenario", 1)[0] if sim_id else ""
+            if project_id:
+                from .graph_context import GraphContext
+                system_scores = GraphContext(project_id).system_criticality()
+    except Exception:
+        pass
+
     n = len(results)
     logger.info("Aggregating %d Monte Carlo iterations", n)
 

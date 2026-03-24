@@ -164,6 +164,15 @@ def _query_graph_for_report(project_id: str, config: dict, actions: list[dict]) 
     except Exception as e:
         logger.warning(f"FirestoreMemory query failed for report: {e}")
 
+    try:
+        from .graph_context import GraphContext
+        graph_ctx = GraphContext(project_id)
+        context["org_structure"] = graph_ctx.org_hierarchy()
+        context["system_architecture"] = graph_ctx.system_dependencies()
+        context["threat_landscape"] = graph_ctx.threat_surface()
+    except Exception:
+        pass
+
     return context
 
 

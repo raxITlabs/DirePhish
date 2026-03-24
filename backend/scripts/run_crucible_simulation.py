@@ -489,6 +489,19 @@ async def run_single_iteration(
                             if memory_text:
                                 atk_user_msg = atk_user_msg + f"\n\n{memory_text}"
 
+                        # Add organizational context from knowledge graph
+                        try:
+                            from app.services.graph_context import GraphContext
+                            graph_ctx = GraphContext(config.get("project_id", sim_id))
+                            agent_graph_ctx = graph_ctx.agent_context(agent["name"])
+                            if agent_graph_ctx:
+                                atk_user_msg += f"\n\n{agent_graph_ctx}"
+                            atk_intel = graph_ctx.attacker_context()
+                            if atk_intel:
+                                atk_user_msg += f"\n\n{atk_intel}"
+                        except Exception:
+                            pass  # Graph context is optional
+
                         # Call LLM
                         tools = tools_per_world[world_name]
                         loop = asyncio.get_event_loop()
@@ -647,6 +660,16 @@ async def run_single_iteration(
                         memory_text = _get_agent_memory_sync(memory, sim_id, agent["name"], world_name)
                         if memory_text:
                             user_msg = user_msg + f"\n\n{memory_text}"
+
+                    # Add organizational context from knowledge graph
+                    try:
+                        from app.services.graph_context import GraphContext
+                        graph_ctx = GraphContext(config.get("project_id", sim_id))
+                        agent_graph_ctx = graph_ctx.agent_context(agent["name"])
+                        if agent_graph_ctx:
+                            user_msg += f"\n\n{agent_graph_ctx}"
+                    except Exception:
+                        pass  # Graph context is optional
 
                     # Call LLM (run in executor to avoid blocking the async event loop)
                     tools = tools_per_world[world_name]

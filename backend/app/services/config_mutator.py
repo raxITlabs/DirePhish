@@ -45,6 +45,16 @@ class ConfigMutator:
                     if (p if isinstance(p, str) else p.get("name", "")) not in (removed_role, removed_name)
                 ]
 
+            try:
+                from .graph_context import GraphContext
+                graph_ctx = GraphContext(config.get("project_id", ""))
+                orphan_info = graph_ctx.orphaned_by(removed.get("name", ""))
+                if orphan_info.get("orphaned_systems"):
+                    label += f"_orphans_{len(orphan_info['orphaned_systems'])}"
+                    mutated["_mutation_impact"] = orphan_info
+            except Exception:
+                pass
+
             logger.debug("Mutation: %s", label)
             results.append((mutated, label))
 
