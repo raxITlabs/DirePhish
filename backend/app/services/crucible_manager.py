@@ -162,26 +162,34 @@ def launch_simulation(config: dict) -> str:
     }
 
     script_path = SCRIPTS_DIR / "run_crucible_simulation.py"
+    stdout_log = sim_dir / "stdout.log"
+    stderr_log = sim_dir / "stderr.log"
+    stdout_fh = open(stdout_log, "w")
+    stderr_fh = open(stderr_log, "w")
     proc = subprocess.Popen(
         ["uv", "run", "python", str(script_path), "--config", str(config_path), "--output", str(sim_dir)],
         cwd=str(Path(__file__).parent.parent.parent),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=stdout_fh,
+        stderr=stderr_fh,
     )
     _processes[sim_id] = proc
     _simulations[sim_id]["status"] = "running"
 
     def _monitor():
         proc.wait()
+        stdout_fh.close()
+        stderr_fh.close()
         if sim_id in _simulations:
             if proc.returncode == 0:
                 _simulations[sim_id]["status"] = "completed"
             else:
                 _simulations[sim_id]["status"] = "failed"
-                # Log subprocess stderr so failures aren't silently swallowed
-                stderr = proc.stderr.read().decode() if proc.stderr else ""
-                if stderr:
-                    logger.error(f"Simulation {sim_id} failed (exit {proc.returncode}):\n{stderr[-2000:]}")
+                try:
+                    stderr_text = stderr_log.read_text()[-2000:]
+                    if stderr_text:
+                        logger.error(f"Simulation {sim_id} failed (exit {proc.returncode}):\n{stderr_text}")
+                except Exception:
+                    logger.error(f"Simulation {sim_id} failed (exit {proc.returncode})")
 
     threading.Thread(target=_monitor, daemon=True).start()
     return sim_id

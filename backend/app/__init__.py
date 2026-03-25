@@ -119,7 +119,7 @@ def create_app(config_class=Config):
     @app.route('/health')
     def health():
         return {'status': 'ok', 'service': 'DirePhish Backend'}
-    
+
     if should_log_startup:
         # Check feature availability
         features = []

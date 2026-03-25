@@ -1,19 +1,37 @@
 """
 DirePhish Mission Control Console
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Rich ANSI mission-control-style logger.
-All output goes to stderr so it never interferes with subprocess capture.
+All output goes to the log file only (no stdout/stderr) to avoid
+filling subprocess pipe buffers when run as a child process.
 """
 
 from __future__ import annotations
 
+import os
 import re
-import sys
 import logging
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
 
 # File logger — captures everything MissionControl prints (stripped of ANSI)
+# Uses propagate=False + own file handler so messages go to log file ONCE
 _file_logger = logging.getLogger("direphish.console")
+_file_logger.setLevel(logging.DEBUG)
+_file_logger.propagate = False
+
+if not _file_logger.handlers:
+    _log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+    os.makedirs(_log_dir, exist_ok=True)
+    _fh = RotatingFileHandler(
+        os.path.join(_log_dir, datetime.now().strftime("%Y-%m-%d") + ".log"),
+        maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8",
+    )
+    _fh.setFormatter(logging.Formatter(
+        "[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    ))
+    _file_logger.addHandler(_fh)
+
 _ANSI_RE = re.compile(r"\033\[[0-9;]*m")
 
 
@@ -45,9 +63,7 @@ class MissionControl:
 
     @staticmethod
     def _out(text: str):
-        """Print to stderr AND log to file (ANSI-stripped)."""
-        print(text, file=sys.stderr, flush=True)
-        # Also write to file logger (strip ANSI codes for clean file output)
+        """Log to file only (ANSI-stripped). No stdout/stderr to avoid pipe buffer issues."""
         clean = _ANSI_RE.sub("", text).strip()
         if clean:
             _file_logger.info(clean)

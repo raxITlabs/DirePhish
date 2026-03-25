@@ -163,6 +163,7 @@ async function pollExerciseReport(projectId: string): Promise<void> {
 
 async function pollMonteCarlo(batchId: string): Promise<void> {
   "use step";
+  let lastReportedIteration = 0;
   for (let i = 0; i < 360; i++) {
     const res = await fetch(`${API_BASE}/api/crucible/monte-carlo/${batchId}/status`);
     const json = await res.json();
@@ -170,6 +171,15 @@ async function pollMonteCarlo(batchId: string): Promise<void> {
     if (status === "completed") return;
     if (["failed", "cost_exceeded", "stopped"].includes(status)) {
       throw new Error(`Monte Carlo batch ${batchId} ${status}: ${json.data?.error || ""}`);
+    }
+    // Emit intermediate progress if iteration count advanced
+    const completedIterations = (json.data?.completed_iterations as number) || 0;
+    const totalIterations = (json.data?.total_iterations as number) || 10;
+    if (completedIterations > lastReportedIteration) {
+      lastReportedIteration = completedIterations;
+      await emitProgress("monte_carlo", "running",
+        `Running Monte Carlo — ${completedIterations}/${totalIterations} iterations...`,
+        JSON.stringify({ batchId, iterations: totalIterations, completed: completedIterations }));
     }
     await new Promise(r => setTimeout(r, 5000));
   }
@@ -183,8 +193,12 @@ async function pollMonteCarlo(batchId: string): Promise<void> {
 export async function cruciblePipeline(input: {
   companyUrl: string;
   userContext?: string;
+  mode?: "standard" | "test";
 }) {
   "use workflow";
+
+  const pipelineMode = input.mode || "standard";
+  const isTestMode = pipelineMode === "test";
 
   let projectId = "";
   let simIds: string[] = [];
@@ -197,7 +211,8 @@ export async function cruciblePipeline(input: {
   try {
     // ─── STEP 1: Create project & start research ───
     stageStart = Date.now();
-    await emitProgress("research", "running", "Starting company research...");
+    await emitProgress("research", "running",
+      isTestMode ? "Starting company research (TEST MODE)..." : "Starting company research...");
 
     const createResult = await flaskApi<{ projectId: string }>(
       "/api/crucible/projects",
@@ -288,7 +303,7 @@ export async function cruciblePipeline(input: {
       selectedIds = confirmation.scenarioOverrides;
     } else {
       const sorted = [...scenarios].sort((a, b) => b.probability - a.probability);
-      selectedIds = sorted.slice(0, 2).map(s => s.id);
+      selectedIds = sorted.slice(0, isTestMode ? 1 : 2).map(s => s.id);
     }
 
     scenarioTitles = scenarios
@@ -349,8 +364,13 @@ export async function cruciblePipeline(input: {
       `All ${simIds.length} simulations complete`, undefined, stageDurations.simulations);
 
     // ─── STEP 7: Monte Carlo analysis ───
+    const mcMode = isTestMode ? "test" : "quick";
+    const mcIterations = isTestMode ? 3 : 10;
+    const mcCostLimit = isTestMode ? 5.0 : 25.0;
+
     stageStart = Date.now();
-    await emitProgress("monte_carlo", "running", "Launching Monte Carlo analysis (10 iterations)...");
+    await emitProgress("monte_carlo", "running",
+      `Launching Monte Carlo analysis (${mcIterations} iterations, ${mcMode} mode)...`);
 
     let mcBatchId = "";
     let mcResults: Record<string, unknown> = {};
@@ -360,20 +380,19 @@ export async function cruciblePipeline(input: {
         `/api/crucible/simulations/${simIds[0]}/config`,
       );
 
-      // Launch MC QUICK mode (10 iterations)
       const mcLaunch = await flaskApi<{ batch_id: string }>(
         "/api/crucible/monte-carlo/launch",
         { method: "POST", body: JSON.stringify({
           project_id: projectId,
           config: simConfig,
-          mode: "quick",
-          cost_limit_usd: 25.0,
+          mode: mcMode,
+          cost_limit_usd: mcCostLimit,
         })},
       );
       mcBatchId = mcLaunch.batch_id;
 
       await emitProgress("monte_carlo", "running",
-        "Running 10 Monte Carlo iterations...", mcBatchId);
+        `Running ${mcIterations} Monte Carlo iterations...`, mcBatchId);
       await pollMonteCarlo(mcBatchId);
 
       mcResults = await flaskApi<Record<string, unknown>>(
@@ -383,7 +402,7 @@ export async function cruciblePipeline(input: {
       stageDurations.monte_carlo = Date.now() - stageStart;
       await emitProgress("monte_carlo", "completed",
         "Monte Carlo analysis complete",
-        JSON.stringify({ batchId: mcBatchId, iterations: 10 }),
+        JSON.stringify({ batchId: mcBatchId, iterations: mcIterations }),
         stageDurations.monte_carlo);
     } catch (mcError) {
       stageDurations.monte_carlo = Date.now() - stageStart;
@@ -408,9 +427,10 @@ export async function cruciblePipeline(input: {
         { method: "POST" },
       );
 
+      const maxForks = isTestMode ? 1 : 2;
       const topDecisions = (decisions.decision_points || [])
         .filter(d => d.criticality === "high")
-        .slice(0, 2);
+        .slice(0, maxForks);
 
       await emitProgress("counterfactual", "running",
         `Found ${topDecisions.length} critical decisions, forking...`);
@@ -437,7 +457,8 @@ export async function cruciblePipeline(input: {
       stageDurations.counterfactual = Date.now() - stageStart;
       await emitProgress("counterfactual", "completed",
         `Analyzed ${topDecisions.length} decisions, ${branchIds.length} branches complete`,
-        undefined, stageDurations.counterfactual);
+        JSON.stringify({ decisions: topDecisions.length, branches: branchIds.length }),
+        stageDurations.counterfactual);
     } catch (cfError) {
       stageDurations.counterfactual = Date.now() - stageStart;
       const msg = cfError instanceof Error ? cfError.message : String(cfError);
@@ -450,15 +471,21 @@ export async function cruciblePipeline(input: {
     stageStart = Date.now();
     await emitProgress("exercise_report", "running", "Generating exercise report...");
 
-    await flaskApi<{ status: string }>(
-      `/api/crucible/projects/${projectId}/exercise-report`,
-      { method: "POST" },
-    );
-
-    await pollExerciseReport(projectId);
-
-    stageDurations.exercise_report = Date.now() - stageStart;
-    await emitProgress("exercise_report", "completed", "Exercise report complete", undefined, stageDurations.exercise_report);
+    try {
+      await flaskApi<{ status: string }>(
+        `/api/crucible/projects/${projectId}/exercise-report`,
+        { method: "POST" },
+      );
+      await pollExerciseReport(projectId);
+      stageDurations.exercise_report = Date.now() - stageStart;
+      await emitProgress("exercise_report", "completed", "Exercise report complete", undefined, stageDurations.exercise_report);
+    } catch (reportError) {
+      stageDurations.exercise_report = Date.now() - stageStart;
+      const msg = reportError instanceof Error ? reportError.message : String(reportError);
+      await emitProgress("exercise_report", "failed",
+        `Exercise report failed: ${msg}`, undefined, stageDurations.exercise_report);
+      // Non-fatal — pipeline still completes
+    }
 
     // ─── DONE ───
     const totalDurationMs = Date.now() - workflowStart;

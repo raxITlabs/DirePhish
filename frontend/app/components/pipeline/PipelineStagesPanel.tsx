@@ -65,10 +65,19 @@ function getInlineSummary(
       return state?.message || "Reports generated";
     case "comparative":
       return state?.message || "Analysis complete";
-    case "monte_carlo":
-      return state?.detail ? `MC: ${state.detail}` : "Monte Carlo complete";
+    case "monte_carlo": {
+      if (state?.detail) {
+        try {
+          const parsed = JSON.parse(state.detail);
+          return `${parsed.iterations || "?"} iterations${parsed.batchId ? ` — ${parsed.batchId.slice(0, 8)}` : ""}`;
+        } catch {
+          return state.detail;
+        }
+      }
+      return state?.message || "Monte Carlo analysis";
+    }
     case "counterfactual":
-      return state?.detail ? state.detail : "Counterfactual complete";
+      return state?.message || "Counterfactual analysis";
     case "exercise_report":
       return state?.message || "Exercise report complete";
     default:

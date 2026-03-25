@@ -14,6 +14,7 @@ export default function HomeClient() {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [context, setContext] = useState("");
+  const [testMode, setTestMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +30,7 @@ export default function HomeClient() {
         body: JSON.stringify({
           companyUrl: url.trim(),
           userContext: context.trim() || undefined,
+          mode: testMode ? "test" : "standard",
         }),
       });
       const json = await res.json();
@@ -42,7 +44,7 @@ export default function HomeClient() {
       setError("Failed to start pipeline");
       setLoading(false);
     }
-  }, [url, context, router]);
+  }, [url, context, testMode, router]);
 
   return (
     <div
@@ -99,13 +101,30 @@ export default function HomeClient() {
           </div>
 
           {/* Bottom bar */}
-          <div className="flex items-center justify-end px-3 py-2 border-t border-border/20">
+          <div className="flex items-center justify-between px-3 py-2 border-t border-border/20">
+            <button
+              type="button"
+              onClick={() => setTestMode(!testMode)}
+              disabled={loading}
+              className="flex items-center gap-2 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <span
+                className={`relative inline-flex h-4 w-7 shrink-0 rounded-full border border-border/40 transition-colors ${testMode ? "bg-tuscan-sun-400" : "bg-muted"}`}
+              >
+                <span
+                  className={`block h-3 w-3 rounded-full bg-white shadow-sm transition-transform mt-px ${testMode ? "translate-x-3.5 ml-px" : "translate-x-0.5"}`}
+                />
+              </span>
+              <span className={testMode ? "text-tuscan-sun-600" : ""}>
+                Test mode
+              </span>
+            </button>
             <button
               onClick={handleSubmit}
               disabled={!url.trim() || loading}
               className="bg-primary text-primary-foreground px-4 py-1.5 rounded-lg font-mono text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {loading ? "Starting..." : "Analyze"}
+              {loading ? "Starting..." : testMode ? "Test run" : "Analyze"}
             </button>
           </div>
         </div>

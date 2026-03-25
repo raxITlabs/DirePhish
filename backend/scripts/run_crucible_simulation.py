@@ -28,7 +28,12 @@ _env_path = Path(__file__).parent.parent.parent / ".env"
 if _env_path.exists():
     load_dotenv(_env_path, override=True)
 
+import httpx
 from openai import AsyncOpenAI, OpenAI
+
+# Timeout config for LLM API calls — prevents hanging on stale connections
+# connect=10s, read=120s (long for large prompts), write=30s, pool=5s (detect dead sockets fast)
+_LLM_TIMEOUT = httpx.Timeout(connect=10.0, read=120.0, write=30.0, pool=5.0)
 
 # Firestore memory (replaces Graphiti)
 try:
@@ -365,12 +370,16 @@ async def run_single_iteration(
         client = AsyncOpenAI(
             api_key=os.environ.get("LLM_API_KEY", ""),
             base_url=os.environ.get("LLM_BASE_URL"),
+            timeout=_LLM_TIMEOUT,
+            max_retries=2,
         )
     elif isinstance(client, OpenAI) and not isinstance(client, AsyncOpenAI):
         # Backward compat: wrap sync client into async with same config
         client = AsyncOpenAI(
             api_key=client.api_key,
             base_url=str(client.base_url) if client.base_url else None,
+            timeout=_LLM_TIMEOUT,
+            max_retries=2,
         )
     if model is None:
         model = os.environ.get("LLM_MODEL_NAME", "gpt-4o-mini")
@@ -525,8 +534,7 @@ async def run_single_iteration(
                         )
                     if mc: mc.inject(inject_text)
 
-            # Tick pressure engine each round
-            env.pressure_engine.tick()
+            # Pressure state is managed internally by CrucibleEnv.step()
 
             if mc: mc.round_header(sim_id, round_num, max_rounds if adaptive_enabled else total_rounds)
 

@@ -16,7 +16,8 @@ from ..config import Config
 from ..utils.llm_client import LLMClient
 from ..utils.cost_tracker import CostTracker
 from ..utils.logger import get_logger
-from . import project_manager, graphiti_manager
+from google.cloud import firestore
+from . import project_manager
 
 logger = get_logger("exercise_report")
 
@@ -144,10 +145,32 @@ def _load_sim_data(sim_id: str) -> dict:
     return data
 
 
+def _get_graph_data(project_id: str) -> dict:
+    """Query Firestore for graph nodes and edges."""
+    db = firestore.Client()
+    nodes = []
+    for doc in db.collection("graph_nodes").where("project_id", "==", project_id).stream():
+        nodes.append({"id": doc.id, **doc.to_dict()})
+    edges = []
+    for doc in db.collection("graph_edges").where("project_id", "==", project_id).stream():
+        edges.append({"id": doc.id, **doc.to_dict()})
+    return {"nodes": nodes, "edges": edges}
+
+
+def _get_embedding_usage(project_id: str) -> dict:
+    """Return stub embedding usage — Graphiti-specific metrics no longer available."""
+    return {"provider": "gemini", "model": "gemini-embedding-001", "note": "See cost_tracker for token counts"}
+
+
+def _get_reranker_usage(project_id: str) -> dict:
+    """Return empty dict — reranker not used with Firestore vector search."""
+    return {}
+
+
 def _query_graph_data(project_id: str) -> dict:
     """Query the knowledge graph for structured evidence."""
     try:
-        graph_data = graphiti_manager.get_graph_data(project_id)
+        graph_data = _get_graph_data(project_id)
         nodes = graph_data.get("nodes", [])
         edges = graph_data.get("edges", [])
 
@@ -341,25 +364,12 @@ def _generate_exercise_report(project_id: str) -> None:
         logger.info("Step 2: Querying knowledge graph...")
         graph_data = _query_graph_data(project_id)
 
-        # Track embedding costs from Graphiti
-        embed_usage = graphiti_manager.get_embedding_usage(project_id)
-        if embed_usage["tokens"] > 0:
-            cost_tracker.track_embedding(
-                "research", embed_usage["tokens"],
-                f"graphiti_embeddings_{embed_usage['source']}",
-                model="gemini-embedding-2-preview",
-            )
-            logger.info(f"Embedding tokens: {embed_usage['tokens']:,} ({embed_usage['source']})")
-
-        # Track reranker LLM costs from Graphiti
-        reranker_usage = graphiti_manager.get_reranker_usage(project_id)
-        if reranker_usage["tokens"] > 0:
-            cost_tracker.track_llm(
-                "research", Config.LLM_MODEL_NAME,
-                reranker_usage["tokens"], 0,
-                f"graphiti_reranker_{reranker_usage['source']}",
-            )
-            logger.info(f"Reranker tokens: {reranker_usage['tokens']:,} ({reranker_usage['source']})")
+        # Embedding/reranker usage stubs (Graphiti removed, now using Firestore)
+        embed_usage = _get_embedding_usage(project_id)
+        logger.info("Embedding provider: %s (%s)", embed_usage.get("provider"), embed_usage.get("note"))
+        reranker_usage = _get_reranker_usage(project_id)
+        if reranker_usage:
+            logger.info("Reranker usage: %s", reranker_usage)
 
         # ─── Step 3: Build rich context ───
         logger.info("Step 3: Building rich context from all data sources...")

@@ -44,6 +44,8 @@ const STAGE_LABELS: Record<string, string> = {
   simulations: "Simulations",
   reports: "After-Action Reports",
   comparative: "Comparative Analysis",
+  monte_carlo: "Monte Carlo Analysis",
+  counterfactual: "Counterfactual Analysis",
   exercise_report: "Exercise Report",
 };
 
@@ -582,6 +584,153 @@ function StageDetail({
       <div className="space-y-3">
         {state?.detail && <p className="text-xs font-mono text-foreground/80 leading-relaxed">{state.detail}</p>}
         <p className="text-xs font-mono text-muted-foreground">{state?.message || "Configuration generated"}</p>
+      </div>
+    );
+  }
+
+  // Monte Carlo Analysis
+  if (stageId === "monte_carlo") {
+    let parsed: { batchId?: string; iterations?: number; totalCost?: number } | null = null;
+    if (state?.detail) {
+      try { parsed = JSON.parse(state.detail); } catch { /* detail is plain text */ }
+    }
+
+    if (state?.status === "running") {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
+            <span className="text-sm font-mono text-muted-foreground">
+              {parsed?.iterations
+                ? `Running ${parsed.iterations} iterations...`
+                : state.message || "Running Monte Carlo iterations..."}
+            </span>
+          </div>
+          {parsed?.batchId && (
+            <div className="bg-muted/30 rounded-md px-3 py-2">
+              <span className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-wider">Batch ID</span>
+              <p className="text-xs font-mono text-foreground/80 mt-0.5">{parsed.batchId.slice(0, 12)}...</p>
+            </div>
+          )}
+          {!parsed && state.detail && (
+            <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>
+          )}
+        </div>
+      );
+    }
+
+    if (state?.status === "completed") {
+      return (
+        <div className="space-y-4">
+          <p className="text-xs font-mono text-verdigris-700">{state.message || "Monte Carlo analysis complete"}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-tuscan-sun-50 rounded-lg px-3 py-2 text-center">
+              <div className="text-xl font-bold font-mono text-tuscan-sun-700">{parsed?.iterations || "?"}</div>
+              <div className="text-[10px] font-mono text-tuscan-sun-600 uppercase">Iterations</div>
+            </div>
+            {parsed?.batchId && (
+              <div className="bg-royal-azure-50 rounded-lg px-3 py-2 text-center">
+                <div className="text-sm font-bold font-mono text-royal-azure-700 truncate">{parsed.batchId.slice(0, 8)}</div>
+                <div className="text-[10px] font-mono text-royal-azure-600 uppercase">Batch</div>
+              </div>
+            )}
+          </div>
+          {parsed?.totalCost != null && (
+            <div className="bg-muted/30 rounded-md px-3 py-2 flex items-center justify-between">
+              <span className="text-[10px] font-mono text-muted-foreground/60 uppercase">Total Cost</span>
+              <span className="text-xs font-mono font-semibold text-foreground/80">${parsed.totalCost.toFixed(2)}</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (state?.status === "failed") {
+      return (
+        <div className="space-y-3">
+          <p className="text-xs font-mono text-destructive">{state.message || "Monte Carlo analysis failed"}</p>
+          {state.detail && <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {state?.message && <p className="text-xs font-mono text-foreground/80">{state.message}</p>}
+        {state?.detail && <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>}
+        {!state?.message && !state?.detail && (
+          <p className="text-xs font-mono text-muted-foreground/50">No details available</p>
+        )}
+      </div>
+    );
+  }
+
+  // Counterfactual Analysis
+  if (stageId === "counterfactual") {
+    let parsed: { decisions?: number; branches?: number } | null = null;
+    if (state?.detail) {
+      try { parsed = JSON.parse(state.detail); } catch { /* detail is plain text */ }
+    }
+
+    // Parse "Analyzed X decisions, Y branches complete" from message
+    const msgMatch = state?.message?.match(/Analyzed (\d+) decisions?, (\d+) branches?/);
+    const decisionsCount = parsed?.decisions ?? (msgMatch ? parseInt(msgMatch[1], 10) : null);
+    const branchesCount = parsed?.branches ?? (msgMatch ? parseInt(msgMatch[2], 10) : null);
+
+    if (state?.status === "running") {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
+            <span className="text-sm font-mono text-muted-foreground">
+              {state.message || "Analyzing critical decisions..."}
+            </span>
+          </div>
+          {state.detail && !parsed && (
+            <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>
+          )}
+        </div>
+      );
+    }
+
+    if (state?.status === "completed") {
+      return (
+        <div className="space-y-4">
+          <p className="text-xs font-mono text-verdigris-700">{state.message || "Counterfactual analysis complete"}</p>
+          <div className="grid grid-cols-2 gap-3">
+            {decisionsCount != null && (
+              <div className="bg-burnt-peach-50 rounded-lg px-3 py-2 text-center">
+                <div className="text-xl font-bold font-mono text-burnt-peach-700">{decisionsCount}</div>
+                <div className="text-[10px] font-mono text-burnt-peach-600 uppercase">Decision Points</div>
+              </div>
+            )}
+            {branchesCount != null && (
+              <div className="bg-verdigris-50 rounded-lg px-3 py-2 text-center">
+                <div className="text-xl font-bold font-mono text-verdigris-700">{branchesCount}</div>
+                <div className="text-[10px] font-mono text-verdigris-600 uppercase">Branches Forked</div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (state?.status === "failed") {
+      return (
+        <div className="space-y-3">
+          <p className="text-xs font-mono text-destructive">{state.message || "Counterfactual analysis failed"}</p>
+          {state.detail && <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {state?.message && <p className="text-xs font-mono text-foreground/80">{state.message}</p>}
+        {state?.detail && <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>}
+        {!state?.message && !state?.detail && (
+          <p className="text-xs font-mono text-muted-foreground/50">No details available</p>
+        )}
       </div>
     );
   }

@@ -275,8 +275,14 @@ async def _run_batch(
 
     # Shared dependencies — use AsyncOpenAI for parallel sim runner
     from openai import AsyncOpenAI
+    import httpx
 
-    shared_client = AsyncOpenAI(api_key=Config.LLM_API_KEY, base_url=Config.LLM_BASE_URL)
+    shared_client = AsyncOpenAI(
+        api_key=Config.LLM_API_KEY,
+        base_url=Config.LLM_BASE_URL,
+        timeout=httpx.Timeout(connect=10.0, read=120.0, write=30.0, pool=5.0),
+        max_retries=2,
+    )
     shared_model = Config.LLM_MODEL_NAME
 
     from .firestore_memory import FirestoreMemory

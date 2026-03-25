@@ -48,11 +48,14 @@ case "$MODE" in
   dev)
     ensure_portless
 
+    # Kill any stale tail processes from previous runs
+    pkill -f "tail -f.*backend/logs.*\\.log" 2>/dev/null
+
     cleanup() {
       echo ""
       echo "Shutting down..."
-      kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
-      wait $BACKEND_PID $FRONTEND_PID 2>/dev/null
+      kill $BACKEND_PID $FRONTEND_PID $TAIL_PID 2>/dev/null
+      wait $BACKEND_PID $FRONTEND_PID $TAIL_PID 2>/dev/null
       echo "Done."
     }
     trap cleanup EXIT INT TERM
