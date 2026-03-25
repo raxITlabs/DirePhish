@@ -45,14 +45,139 @@ Sharpened by [raxIT Labs](https://raxit.ai).
 
 ## How it works
 
-1. **Research** — crawls websites, runs grounded searches, processes
-   your documents, and synthesizes a structured company dossier
-2. **Threat model** — generates scenarios from real-world signals,
-   maps kill chains, scores probability and severity
-3. **Simulate** — agents act out the incident across Slack and email,
-   escalating, miscommunicating, reacting — just like your real team
-4. **Report** — get the post-mortem, comparative analysis, and
-   recommendations before anything real goes wrong
+```
+ YOU                                           DIREPHISH
+  |
+  |  company.com + context
+  v
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. RESEARCH                                                     │
+│    Crawl website ─► Gemini grounded search (5 queries) ─► LLM   │
+│    synthesis ─► structured dossier + knowledge graph            │
+│                                                                 │
+│    Output:  8-15 roles, 7-12 systems, 5-8 risks, 5+ events      │
+│    Stores:  dossier.json (disk)                                 │
+│             sim_episodes (Firestore, 28 vector-embedded chunks) │
+│             graph_nodes + graph_edges (Firestore, ~30 entities) │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ dossier + graph
+                           v
+┌─────────────────────────────────────────────────────────────────┐
+│ 2. DOSSIER REVIEW                                               │
+│    You review and edit the dossier before simulation begins.    │
+│    Fix roles, add systems, adjust risks.                        │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ confirmed dossier
+                           v
+┌─────────────────────────────────────────────────────────────────┐
+│ 3. THREAT ANALYSIS                                              │
+│    LLM generates threat scenarios from dossier + graph.         │
+│    Maps MITRE ATT&CK kill chains, scores probability/severity.  │
+│                                                                 │
+│    Output:  3-5 ranked scenarios with attack paths              │
+│    Stores:  scenarios.json (disk)                               │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ top 1-2 scenarios
+                           v
+┌─────────────────────────────────────────────────────────────────┐
+│ 4. CONFIG EXPANSION (5 LLM calls per scenario)                  │
+│    Generates full simulation config from scenario + graph:      │
+│    ├── Agent personas (grounded in org hierarchy from graph)    │
+│    ├── Communication worlds (Slack channels, email threads)     │
+│    ├── Timed injects (grounded in system dependencies)          │
+│    ├── Business pressures (countdowns, deadlines)               │
+│    └── Auto-injects: threat actor + adaptive depth              │
+│                                                                 │
+│    The threat actor gets attacker intelligence from the graph:  │
+│    critical systems ranked by connectivity, lateral movement    │
+│    paths, defender blind spots.                                 │
+│                                                                 │
+│    Output:  config.json with 8-14 agents, 3-5 worlds,           │
+│             8-15 injects, adaptive depth (3-30 rounds)          │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ simulation config(s)
+                           v
+┌─────────────────────────────────────────────────────────────────┐
+│ 5. SIMULATION (parallel worlds, async LLM calls)                │
+│                                                                 │
+│    Each round:                                                  │
+│    ├── Attacker phase: threat actor reads defender channels,    │
+│    │   acts in C2 (invisible to defenders)                      │
+│    ├── Defender phase: all agents act in parallel across worlds │
+│    ├── Memory: Firestore vector search for agent recall         │
+│    ├── Graph: each agent gets org context (who they manage,     │
+│    │   what systems they own, who they report to)               │
+│    └── Arbiter: LLM evaluates — continue / halt / inject twist  │
+│                                                                 │
+│    Runs until arbiter halts (adaptive) or max rounds reached.   │
+│    ~20-25s per round (12x faster than sequential).              │
+│                                                                 │
+│    Stores:  actions.jsonl, checkpoints/round_N.json (disk)      │
+│             sim_episodes (Firestore, batch per round)           │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ completed simulation(s)
+                           v
+┌─────────────────────────────────────────────────────────────────┐
+│ 6. MONTE CARLO — run the sim N times with controlled variation  │
+│                                                                 │
+│    ┌──────────┬──────┬─────────┬───────────┬────────┐            │
+│    │   Mode   │ Iter │ Workers │ Max rnds  │  Cost  │            │
+│    ├──────────┼──────┼─────────┼───────────┼────────┤            │
+│    │ Test     │   1  │    1    │  8 (5 ag) │  ~$1   │            │
+│    │ Quick    │  10  │    2    │ 30        │  ~$7   │            │
+│    │ Standard │  50  │    3    │ 30        │  ~$35  │            │
+│    │ Deep     │ 100+ │    3    │ 30        │  ~$70+ │            │
+│    └──────────┴──────┴─────────┴───────────┴────────┘            │
+│                                                                 │
+│    4 variation axes per iteration (seeded, reproducible):       │
+│    temperature jitter · persona perturbation ·                  │
+│    inject timing shift · agent order shuffle                    │
+│                                                                 │
+│    Output:  outcome distribution, containment stats,            │
+│             decision divergence, agent consistency scores       │
+│    Stores:  mc_aggregates (Firestore)                           │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ aggregate results
+                           v
+┌─────────────────────────────────────────────────────────────────┐
+│ 7. COUNTERFACTUAL — what if they decided differently?           │
+│                                                                 │
+│    LLM identifies 3-5 critical decision points from the sim.    │
+│    Forks top 1-2 decisions from checkpoint, replays with        │
+│    modifications (override agent, inject event, remove action). │
+│    Compares: original outcome vs alternate timeline.            │
+│                                                                 │
+│    Stores:  branch configs + actions (disk), episodes           |
+|    (Firestore)                                                  │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ all simulation data + MC stats + branches
+                           v
+┌─────────────────────────────────────────────────────────────────┐
+│ 8. EXERCISE REPORT                                              │
+│                                                                 │
+│    LLM generates executive-grade report combining:              │
+│    ├── Simulation timeline with MITRE ATT&CK mapping            │
+│    ├── Monte Carlo probability distribution                     │
+│    ├── Counterfactual "what if" analysis                        │
+│    ├── Agent performance breakdown                              │
+│    └── Concrete recommendations ranked by impact                │
+│                                                                 │
+│    All in predictive language — this is a forecast, not a       │
+│    post-mortem.                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+Data stores:
+  Firestore:  sim_episodes · graph_nodes · graph_edges · mc_aggregates
+  Disk:       dossier.json · scenarios.json · config.json · actions.jsonl
+```
+
+**What the numbers mean:** In test mode, DirePhish runs 1 Monte Carlo
+iteration with a lightweight config (5 agents, 2 worlds, max 8 rounds)
+and 1 counterfactual fork — enough to validate the entire pipeline
+end-to-end in ~3-5 minutes. In standard mode, 50 iterations with full
+configs produce statistically meaningful outcome distributions: "73%
+contained within 12 hours, 18% lateral movement succeeded, 9% full
+regulatory escalation."
 
 ## Quick start
 
@@ -195,15 +320,16 @@ probabilistic threat intelligence instead of a single narrative.
 
 **Graduated test mode** — start small, scale up:
 
-| Mode | Iterations | Workers | Cost estimate |
-|------|-----------|---------|---------------|
-| Test | 3 | 1 (sequential) | ~$0.30 |
-| Quick | 10 | 2 | ~$1.00 |
-| Standard | 50 | 3 | ~$5.00 |
-| Deep | 100+ | 3 | ~$10.00+ |
+| Mode | Iterations | Workers | Max rounds | Agents | Cost est. |
+|------|-----------|---------|------------|--------|-----------|
+| Test | 1 | 1 (sequential) | 8 | 5 | ~$1 |
+| Quick | 10 | 2 | 30 | 8-14 | ~$7 |
+| Standard | 50 | 3 | 30 | 8-14 | ~$35 |
+| Deep | 100+ | 3 | 30 | 8-14 | ~$70+ |
 
-Must complete a test run before unlocking standard/deep. Cost tracking at
-every level with hard spend limits.
+Test mode runs a lightweight config (5 agents, 2 worlds, max 8 rounds) for
+fast end-to-end validation in ~3-5 minutes. Must complete a test run before
+unlocking standard/deep. Cost tracking at every level with hard spend limits.
 
 **What you get:**
 - Outcome probability distribution (73% contained, 18% escalated, 9% breach)

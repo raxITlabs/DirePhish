@@ -329,7 +329,7 @@ export async function cruciblePipeline(input: {
 
     await flaskApi<{ status: string }>(
       `/api/crucible/projects/${projectId}/generate-configs`,
-      { method: "POST", body: JSON.stringify({ scenario_ids: selectedIds }) },
+      { method: "POST", body: JSON.stringify({ scenario_ids: selectedIds, test_mode: isTestMode }) },
     );
 
     await pollStatus(projectId, ["configs_ready"]);
@@ -365,8 +365,8 @@ export async function cruciblePipeline(input: {
 
     // ─── STEP 7: Monte Carlo analysis ───
     const mcMode = isTestMode ? "test" : "quick";
-    const mcIterations = isTestMode ? 3 : 10;
-    const mcCostLimit = isTestMode ? 5.0 : 25.0;
+    const mcIterations = isTestMode ? 1 : 10;
+    const mcCostLimit = isTestMode ? 2.0 : 25.0;
 
     stageStart = Date.now();
     await emitProgress("monte_carlo", "running",
@@ -380,7 +380,7 @@ export async function cruciblePipeline(input: {
         `/api/crucible/simulations/${simIds[0]}/config`,
       );
 
-      const mcLaunch = await flaskApi<{ batch_id: string }>(
+      const mcLaunch = await flaskApi<{ batchId: string }>(
         "/api/crucible/monte-carlo/launch",
         { method: "POST", body: JSON.stringify({
           project_id: projectId,
@@ -389,7 +389,7 @@ export async function cruciblePipeline(input: {
           cost_limit_usd: mcCostLimit,
         })},
       );
-      mcBatchId = mcLaunch.batch_id;
+      mcBatchId = mcLaunch.batchId;
 
       await emitProgress("monte_carlo", "running",
         `Running ${mcIterations} Monte Carlo iterations...`, mcBatchId);

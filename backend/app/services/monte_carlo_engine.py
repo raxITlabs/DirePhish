@@ -40,7 +40,7 @@ class MonteCarloMode(str, Enum):
 
 
 MODE_CONFIGS = {
-    MonteCarloMode.TEST:     {"iterations": 3,   "max_workers": 1},
+    MonteCarloMode.TEST:     {"iterations": 1,   "max_workers": 1},
     MonteCarloMode.QUICK:    {"iterations": 10,  "max_workers": 2},
     MonteCarloMode.STANDARD: {"iterations": 50,  "max_workers": 3},
     MonteCarloMode.DEEP:     {"iterations": 100, "max_workers": 3},

@@ -396,18 +396,32 @@ class FirestoreMemory:
         },
     }
 
-    def extract_and_store_graph(self, sim_id: str, text_chunks: List[str]) -> Dict[str, int]:
+    def extract_and_store_graph(self, sim_id: str, text_chunks: List[str], incremental: bool = False) -> Dict[str, int]:
         """Use Gemini structured output to extract entities + relationships from text.
 
         Calls the LLM with a JSON schema to classify entities (person, system, threat,
         compliance, organization, event) and extract relationships between them.
         Stores results in graph_nodes and graph_edges Firestore collections.
 
+        Args:
+            sim_id: Simulation/project ID for graph storage.
+            text_chunks: Text passages to extract entities from.
+            incremental: If False (default), delete existing graph before inserting.
+                If True, deduplicate by name (nodes) and source+target+label (edges).
+
         Returns:
             {"nodes": N, "edges": M} count of extracted items.
         """
         from ..utils.llm_client import LLMClient
         import json as _json
+
+        # Delete existing graph data unless incremental mode
+        if not incremental:
+            for doc in self.db.collection("graph_nodes").where("sim_id", "==", sim_id).stream():
+                doc.reference.delete()
+            for doc in self.db.collection("graph_edges").where("sim_id", "==", sim_id).stream():
+                doc.reference.delete()
+            logger.info(f"Cleared existing graph for {sim_id}")
 
         combined_text = "\n\n".join(text_chunks)
         # Truncate if very long (keep under ~8K tokens for efficiency)
@@ -482,11 +496,18 @@ class FirestoreMemory:
             entities = extraction.get("entities", [])
             relationships = extraction.get("relationships", [])
 
-            # Store nodes
+            # Store nodes (deduplicate by name in incremental mode)
             graph_nodes = self.db.collection("graph_nodes")
+            existing_names = set()
+            if incremental:
+                for doc in graph_nodes.where("sim_id", "==", sim_id).stream():
+                    existing_names.add(doc.to_dict().get("name"))
+
             batch = self.db.batch()
             node_count = 0
             for entity in entities:
+                if entity["name"] in existing_names:
+                    continue  # Skip duplicate
                 doc_ref = graph_nodes.document()
                 batch.set(doc_ref, {
                     "sim_id": sim_id,
@@ -495,17 +516,27 @@ class FirestoreMemory:
                     "summary": entity.get("summary", ""),
                 })
                 node_count += 1
+                existing_names.add(entity["name"])
                 if node_count % 500 == 0:
                     batch.commit()
                     batch = self.db.batch()
             if node_count % 500 != 0:
                 batch.commit()
 
-            # Store edges
+            # Store edges (deduplicate by source+target+label in incremental mode)
             graph_edges = self.db.collection("graph_edges")
+            existing_edges = set()
+            if incremental:
+                for doc in graph_edges.where("sim_id", "==", sim_id).stream():
+                    d = doc.to_dict()
+                    existing_edges.add((d.get("source"), d.get("target"), d.get("label")))
+
             batch = self.db.batch()
             edge_count = 0
             for rel in relationships:
+                edge_key = (rel["source"], rel["target"], rel["label"])
+                if edge_key in existing_edges:
+                    continue
                 doc_ref = graph_edges.document()
                 batch.set(doc_ref, {
                     "sim_id": sim_id,
@@ -514,6 +545,7 @@ class FirestoreMemory:
                     "label": rel["label"],
                 })
                 edge_count += 1
+                existing_edges.add(edge_key)
                 if edge_count % 500 == 0:
                     batch.commit()
                     batch = self.db.batch()

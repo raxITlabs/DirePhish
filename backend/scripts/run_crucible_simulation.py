@@ -306,6 +306,7 @@ async def _background_writer(
             break
 
         if entry.get("_type") == "round_end":
+            round_num = entry.get("round_num", 0)
             # Flush episodes at round boundary
             if memory and pending_episodes:
                 try:
@@ -313,6 +314,21 @@ async def _background_writer(
                     if mc_console: mc_console.research_step(sim_id, f"Batch-wrote {len(pending_episodes)} episodes")
                 except Exception as e:
                     if mc_console: mc_console.warning(f"Episode batch write failed: {e}")
+
+                # Incremental graph extraction every 3 rounds
+                if round_num > 0 and round_num % 3 == 0:
+                    try:
+                        text_chunks = [ep.get("content", "") for ep in pending_episodes if ep.get("content")]
+                        if text_chunks:
+                            # Use project_id (graph_id) not sim_id for graph storage
+                            graph_id = entry.get("graph_id", sim_id)
+                            result = memory.extract_and_store_graph(graph_id, text_chunks, incremental=True)
+                            if mc_console:
+                                mc_console.research_step(sim_id,
+                                    f"Graph +{result['nodes']} nodes, +{result['edges']} edges (round {round_num})")
+                    except Exception as e:
+                        if mc_console: mc_console.warning(f"Incremental graph extraction failed: {e}")
+
                 pending_episodes = []
             queue.task_done()
             continue
@@ -867,7 +883,11 @@ async def run_single_iteration(
             ])
 
             # Signal round end — flushes episodes to Firestore
-            await write_queue.put({"_type": "round_end"})
+            await write_queue.put({
+                "_type": "round_end",
+                "round_num": round_num,
+                "graph_id": config.get("project_id", sim_id),
+            })
             await write_queue.join()  # Wait for all writes to complete before arbiter
 
             # --- Arbiter evaluation (end of round, after all agents have acted) ---

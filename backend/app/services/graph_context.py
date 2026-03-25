@@ -79,7 +79,7 @@ class GraphContext:
         return [
             e.get("target", "?")
             for e in self._edges_from(source)
-            if e.get("relation_type") == relation
+            if e.get("label") == relation
         ]
 
     def _edge_sources(self, target: str, relation: str) -> list[str]:
@@ -87,7 +87,7 @@ class GraphContext:
         return [
             e.get("source", "?")
             for e in self._edges_to(target)
-            if e.get("relation_type") == relation
+            if e.get("label") == relation
         ]
 
     # ------------------------------------------------------------------
@@ -227,7 +227,7 @@ class GraphContext:
             # Check for collaboration topic in edge metadata
             collab_edges = [
                 e for e in self._edges_from(agent_name)
-                if e.get("relation_type") == "collaborates_with"
+                if e.get("label") == "collaborates_with"
             ]
             for edge in collab_edges:
                 topic = edge.get("topic", edge.get("context", ""))
@@ -285,7 +285,7 @@ class GraphContext:
 
         # Defender blind spots: systems with no protected_by edge
         protected_systems = {
-            e.get("source") for e in self.edges if e.get("relation_type") == "protected_by"
+            e.get("source") for e in self.edges if e.get("label") == "protected_by"
         }
         unprotected = [
             s.get("name", "?") for s in systems
@@ -370,7 +370,7 @@ class GraphContext:
         """
         dep_edges: dict[str, list[str]] = {}
         for e in self.edges:
-            if e.get("relation_type") == "depends_on":
+            if e.get("label") == "depends_on":
                 src = e.get("source", "")
                 tgt = e.get("target", "")
                 if src and tgt:

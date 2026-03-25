@@ -26,9 +26,24 @@ logger = get_logger("research_agent")
 
 
 def run_research(project_id: str) -> None:
-    """Run the full research pipeline in a background thread."""
+    """Run the full research pipeline in a background thread with a 5-minute watchdog."""
     thread = threading.Thread(target=_research_pipeline, args=(project_id,), daemon=True)
     thread.start()
+
+    def _watchdog():
+        thread.join(timeout=300)
+        if thread.is_alive():
+            logger.error(f"Research timeout for {project_id} (>5min)")
+            try:
+                project_manager.update_project(
+                    project_id, status="failed",
+                    error_message="Research timed out after 5 minutes",
+                    progress_message="Research timed out.",
+                )
+            except Exception:
+                pass
+
+    threading.Thread(target=_watchdog, daemon=True).start()
 
 
 def _research_pipeline(project_id: str) -> None:
@@ -116,7 +131,7 @@ def _research_pipeline(project_id: str) -> None:
             graph_id=graph_id,
         )
     except Exception as e:
-        logger.error(f"Research failed for {project_id}: {e}")
+        logger.error(f"Research failed for {project_id}: {e}", exc_info=True)
         research_log["error"] = str(e)
         # Save log even on failure
         try:
@@ -314,7 +329,10 @@ def _web_search_gemini(company_name: str, cost_tracker: CostTracker = None) -> s
     from google import genai
     from google.genai import types
 
-    client = genai.Client(api_key=Config.LLM_API_KEY)
+    client = genai.Client(
+        api_key=Config.LLM_API_KEY,
+        http_options={"timeout": 120_000},  # 120 seconds in milliseconds
+    )
 
     # Rich prompts — the model generates its own search queries from these
     prompts = [
@@ -377,46 +395,51 @@ def _web_search_gemini(company_name: str, cost_tracker: CostTracker = None) -> s
 
     results = []
     for label, prompt in prompts:
-        logger.info(f"Gemini search [{label}]: sending query for {company_name}")
-        response = client.models.generate_content(
-            model=Config.LLM_MODEL_NAME,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                tools=[types.Tool(google_search=types.GoogleSearch())],
-                temperature=0.2,
-            ),
-        )
-        text = response.text or ""
+        try:
+            logger.info(f"Gemini search [{label}]: sending query for {company_name}")
+            response = client.models.generate_content(
+                model=Config.LLM_MODEL_NAME,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    tools=[types.Tool(google_search=types.GoogleSearch())],
+                    temperature=0.2,
+                ),
+            )
+            text = response.text or ""
 
-        # Extract source URLs and search queries used
-        sources = ""
-        search_queries_used = []
-        if response.candidates and response.candidates[0].grounding_metadata:
-            meta = response.candidates[0].grounding_metadata
-            chunks = meta.grounding_chunks or []
-            urls = [c.web.uri for c in chunks if hasattr(c, "web") and c.web and c.web.uri]
-            if urls:
-                sources = "\nSources: " + ", ".join(urls[:8])
-            search_queries_used = meta.web_search_queries or []
+            # Extract source URLs and search queries used
+            sources = ""
+            search_queries_used = []
+            if response.candidates and response.candidates[0].grounding_metadata:
+                meta = response.candidates[0].grounding_metadata
+                chunks = meta.grounding_chunks or []
+                urls = [c.web.uri for c in chunks if hasattr(c, "web") and c.web and c.web.uri]
+                if urls:
+                    sources = "\nSources: " + ", ".join(urls[:8])
+                search_queries_used = meta.web_search_queries or []
 
-        if search_queries_used:
-            logger.info(f"Gemini search [{label}]: model searched for: {search_queries_used}")
-        logger.info(f"Gemini search [{label}]: got {len(text)} chars, {len(sources.split(', ')) if sources else 0} sources")
-
-        # Track costs
-        if cost_tracker:
             if search_queries_used:
-                cost_tracker.track_search("research", len(search_queries_used), f"grounded_search_{label}")
-            if hasattr(response, "usage_metadata") and response.usage_metadata:
-                um = response.usage_metadata
-                cost_tracker.track_llm(
-                    "research", Config.LLM_MODEL_NAME,
-                    getattr(um, "prompt_token_count", 0) or 0,
-                    getattr(um, "candidates_token_count", 0) or 0,
-                    f"grounded_search_{label}",
-                )
+                logger.info(f"Gemini search [{label}]: model searched for: {search_queries_used}")
+            logger.info(f"Gemini search [{label}]: got {len(text)} chars, {len(sources.split(', ')) if sources else 0} sources")
 
-        results.append(f"## {label}\n{text[:4000]}{sources}\n")
+            # Track costs
+            if cost_tracker:
+                if search_queries_used:
+                    cost_tracker.track_search("research", len(search_queries_used), f"grounded_search_{label}")
+                if hasattr(response, "usage_metadata") and response.usage_metadata:
+                    um = response.usage_metadata
+                    cost_tracker.track_llm(
+                        "research", Config.LLM_MODEL_NAME,
+                        getattr(um, "prompt_token_count", 0) or 0,
+                        getattr(um, "candidates_token_count", 0) or 0,
+                        f"grounded_search_{label}",
+                    )
+
+            results.append(f"## {label}\n{text[:4000]}{sources}\n")
+
+        except Exception as e:
+            logger.warning(f"Gemini search [{label}] failed: {e}")
+            results.append(f"## {label}\n(Search failed: {e})\n")
 
     return "\n---\n".join(results)
 

@@ -103,52 +103,16 @@ def simulation_stop(sim_id):
 
 @crucible_bp.route("/simulations/<sim_id>/graph", methods=["GET"])
 def simulation_graph(sim_id):
-    """Build graph data — from Graphiti if project graph exists, else from config."""
+    """Return the knowledge graph for a simulation — delegates to the project graph via graph_id."""
     status = get_simulation_status(sim_id)
     if not status:
         return jsonify({"error": f"Simulation '{sim_id}' not found"}), 404
 
-    # Firestore doesn't have a native graph view — skip to config-based fallback
-    # (FirestoreMemory stores flat episodes, not nodes/edges)
-
-    # Fallback: build static graph from config
-    config_path = Path(__file__).parent.parent.parent / "uploads" / "simulations" / sim_id / "config.json"
-    if not config_path.exists():
+    graph_id = status.get("graph_id", "")
+    if not graph_id:
         return jsonify({"data": {"nodes": [], "edges": []}})
 
-    with open(config_path) as f:
-        config = json.load(f)
-
-    nodes = []
-    edges = []
-
-    company = config.get("company_name", "Company")
-    nodes.append({"id": "org_0", "name": company, "type": "org", "attributes": {}})
-
-    for i, agent in enumerate(config.get("agent_profiles", [])):
-        agent_id = f"agent_{i}"
-        nodes.append({
-            "id": agent_id,
-            "name": agent.get("name", f"Agent {i}"),
-            "type": "agent",
-            "attributes": {"role": agent.get("role", ""), "persona": agent.get("persona", "")},
-        })
-        edges.append({"source": agent_id, "target": "org_0", "label": agent.get("role", "member"), "type": "works_at"})
-
-    for i, pressure in enumerate(config.get("pressures", [])):
-        p_id = f"pressure_{i}"
-        p_type = "compliance" if "gdpr" in pressure.get("name", "").lower() else "threat"
-        nodes.append({
-            "id": p_id,
-            "name": pressure.get("name", f"Pressure {i}"),
-            "type": p_type,
-            "attributes": {"pressure_type": pressure.get("type", ""), "severity_at_50pct": pressure.get("severity_at_50pct", "")},
-        })
-        for j, agent in enumerate(config.get("agent_profiles", [])):
-            if agent.get("role") in pressure.get("affects_roles", []):
-                edges.append({"source": f"pressure_{i}", "target": f"agent_{j}", "label": "affects", "type": "pressure"})
-
-    return jsonify({"data": {"nodes": nodes, "edges": edges}})
+    return project_graph(graph_id)
 
 
 @crucible_bp.route("/simulations/<sim_id>/report", methods=["POST"])
@@ -318,13 +282,9 @@ def project_graph(project_id):
 
         nodes, edges = _read_graph(memory, project_id)
 
-        # If no extracted graph yet, trigger extraction from dossier
+        # Graph should be created during research. If missing, return empty.
         if not nodes:
-            dossier = project_manager.get_dossier(project_id)
-            if dossier:
-                _get_logger("crucible_api").info(f"No graph found for {project_id}, triggering extraction...")
-                memory.push_dossier(project_id, dossier)
-                nodes, edges = _read_graph(memory, project_id)
+            _get_logger("crucible_api").debug(f"No graph data for {project_id}")
 
         result = {"nodes": nodes, "edges": edges}
         _graph_cache[project_id] = (_time.time(), result)
@@ -406,7 +366,7 @@ def generate_configs(project_id):
     if not project:
         return jsonify({"error": "Project not found"}), 404
     from ..services.config_expander import run_config_expansion
-    run_config_expansion(project_id, data["scenario_ids"])
+    run_config_expansion(project_id, data["scenario_ids"], test_mode=data.get("test_mode", False))
     return jsonify({"data": {"status": "generating"}}), 202
 
 

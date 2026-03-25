@@ -26,17 +26,17 @@ def _extract_list(result) -> list:
     return []
 
 
-def run_config_expansion(project_id: str, scenario_ids: list[str]) -> None:
+def run_config_expansion(project_id: str, scenario_ids: list[str], test_mode: bool = False) -> None:
     """Expand selected scenarios into full configs in a background thread."""
     thread = threading.Thread(
         target=_expansion_pipeline,
-        args=(project_id, scenario_ids),
+        args=(project_id, scenario_ids, test_mode),
         daemon=True,
     )
     thread.start()
 
 
-def _expansion_pipeline(project_id: str, scenario_ids: list[str]) -> None:
+def _expansion_pipeline(project_id: str, scenario_ids: list[str], test_mode: bool = False) -> None:
     """Generate full SimulationConfig for each selected scenario."""
     try:
         project_manager.update_project(project_id,
@@ -86,6 +86,34 @@ def _expansion_pipeline(project_id: str, scenario_ids: list[str]) -> None:
                     project_id, dossier, scenario, attack_path, cost_tracker, sid,
                     threat_context,
                 )
+                # Test mode: reduce config size for fast E2E validation
+                if test_mode:
+                    config["_test_mode"] = True
+                    # Cap agents at 5 (keep threat actor if present)
+                    agents = config.get("agent_profiles", [])
+                    if len(agents) > 5:
+                        threat_actors = [a for a in agents if a.get("role") == "threat_actor" or a.get("agent_type") == "threat_actor"]
+                        defenders = [a for a in agents if a not in threat_actors]
+                        config["agent_profiles"] = defenders[:4] + threat_actors[:1]
+                    # Cap worlds at 2
+                    worlds = config.get("worlds", [])
+                    if len(worlds) > 2:
+                        config["worlds"] = worlds[:2]
+                    # Cap scheduled events at 4
+                    events = config.get("scheduled_events", [])
+                    if len(events) > 4:
+                        config["scheduled_events"] = events[:4]
+                    # Reduce adaptive depth: max 8 rounds
+                    ad = config.get("adaptive_depth", {})
+                    if ad.get("enabled"):
+                        ad["max_rounds"] = min(ad.get("max_rounds", 30), 8)
+                        config["adaptive_depth"] = ad
+                    # Reduce total rounds
+                    config["total_rounds"] = min(config.get("total_rounds", 6), 5)
+                    logger.info(f"Test mode: {len(config.get('agent_profiles',[]))} agents, "
+                                f"{len(config.get('worlds',[]))} worlds, "
+                                f"max {ad.get('max_rounds', 8)} rounds")
+
                 project_manager.save_scenario(project_id, sid, config)
                 completed += 1
             except Exception as e:
