@@ -49,7 +49,7 @@ case "$MODE" in
     ensure_portless
 
     # Kill any stale tail processes from previous runs
-    pkill -f "tail -f.*backend/logs.*\\.log" 2>/dev/null
+    pkill -f "tail -f.*backend/logs.*\\.log" 2>/dev/null || true
 
     cleanup() {
       echo ""
