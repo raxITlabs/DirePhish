@@ -336,23 +336,63 @@ async def _run_batch(
 
     # Aggregate results
     try:
+        from dataclasses import asdict
+        from pathlib import Path as _Path
         from .monte_carlo_aggregator import aggregate_batch, IterationResult
 
-        valid_results = [
-            IterationResult(**r) for r in batch.results if r.get("status") == "completed"
-        ]
+        valid_results = []
+        for r in batch.results:
+            if r.get("status") != "completed":
+                continue
+            try:
+                # Load actions + summary from disk (sim runner writes files but
+                # doesn't include them in the return dict)
+                iter_dir = _Path(r.get("output_dir", ""))
+                actions = []
+                actions_path = iter_dir / "actions.jsonl"
+                if actions_path.exists():
+                    with open(actions_path) as f:
+                        for line in f:
+                            line = line.strip()
+                            if line:
+                                try:
+                                    actions.append(json.loads(line))
+                                except json.JSONDecodeError:
+                                    continue
+                summary = {}
+                summary_path = iter_dir / "summary.json"
+                if summary_path.exists():
+                    with open(summary_path) as f:
+                        summary = json.load(f)
+
+                valid_results.append(IterationResult(
+                    iteration_id=r["iteration_id"],
+                    seed=r.get("seed", 0),
+                    total_rounds=r.get("total_rounds", 0),
+                    total_actions=r.get("total_actions", 0),
+                    actions=actions,
+                    summary=summary,
+                    cost_usd=r.get("cost_usd", 0),
+                    variation_description=r.get("variation_description", ""),
+                    completed_at=r.get("completed_at", ""),
+                    output_dir=r.get("output_dir", ""),
+                ))
+            except Exception as e:
+                logger.warning("Failed to build IterationResult for %s: %s", r.get("iteration_id"), e)
+
         if valid_results:
             aggregation = aggregate_batch(valid_results)
             agg_path = mc_dir / "aggregation.json"
+            agg_dict = asdict(aggregation)
             with open(agg_path, "w") as f:
-                json.dump(aggregation.__dict__ if hasattr(aggregation, "__dict__") else str(aggregation), f, indent=2, default=str)
+                json.dump(agg_dict, f, indent=2, default=str)
             logger.info("Aggregation saved: %s", agg_path)
 
             # Data flywheel: store aggregate outcomes for future learning
             try:
                 from .firestore_memory import FirestoreMemory
                 flywheel = FirestoreMemory()
-                agg_dict = aggregation.__dict__ if hasattr(aggregation, "__dict__") else {}
+                crs = agg_dict.get("containment_round_stats") or {}
                 flywheel.store_aggregate_outcome({
                     "batch_id": batch.batch_id,
                     "project_id": batch.project_id,
@@ -360,15 +400,17 @@ async def _run_batch(
                     "iterations": batch.iterations_completed,
                     "outcome_distribution": agg_dict.get("outcome_distribution", {}),
                     "containment_round_stats": {
-                        "mean": getattr(agg_dict.get("containment_round_stats"), "mean", 0),
-                        "median": getattr(agg_dict.get("containment_round_stats"), "median", 0),
-                        "std": getattr(agg_dict.get("containment_round_stats"), "std", 0),
-                    } if agg_dict.get("containment_round_stats") else {},
+                        "mean": crs.get("mean", 0),
+                        "median": crs.get("median", 0),
+                        "std": crs.get("std", 0),
+                    } if crs else {},
                     "cost_summary": {"total_usd": batch.cost_tracker.total_cost()},
                 })
                 logger.info("Data flywheel: stored aggregate for batch %s", batch.batch_id)
             except Exception as e:
                 logger.warning("Data flywheel store failed (non-fatal): %s", e)
+        else:
+            logger.warning("No valid iteration results to aggregate for batch %s", batch.batch_id)
     except Exception as e:
         logger.error("Aggregation failed for batch %s: %s", batch.batch_id, e)
 

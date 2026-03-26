@@ -309,54 +309,305 @@ def _build_rich_context(sim_data_list: list[dict], graph_data: dict) -> str:
     return "\n".join(sections)
 
 
-# ─── Playbook generation ───
+# ─── Playbook generation (5-step pipeline) ───
 
-_PLAYBOOK_SYSTEM_PROMPT = """You are an incident response playbook generator following NIST SP 800-61r2.
+_PLAYBOOK_PREAMBLE = """You are an incident response playbook generator following NIST SP 800-61r2.
+ALL output must be specific to the simulation exercise data provided.
+Reference ACTUAL system names, ACTUAL attack techniques, ACTUAL team responses from the exercise.
+Do NOT produce generic boilerplate — every item must be grounded in the evidence below.
+Output valid JSON matching the schema exactly."""
 
-Generate a structured incident response playbook based on the simulation exercise data provided.
-The playbook must be specific to the actual systems, threats, and attack paths from the exercise.
 
-Output JSON with this exact structure:
-{
-  "overview": {
-    "incidentType": "string",
-    "scope": "string (systems affected, data at risk)",
-    "regulatoryContext": "string (compliance requirements)"
-  },
-  "evidenceAcquisition": {
-    "logSources": ["string (specific log sources mapped to actual systems)"],
-    "awsSpecific": ["CloudTrail queries", "VPC Flow Log filters", "S3 access log patterns"],
-    "chainOfCustody": ["string (requirements)"],
-    "dataClassification": "string (sensitivity of affected data)"
-  },
-  "containment": {
-    "immediateActions": ["string (from simulation's successful containment steps)"],
-    "iamRevocation": ["string (specific IAM roles/policies)"],
-    "networkIsolation": ["string (specific subnets/VPCs/security groups)"],
-    "serviceSuspension": ["string (specific services from graph)"]
-  },
-  "eradication": {
-    "rootCauseRemoval": ["string (from 5 Whys root cause)"],
-    "credentialRotation": ["string (scope of rotation needed)"],
-    "patchRequirements": ["string"],
-    "configRemediation": ["string"]
-  },
-  "recovery": {
-    "restorationSequence": ["string (ordered service restoration)"],
-    "verificationSteps": ["string"],
-    "communicationPlan": ["string (from simulation comms patterns)"],
-    "regulatoryTimeline": ["string (notification deadlines)"]
-  },
-  "postIncident": {
-    "lessonsLearned": ["string (from exercise conclusions)"],
-    "policyUpdates": ["string (from root cause analysis)"],
-    "trainingRecommendations": ["string"],
-    "nextExerciseSchedule": "string"
-  }
-}
+def _playbook_scope_and_evidence(
+    llm: LLMClient,
+    sim_data_list: list[dict],
+    graph_data: dict,
+    cost_tracker: CostTracker,
+) -> dict:
+    """Step 1: Determine incident scope and evidence acquisition plan."""
+    # Collect specific data for this step
+    attack_paths = []
+    for sd in sim_data_list:
+        ap = sd.get("attackPath", {})
+        if ap:
+            attack_paths.append({
+                "title": ap.get("title", ""),
+                "threat_name": ap.get("threat_name", ""),
+                "kill_chain": ap.get("kill_chain", []),
+            })
 
-Make every item SPECIFIC to the exercise data — reference actual system names, actual attack techniques,
-actual team responses. Do not generate generic boilerplate."""
+    systems = [{"name": s["name"], "summary": s.get("summary", "")} for s in graph_data.get("systems", [])]
+    compliance = [{"name": c["name"], "summary": c.get("summary", "")} for c in graph_data.get("compliance", [])]
+    threats = [{"name": t["name"], "summary": t.get("summary", "")} for t in graph_data.get("threats", [])]
+    relationships = graph_data.get("relationships", [])[:30]
+
+    prompt = f"""{_PLAYBOOK_PREAMBLE}
+
+TASK: Generate the Overview and Evidence Acquisition sections of an incident response playbook.
+
+ATTACK PATHS FROM EXERCISE:
+{json.dumps(attack_paths, indent=2)}
+
+SYSTEMS IN ORGANIZATION (from knowledge graph):
+{json.dumps(systems, indent=2)}
+
+COMPLIANCE REQUIREMENTS (from knowledge graph):
+{json.dumps(compliance, indent=2)}
+
+THREATS IDENTIFIED:
+{json.dumps(threats, indent=2)}
+
+KEY RELATIONSHIPS:
+{chr(10).join(relationships[:20])}
+
+Output JSON:
+{{
+  "overview": {{
+    "incidentType": "specific incident type from the attack path",
+    "scope": "which systems are affected, what data is at risk — reference actual system names",
+    "regulatoryContext": "compliance requirements that apply — reference actual compliance nodes"
+  }},
+  "evidenceAcquisition": {{
+    "logSources": ["specific log source for each affected system — e.g., 'CloudTrail for IAM activity on [system]'"],
+    "awsSpecific": ["specific AWS log queries/filters for the attack techniques used"],
+    "chainOfCustody": ["evidence handling requirements based on compliance context"],
+    "dataClassification": "classification of data at risk based on actual systems"
+  }}
+}}"""
+
+    result = llm.chat_json([{"role": "user", "content": prompt}])
+    _track_call(llm, cost_tracker, "playbook_1_scope_evidence")
+    return result
+
+
+def _playbook_containment(
+    llm: LLMClient,
+    sim_data_list: list[dict],
+    previous: dict,
+    root_causes: list,
+    cost_tracker: CostTracker,
+) -> dict:
+    """Step 2: Map containment actions from successful simulation outcomes."""
+    # Extract containment-related actions from simulation
+    containment_actions = []
+    cascading_effects = {}
+    for sd in sim_data_list:
+        cascading_effects = sd.get("cascadingEffects", {})
+        for action in sd.get("actions", []):
+            content = (action.get("args", {}).get("content", "") or
+                       action.get("description", "") or "")
+            content_lower = content.lower()
+            if any(kw in content_lower for kw in
+                   ("isolat", "contain", "block", "revok", "suspend", "quarantin",
+                    "lockdown", "shut", "disable", "restrict")):
+                containment_actions.append({
+                    "round": action.get("round"),
+                    "agent": action.get("agent", action.get("role", "Unknown")),
+                    "action": content[:200],
+                })
+
+    prompt = f"""{_PLAYBOOK_PREAMBLE}
+
+TASK: Generate the Containment section. Base it on containment actions that ACTUALLY WORKED in the simulation.
+
+INCIDENT SCOPE (from previous step):
+{json.dumps(previous.get("overview", {}), indent=2)}
+
+EVIDENCE PLAN (from previous step):
+{json.dumps(previous.get("evidenceAcquisition", {}), indent=2)}
+
+CONTAINMENT ACTIONS OBSERVED IN SIMULATION ({len(containment_actions)} found):
+{json.dumps(containment_actions[:15], indent=2)}
+
+ROOT CAUSES IDENTIFIED:
+{json.dumps([{{"issue": rc.get("issue"), "rootCause": rc.get("rootCause")}} for rc in root_causes[:5]], indent=2)}
+
+PREDICTED CASCADING EFFECTS:
+{json.dumps(cascading_effects, indent=2)}
+
+Output JSON:
+{{
+  "containment": {{
+    "immediateActions": ["specific actions from simulation's successful containment — reference the agent and round"],
+    "iamRevocation": ["specific IAM roles/policies to revoke based on the attack path"],
+    "networkIsolation": ["specific network segments to isolate based on affected systems"],
+    "serviceSuspension": ["specific services to suspend, considering cascading effects"]
+  }}
+}}"""
+
+    result = llm.chat_json([{"role": "user", "content": prompt}])
+    _track_call(llm, cost_tracker, "playbook_2_containment")
+    return result
+
+
+def _playbook_eradication(
+    llm: LLMClient,
+    sim_data_list: list[dict],
+    previous: dict,
+    root_causes: list,
+    cost_tracker: CostTracker,
+) -> dict:
+    """Step 3: Tie eradication to specific root causes and MITRE techniques."""
+    attack_paths = []
+    for sd in sim_data_list:
+        ap = sd.get("attackPath", {})
+        if ap:
+            attack_paths.append(ap)
+
+    prompt = f"""{_PLAYBOOK_PREAMBLE}
+
+TASK: Generate the Eradication section. Tie each remediation step to a specific root cause from the exercise.
+
+CONTAINMENT ACTIONS TAKEN (from previous step):
+{json.dumps(previous.get("containment", {}), indent=2)}
+
+ROOT CAUSES WITH MITRE REFERENCES:
+{json.dumps([{{
+    "issue": rc.get("issue"),
+    "rootCause": rc.get("rootCause"),
+    "mitreReference": rc.get("mitreReference", ""),
+    "preventionStrategies": rc.get("preventionStrategies", []),
+}} for rc in root_causes], indent=2)}
+
+ATTACK PATH TECHNIQUES:
+{json.dumps([{{
+    "kill_chain": ap.get("kill_chain", []),
+    "threat_name": ap.get("threat_name", ""),
+}} for ap in attack_paths], indent=2)}
+
+Output JSON:
+{{
+  "eradication": {{
+    "rootCauseRemoval": ["for each root cause: specific removal step referencing the cause and MITRE technique"],
+    "credentialRotation": ["specific credentials to rotate based on compromised systems"],
+    "patchRequirements": ["specific patches needed based on attack techniques used"],
+    "configRemediation": ["specific configuration changes to prevent recurrence"]
+  }}
+}}"""
+
+    result = llm.chat_json([{"role": "user", "content": prompt}])
+    _track_call(llm, cost_tracker, "playbook_3_eradication")
+    return result
+
+
+def _playbook_recovery(
+    llm: LLMClient,
+    sim_data_list: list[dict],
+    graph_data: dict,
+    previous: dict,
+    conclusions: dict,
+    cost_tracker: CostTracker,
+) -> dict:
+    """Step 4: Recovery based on system dependencies and communication patterns."""
+    worlds = []
+    agent_profiles = []
+    for sd in sim_data_list:
+        worlds.extend(sd.get("worlds", []))
+        agent_profiles.extend(sd.get("agentProfiles", []))
+
+    # Deduplicate worlds
+    seen_worlds = set()
+    unique_worlds = []
+    for w in worlds:
+        name = w.get("name", "")
+        if name not in seen_worlds:
+            seen_worlds.add(name)
+            unique_worlds.append(w)
+
+    action_items = conclusions.get("actionItems", conclusions.get("priorityRecommendations", []))
+    systems = graph_data.get("systems", [])
+    compliance = graph_data.get("compliance", [])
+    relationships = graph_data.get("relationships", [])[:20]
+
+    prompt = f"""{_PLAYBOOK_PREAMBLE}
+
+TASK: Generate the Recovery section. Base restoration on actual system dependencies and communication patterns from the exercise.
+
+ERADICATION STEPS TAKEN (from previous step):
+{json.dumps(previous.get("eradication", {}), indent=2)}
+
+COMMUNICATION CHANNELS USED IN EXERCISE:
+{json.dumps([{{"name": w.get("name"), "type": w.get("type", ""), "description": w.get("description", "")}} for w in unique_worlds], indent=2)}
+
+TEAM ROLES IN EXERCISE:
+{json.dumps([{{"name": ap.get("name"), "role": ap.get("role")}} for ap in agent_profiles[:10]], indent=2)}
+
+SYSTEM DEPENDENCIES (from knowledge graph):
+{json.dumps([{{"name": s.get("name"), "summary": s.get("summary", "")}} for s in systems], indent=2)}
+{chr(10).join(relationships)}
+
+COMPLIANCE REQUIREMENTS:
+{json.dumps([{{"name": c.get("name"), "summary": c.get("summary", "")}} for c in compliance], indent=2)}
+
+ACTION ITEMS FROM EXERCISE CONCLUSIONS:
+{json.dumps(action_items[:5], indent=2)}
+
+Output JSON:
+{{
+  "recovery": {{
+    "restorationSequence": ["ordered steps referencing actual systems and their dependencies"],
+    "verificationSteps": ["specific verification for each restored system"],
+    "communicationPlan": ["who communicates what, via which channel — reference actual worlds/roles"],
+    "regulatoryTimeline": ["notification deadlines based on actual compliance requirements"]
+  }}
+}}"""
+
+    result = llm.chat_json([{"role": "user", "content": prompt}])
+    _track_call(llm, cost_tracker, "playbook_4_recovery")
+    return result
+
+
+def _playbook_post_incident(
+    llm: LLMClient,
+    previous_sections: dict,
+    conclusions: dict,
+    mc_aggregation: dict | None,
+    cost_tracker: CostTracker,
+) -> dict:
+    """Step 5: Synthesize lessons learned from all analysis."""
+    key_findings = conclusions.get("keyFindings", [])
+    action_items = conclusions.get("actionItems", conclusions.get("priorityRecommendations", []))
+
+    mc_summary = ""
+    if mc_aggregation:
+        mc_summary = (
+            f"Outcome distribution: {json.dumps(mc_aggregation.get('outcome_distribution', {}))}\n"
+            f"Agent consistency: {json.dumps(mc_aggregation.get('agent_consistency', {}))}"
+        )
+
+    prompt = f"""{_PLAYBOOK_PREAMBLE}
+
+TASK: Generate the Post-Incident section. Synthesize lessons from the entire exercise.
+
+PLAYBOOK SECTIONS SO FAR:
+- Incident type: {previous_sections.get("overview", {}).get("incidentType", "Unknown")}
+- Scope: {previous_sections.get("overview", {}).get("scope", "Unknown")}
+- Containment actions: {len(previous_sections.get("containment", {}).get("immediateActions", []))} steps
+- Eradication steps: {len(previous_sections.get("eradication", {}).get("rootCauseRemoval", []))} root causes addressed
+- Recovery sequence: {len(previous_sections.get("recovery", {}).get("restorationSequence", []))} systems
+
+KEY FINDINGS FROM EXERCISE:
+{json.dumps([{{"finding": f.get("finding"), "severity": f.get("severity"), "businessImpact": f.get("businessImpact", "")}} for f in key_findings[:5]], indent=2)}
+
+STRATEGIC ACTION ITEMS:
+{json.dumps(action_items[:5], indent=2)}
+
+MONTE CARLO STATISTICS:
+{mc_summary if mc_summary else "Not available for this exercise run"}
+
+Output JSON:
+{{
+  "postIncident": {{
+    "lessonsLearned": ["specific lessons from this exercise — reference actual findings and outcomes"],
+    "policyUpdates": ["specific policy changes needed — tied to root causes found"],
+    "trainingRecommendations": ["specific training needs based on team performance gaps"],
+    "nextExerciseSchedule": "recommended schedule and focus for next exercise"
+  }}
+}}"""
+
+    result = llm.chat_json([{"role": "user", "content": prompt}])
+    _track_call(llm, cost_tracker, "playbook_5_post_incident")
+    return result
 
 
 def _generate_playbook(
@@ -368,29 +619,70 @@ def _generate_playbook(
     mc_aggregation: dict | None,
     cost_tracker: CostTracker,
 ) -> dict | None:
-    """Generate NIST SP 800-61r2 incident response playbook."""
+    """Generate NIST SP 800-61r2 playbook via 5-step evidence-grounded pipeline."""
+    playbook = {}
+
     try:
-        context = _build_rich_context(sim_data_list, graph_data)
-
-        mc_section = json.dumps(mc_aggregation, indent=2) if mc_aggregation else "Not available"
-        user_prompt = (
-            f"Exercise Context:\n{context}\n\n"
-            f"Root Cause Analysis:\n{json.dumps(root_causes, indent=2)}\n\n"
-            f"Conclusions & Action Items:\n{json.dumps(conclusions, indent=2)}\n\n"
-            f"Monte Carlo Statistics (if available):\n{mc_section}\n\n"
-            f"Generate the incident response playbook."
-        )
-
-        playbook = llm.chat_json(
-            system=_PLAYBOOK_SYSTEM_PROMPT,
-            user=user_prompt,
-        )
-        _track_call(llm, cost_tracker, "playbook_generation")
-        logger.info("Playbook generated successfully")
-        return playbook
-
+        # Step 1: Scope & Evidence
+        logger.info("Playbook step 1/5: Scope & Evidence Acquisition...")
+        step1 = _playbook_scope_and_evidence(llm, sim_data_list, graph_data, cost_tracker)
+        playbook.update(step1)
     except Exception as e:
-        logger.warning(f"Playbook generation failed: {e}")
+        logger.warning(f"Playbook step 1 failed: {e}")
+        playbook["overview"] = {"incidentType": "Unknown", "scope": "Unable to determine", "regulatoryContext": "Review required"}
+        playbook["evidenceAcquisition"] = {"logSources": [], "awsSpecific": [], "chainOfCustody": [], "dataClassification": "Review required"}
+
+    try:
+        # Step 2: Containment
+        logger.info("Playbook step 2/5: Containment...")
+        step2 = _playbook_containment(llm, sim_data_list, playbook, root_causes, cost_tracker)
+        playbook.update(step2)
+    except Exception as e:
+        logger.warning(f"Playbook step 2 failed: {e}")
+        playbook["containment"] = {"immediateActions": [], "iamRevocation": [], "networkIsolation": [], "serviceSuspension": []}
+
+    try:
+        # Step 3: Eradication
+        logger.info("Playbook step 3/5: Eradication...")
+        step3 = _playbook_eradication(llm, sim_data_list, playbook, root_causes, cost_tracker)
+        playbook.update(step3)
+    except Exception as e:
+        logger.warning(f"Playbook step 3 failed: {e}")
+        playbook["eradication"] = {"rootCauseRemoval": [], "credentialRotation": [], "patchRequirements": [], "configRemediation": []}
+
+    try:
+        # Step 4: Recovery
+        logger.info("Playbook step 4/5: Recovery...")
+        step4 = _playbook_recovery(llm, sim_data_list, graph_data, playbook, conclusions, cost_tracker)
+        playbook.update(step4)
+    except Exception as e:
+        logger.warning(f"Playbook step 4 failed: {e}")
+        playbook["recovery"] = {"restorationSequence": [], "verificationSteps": [], "communicationPlan": [], "regulatoryTimeline": []}
+
+    try:
+        # Step 5: Post-Incident
+        logger.info("Playbook step 5/5: Post-Incident...")
+        step5 = _playbook_post_incident(llm, playbook, conclusions, mc_aggregation, cost_tracker)
+        playbook.update(step5)
+    except Exception as e:
+        logger.warning(f"Playbook step 5 failed: {e}")
+        playbook["postIncident"] = {"lessonsLearned": [], "policyUpdates": [], "trainingRecommendations": [], "nextExerciseSchedule": "TBD"}
+
+    # Check if we got meaningful content
+    has_content = any(
+        isinstance(v, dict) and any(
+            (isinstance(sv, list) and len(sv) > 0) or (isinstance(sv, str) and len(sv) > 10)
+            for sv in v.values()
+        )
+        for v in playbook.values()
+        if isinstance(v, dict)
+    )
+
+    if has_content:
+        logger.info("Playbook generated successfully (5-step pipeline)")
+        return playbook
+    else:
+        logger.warning("Playbook pipeline produced no meaningful content")
         return None
 
 
