@@ -149,5 +149,11 @@ function transformAction(a: Record<string, unknown>): AgentAction {
     action: (a.action as string) || "",
     args: (a.args as Record<string, unknown>) || {},
     result: a.result as AgentAction["result"],
+    type: (a.type as string) || undefined,
+    description: (a.description as string) || undefined,
+    kill_chain_step: (a.kill_chain_step as string) || undefined,
+    decision: (a.decision as string) || undefined,
+    reason: (a.reason as string) || undefined,
+    complication: (a.complication as string) || undefined,
   };
 }
