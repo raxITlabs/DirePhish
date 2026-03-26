@@ -306,6 +306,40 @@ def _rehydrate_simulations():
         except Exception as e:
             logger.warning(f"Failed to rehydrate simulation {sim_id}: {e}")
 
+    # Also scan MC iteration directories (stored separately from main sims)
+    projects_dir = SIMULATIONS_DIR.parent / "crucible_projects"
+    if projects_dir.exists():
+        for project_dir in projects_dir.iterdir():
+            mc_dir = project_dir / "monte_carlo"
+            if not mc_dir.is_dir():
+                continue
+            for batch_dir in mc_dir.iterdir():
+                if not batch_dir.is_dir():
+                    continue
+                for iter_dir in batch_dir.iterdir():
+                    if not iter_dir.is_dir() or iter_dir.name.endswith(".json"):
+                        continue
+                    sim_id = iter_dir.name
+                    if sim_id in _simulations:
+                        continue
+                    actions_path = iter_dir / "actions.jsonl"
+                    if not actions_path.exists():
+                        continue
+                    try:
+                        actions = _read_actions(actions_path)
+                        current_round = max((a.get("round", 0) for a in actions), default=0) if actions else 0
+                        _simulations[sim_id] = {
+                            "sim_id": sim_id,
+                            "status": "completed",
+                            "current_round": current_round,
+                            "total_rounds": current_round,
+                            "action_count": len(actions) if actions else 0,
+                            "graph_id": project_dir.name,
+                            "output_dir": str(iter_dir),
+                        }
+                    except Exception:
+                        pass
+
     if _simulations:
         logger.info(f"Rehydrated {len(_simulations)} simulation(s) from disk")
 
