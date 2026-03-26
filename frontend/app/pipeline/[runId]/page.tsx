@@ -87,15 +87,23 @@ export default function PipelinePage({
 
   const [configs, setConfigs] = useState<SimulationConfig[] | null>(null);
 
-  // MC/CF live action feed — track the active sub-simulation
-  const [mcCfSimId, setMcCfSimId] = useState<string | null>(null);
+  // MC/CF live action feed — separate sim IDs for each stage
+  const [mcSimId, setMcSimId] = useState<string | null>(null);
+  const [cfSimId, setCfSimId] = useState<string | null>(null);
+  // Active one drives the polling hook + graph highlighting
+  const mcCfSimId = cfSimId || mcSimId;
 
   // Simulation polling hook
   const { simStatus, simActions, graphData: simGraphData, graphPushing, error: simError, pollGraph } =
     useSimulationPolling(activeSimId);
 
-  // MC/CF simulation polling hook
-  const { simStatus: mcCfStatus, simActions: mcCfActions } = useSimulationPolling(mcCfSimId);
+  // MC simulation polling hook
+  const { simStatus: mcStatus, simActions: mcActions } = useSimulationPolling(mcSimId);
+  // CF simulation polling hook
+  const { simStatus: cfStatus, simActions: cfActions } = useSimulationPolling(cfSimId);
+  // Combined for graph highlighting (whichever is active)
+  const mcCfStatus = cfSimId ? cfStatus : mcStatus;
+  const mcCfActions = cfSimId ? cfActions : mcActions;
 
   // Research progress polling
   const researchProgress = useResearchPolling(
@@ -203,13 +211,13 @@ export default function PipelinePage({
               if (update.step === "monte_carlo" && update.status === "running" && update.detail) {
                 try {
                   const parsed = JSON.parse(update.detail);
-                  if (parsed.currentSimId) setMcCfSimId(parsed.currentSimId);
+                  if (parsed.currentSimId) setMcSimId(parsed.currentSimId);
                 } catch { /* detail is plain text */ }
               }
               if (update.step === "counterfactual" && update.status === "running" && update.detail) {
                 try {
                   const parsed = JSON.parse(update.detail);
-                  if (parsed.forkSimId) setMcCfSimId(parsed.forkSimId);
+                  if (parsed.forkSimId) setCfSimId(parsed.forkSimId);
                 } catch { /* detail is plain text */ }
               }
               // Keep mcCfSimId after completion so action history stays visible.
@@ -339,6 +347,10 @@ export default function PipelinePage({
                 mcCfSimStatus={mcCfStatus}
                 mcCfSimActions={mcCfActions}
                 mcCfSimId={mcCfSimId}
+                mcSimStatus={mcStatus}
+                mcSimActions={mcActions}
+                cfSimStatus={cfStatus}
+                cfSimActions={cfActions}
                 researchProgress={researchProgress}
               />
             </ResizablePanel>

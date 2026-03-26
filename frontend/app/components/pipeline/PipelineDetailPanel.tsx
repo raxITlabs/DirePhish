@@ -71,6 +71,10 @@ interface PipelineDetailPanelProps {
   mcCfSimStatus?: SimulationStatus | null;
   mcCfSimActions?: AgentAction[];
   mcCfSimId?: string | null;
+  mcSimStatus?: SimulationStatus | null;
+  mcSimActions?: AgentAction[];
+  cfSimStatus?: SimulationStatus | null;
+  cfSimActions?: AgentAction[];
   researchProgress?: ResearchProgress;
 }
 
@@ -94,6 +98,10 @@ export default function PipelineDetailPanel({
   onSimChange,
   mcCfSimStatus,
   mcCfSimActions,
+  mcSimStatus,
+  mcSimActions,
+  cfSimStatus,
+  cfSimActions,
   researchProgress,
 }: PipelineDetailPanelProps) {
   const state = steps[stageId];
@@ -188,6 +196,10 @@ export default function PipelineDetailPanel({
           allSimIds={allSimIds}
           mcCfSimActions={mcCfSimActions}
           mcCfSimStatus={mcCfSimStatus}
+          mcSimActions={mcSimActions}
+          mcSimStatus={mcSimStatus}
+          cfSimActions={cfSimActions}
+          cfSimStatus={cfSimStatus}
           researchProgress={researchProgress}
         />
       </div>
@@ -445,6 +457,10 @@ function StageDetail({
   allSimIds,
   mcCfSimActions,
   mcCfSimStatus,
+  mcSimActions,
+  mcSimStatus,
+  cfSimActions,
+  cfSimStatus,
   researchProgress,
 }: {
   stageId: string;
@@ -456,6 +472,10 @@ function StageDetail({
   allSimIds: string[];
   mcCfSimActions?: AgentAction[];
   mcCfSimStatus?: SimulationStatus | null;
+  mcSimActions?: AgentAction[];
+  mcSimStatus?: SimulationStatus | null;
+  cfSimActions?: AgentAction[];
+  cfSimStatus?: SimulationStatus | null;
   researchProgress?: ResearchProgress;
 }) {
   // Research — live activity or entity summary
@@ -787,12 +807,15 @@ function StageDetail({
     }
 
     if (state?.status === "running") {
-      if (mcCfSimStatus && mcCfSimActions) {
+      // Use MC-specific data (not shared mcCf which may be CF's data)
+      const mcSt = mcSimStatus || mcCfSimStatus;
+      const mcAc = mcSimActions || mcCfSimActions;
+      if (mcSt && mcAc) {
         const title = parsed?.scenarioTitle
           ? `Stress Test: ${parsed.scenarioTitle}`
           : "Stress Test Variation";
 
-        const variationDesc = parsed?.variation_description || mcCfSimStatus?.variation_description || "";
+        const variationDesc = parsed?.variation_description || mcSt?.variation_description || "";
         const mcChanges: string[] = [];
         if (variationDesc) {
           // Parse "temp=0.74"
@@ -819,8 +842,8 @@ function StageDetail({
 
         return (
           <PipelineSimulationPanel
-            simStatus={mcCfSimStatus}
-            simActions={mcCfSimActions}
+            simStatus={mcSt}
+            simActions={mcAc}
             graphData={graphData}
             activeSimIndex={0}
             totalSims={1}
@@ -881,10 +904,10 @@ function StageDetail({
               <span className="text-xs font-mono font-semibold text-foreground/80">${parsed.totalCost.toFixed(2)}</span>
             </div>
           )}
-          {mcCfSimStatus && mcCfSimActions && mcCfSimActions.length > 0 && (
+          {(mcSimStatus || mcCfSimStatus) && (mcSimActions || mcCfSimActions) && ((mcSimActions || mcCfSimActions)?.length ?? 0) > 0 && (
             <PipelineSimulationPanel
-              simStatus={mcCfSimStatus}
-              simActions={mcCfSimActions}
+              simStatus={(mcSimStatus || mcCfSimStatus)!}
+              simActions={(mcSimActions || mcCfSimActions)!}
               graphData={graphData}
               activeSimIndex={0}
               totalSims={1}
@@ -931,14 +954,17 @@ function StageDetail({
     const forkRound = parsed?.forkRound;
 
     if (state?.status === "running") {
-      if (mcCfSimStatus && mcCfSimActions) {
+      // Use CF-specific data (not shared mcCf which may be MC's data)
+      const cfSt = cfSimStatus || mcCfSimStatus;
+      const cfAc = cfSimActions || mcCfSimActions;
+      if (cfSt && cfAc) {
         const title = parsed?.forkAgent && parsed?.forkRound
           ? `What If: Round ${parsed.forkRound} — ${parsed.forkAgent}'s decision`
           : "Alternate Timeline";
         return (
           <PipelineSimulationPanel
-            simStatus={mcCfSimStatus}
-            simActions={mcCfSimActions}
+            simStatus={cfSt}
+            simActions={cfAc}
             graphData={graphData}
             activeSimIndex={0}
             totalSims={1}
@@ -993,10 +1019,10 @@ function StageDetail({
               </div>
             )}
           </div>
-          {mcCfSimStatus && mcCfSimActions && mcCfSimActions.length > 0 && (
+          {(cfSimStatus || mcCfSimStatus) && (cfSimActions || mcCfSimActions) && ((cfSimActions || mcCfSimActions)?.length ?? 0) > 0 && (
             <PipelineSimulationPanel
-              simStatus={mcCfSimStatus}
-              simActions={mcCfSimActions}
+              simStatus={(cfSimStatus || mcCfSimStatus)!}
+              simActions={(cfSimActions || mcCfSimActions)!}
               graphData={graphData}
               activeSimIndex={0}
               totalSims={1}
