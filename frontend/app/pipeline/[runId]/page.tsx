@@ -11,6 +11,7 @@ import {
   ResizableHandle,
 } from "@/app/components/ui/resizable";
 import { useSimulationPolling } from "@/app/hooks/useSimulationPolling";
+import { useResearchPolling } from "@/app/hooks/useResearchPolling";
 import { getDossier, getProjectGraph, updateDossier } from "@/app/actions/project";
 import { getScenarios, getConfigs } from "@/app/actions/scenarios";
 import type { CompanyDossier, GraphData, GraphNode, ThreatAnalysisResponse, SimulationConfig } from "@/app/types";
@@ -42,8 +43,8 @@ const STEP_ORDER = [
   { id: "scenario_selection", label: "Scenario Selection" },
   { id: "config_expansion", label: "Config Generation" },
   { id: "simulations", label: "Simulations" },
-  { id: "monte_carlo", label: "Monte Carlo Analysis" },
-  { id: "counterfactual", label: "Counterfactual Analysis" },
+  { id: "monte_carlo", label: "Stress Testing" },
+  { id: "counterfactual", label: "What-If Analysis" },
   { id: "exercise_report", label: "Exercise Report" },
 ];
 
@@ -81,9 +82,21 @@ export default function PipelinePage({
 
   const [configs, setConfigs] = useState<SimulationConfig[] | null>(null);
 
+  // MC/CF live action feed — track the active sub-simulation
+  const [mcCfSimId, setMcCfSimId] = useState<string | null>(null);
+
   // Simulation polling hook
   const { simStatus, simActions, graphData: simGraphData, graphPushing, error: simError, pollGraph } =
     useSimulationPolling(activeSimId);
+
+  // MC/CF simulation polling hook
+  const { simStatus: mcCfStatus, simActions: mcCfActions } = useSimulationPolling(mcCfSimId);
+
+  // Research progress polling
+  const researchProgress = useResearchPolling(
+    projectId || null,
+    steps["research"]?.status === "running",
+  );
 
   // Merge: use simulation graph if available, otherwise project graph
   const graphData = simGraphData.nodes.length > 0 ? simGraphData : projectGraph;
@@ -179,6 +192,25 @@ export default function PipelinePage({
                 if (simMatch) {
                   setActiveSimIndex(parseInt(simMatch[1], 10) - 1);
                 }
+              }
+
+              // MC/CF live action feed — extract active sub-simulation ID
+              if (update.step === "monte_carlo" && update.status === "running" && update.detail) {
+                try {
+                  const parsed = JSON.parse(update.detail);
+                  if (parsed.currentSimId) setMcCfSimId(parsed.currentSimId);
+                } catch { /* detail is plain text */ }
+              }
+              if (update.step === "counterfactual" && update.status === "running" && update.detail) {
+                try {
+                  const parsed = JSON.parse(update.detail);
+                  if (parsed.forkSimId) setMcCfSimId(parsed.forkSimId);
+                } catch { /* detail is plain text */ }
+              }
+              // Clear when MC/CF completes or fails
+              if ((update.step === "monte_carlo" || update.step === "counterfactual") &&
+                  (update.status === "completed" || update.status === "failed")) {
+                setMcCfSimId(null);
               }
             }
             return newSteps;
@@ -279,6 +311,7 @@ export default function PipelinePage({
                 onSelectNode={setSelectedNode}
                 error={error || simError}
                 isSimRunning={isSimRunning}
+                simActions={mcCfSimId ? mcCfActions : simActions}
               />
             </ResizablePanel>
             <ResizableHandle withHandle />
@@ -301,6 +334,10 @@ export default function PipelinePage({
                 allSimIds={allSimIds}
                 onSimChange={handleSimChange}
                 configs={configs}
+                mcCfSimStatus={mcCfStatus}
+                mcCfSimActions={mcCfActions}
+                mcCfSimId={mcCfSimId}
+                researchProgress={researchProgress}
               />
             </ResizablePanel>
           </ResizablePanelGroup>
@@ -311,6 +348,7 @@ export default function PipelinePage({
             onSelectNode={setSelectedNode}
             error={error || simError}
             isSimRunning={isSimRunning}
+            simActions={simActions}
           />
         )}
       </div>

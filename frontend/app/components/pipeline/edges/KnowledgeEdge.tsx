@@ -9,10 +9,16 @@ interface KnowledgeEdgeData {
   isSimRunning?: boolean;
   isHighlighted?: boolean;
   isDimmed?: boolean;
+  isActive?: boolean;
   siblingIndex?: number;
   siblingCount?: number;
   showLabel?: boolean;
 }
+
+/** Check once at module level whether the user prefers reduced motion. */
+const prefersReducedMotion =
+  typeof window !== "undefined" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function KnowledgeEdge({
   id,
@@ -29,9 +35,9 @@ function KnowledgeEdge({
   const {
     label = "",
     isAction = false,
-    isSimRunning = false,
     isHighlighted = false,
     isDimmed = false,
+    isActive = false,
     siblingIndex = 0,
     siblingCount = 1,
     showLabel = false,
@@ -62,21 +68,25 @@ function KnowledgeEdge({
   const labelY = sourceY * 0.25 + midY * 0.5 + targetY * 0.25;
 
   // Colors
-  const strokeColor = isAction
-    ? "var(--color-burnt-peach-400)"
-    : isHighlighted
-      ? "var(--color-royal-azure-400)"
-      : isDimmed
-        ? "var(--color-pitch-black-200)"
-        : "var(--color-pitch-black-300)";
+  const strokeColor = isActive
+    ? "var(--color-royal-azure-400)"
+    : isAction
+      ? "var(--color-burnt-peach-400)"
+      : isHighlighted
+        ? "var(--color-royal-azure-400)"
+        : isDimmed
+          ? "var(--color-pitch-black-200)"
+          : "var(--color-pitch-black-300)";
 
-  const strokeWidth = isAction ? 2.5 : isHighlighted ? 2 : 1.5;
-  const opacity = isDimmed ? 0.1 : isAction ? 0.85 : 0.5;
+  const strokeWidth = isActive ? 2 : isHighlighted ? 1.5 : 1;
+  const opacity = isDimmed ? 0.08 : isActive ? 0.85 : isHighlighted ? 0.45 : 0.25;
 
   // Particle color
   const particleColor = isAction
     ? "var(--color-burnt-peach-400)"
     : "var(--color-royal-azure-400)";
+
+  const showParticles = isActive && !isDimmed && !prefersReducedMotion;
 
   return (
     <g
@@ -106,30 +116,19 @@ function KnowledgeEdge({
         }}
       />
 
-      {/* animateMotion particles — only during simulation */}
-      {isSimRunning && !isDimmed && (
-        <>
-          <circle r="3" fill={particleColor} opacity={0.8}>
-            <animateMotion
-              dur="3s"
-              repeatCount="indefinite"
-              path={edgePath}
-              calcMode="spline"
-              keySplines="0.42 0 0.58 1"
-            />
-          </circle>
-          <circle r="2" fill={particleColor} opacity={0.5}>
-            <animateMotion
-              dur="3s"
-              repeatCount="indefinite"
-              path={edgePath}
-              begin="1.5s"
-              calcMode="spline"
-              keySplines="0.42 0 0.58 1"
-            />
-          </circle>
-        </>
-      )}
+      {/* Flowing particles along edge — only when active */}
+      {showParticles && [0, 1, 2].map(i => (
+        <circle key={i} r="2" fill={particleColor} opacity={0.7 - i * 0.1}>
+          <animateMotion
+            dur="3s"
+            repeatCount="indefinite"
+            path={edgePath}
+            begin={`${i}s`}
+            calcMode="spline"
+            keySplines="0.42 0 0.58 1"
+          />
+        </circle>
+      ))}
 
       {/* Edge label — show on hover or when showLabel is true */}
       {label && (hovered || showLabel) && (

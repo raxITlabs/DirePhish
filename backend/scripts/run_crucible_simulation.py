@@ -343,9 +343,9 @@ async def _background_writer(
         all_actions.append(entry)
         summary_actions.append({
             "round": entry.get("round"),
-            "agent": entry.get("agent"),
-            "world": entry.get("world"),
-            "action": entry.get("action"),
+            "agent": entry.get("agent", entry.get("type", "")),  # "inject" or "arbiter" for system entries
+            "world": entry.get("world", ""),
+            "action": entry.get("action", entry.get("type", "")),
         })
 
         # Write to JSONL (single writer, no contention)
@@ -549,6 +549,16 @@ async def run_single_iteration(
                             f"🚨 [SYSTEM ALERT] {inject_text}"
                         )
                     if mc: mc.inject(inject_text)
+
+                    # Write inject to actions stream for frontend visibility
+                    await write_queue.put({
+                        "type": "inject",
+                        "round": round_num,
+                        "description": inject_text,
+                        "kill_chain_step": event.get("kill_chain_step", "") if isinstance(event, dict) else "",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "simulation_id": sim_id,
+                    })
 
             # Pressure state is managed internally by CrucibleEnv.step()
 
@@ -900,6 +910,17 @@ async def run_single_iteration(
                 if cost_tracker:
                     # Track arbiter LLM call cost (approximate)
                     cost_tracker.track_llm("arbiter", model, 500, 100, f"arbiter_round_{round_num}")
+
+                # Write arbiter decision to actions stream
+                await write_queue.put({
+                    "type": "arbiter",
+                    "round": round_num,
+                    "decision": "continue" if last_verdict["continue"] else "halt",
+                    "reason": last_verdict.get("reason", ""),
+                    "complication": last_verdict.get("inject_complication"),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "simulation_id": sim_id,
+                })
 
                 if not last_verdict["continue"]:
                     if mc: mc.arbiter(last_verdict['reason'], stop=True)

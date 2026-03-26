@@ -11,7 +11,7 @@ import type { GraphEntityData } from "./nodes/GraphEntityNode";
  * Runs d3-force synchronously to compute initial positions.
  * NO live simulation, NO drag handlers — those are in useForceLayout.ts.
  */
-export function useGraphLayout(graphData: GraphData, isSimRunning = false) {
+export function useGraphLayout(graphData: GraphData, isSimRunning = false, activeNodeIds: Set<string> = new Set(), newNodeIds: Set<string> = new Set()) {
   const prevPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
   return useMemo(() => {
@@ -81,6 +81,8 @@ export function useGraphLayout(graphData: GraphData, isSimRunning = false) {
         attributes: gn.attributes,
         summary: gn.summary,
         isSimRunning,
+        isActive: activeNodeIds.has(gn.id),
+        isNew: newNodeIds.has(gn.id),
       };
       return {
         id: gn.id,
@@ -116,6 +118,7 @@ export function useGraphLayout(graphData: GraphData, isSimRunning = false) {
           label: ge.label,
           isAction: ge.type === "action",
           isSimRunning,
+          isActive: activeNodeIds.has(ge.source) && activeNodeIds.has(ge.target),
           siblingIndex,
           siblingCount,
           isHighlighted: false,
@@ -126,5 +129,5 @@ export function useGraphLayout(graphData: GraphData, isSimRunning = false) {
     });
 
     return { nodes: flowNodes, edges: flowEdges };
-  }, [graphData, isSimRunning]);
+  }, [graphData, isSimRunning, activeNodeIds, newNodeIds]);
 }

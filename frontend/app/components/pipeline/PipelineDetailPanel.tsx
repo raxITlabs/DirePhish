@@ -11,6 +11,7 @@ import type {
   AgentAction,
   SimulationConfig,
 } from "@/app/types";
+import type { ResearchProgress } from "@/app/hooks/useResearchPolling";
 import { getExerciseReport, type ExerciseReport } from "@/app/actions/report";
 import PipelineDossierPanel from "./PipelineDossierPanel";
 import PipelineSimulationPanel from "./PipelineSimulationPanel";
@@ -44,8 +45,8 @@ const STAGE_LABELS: Record<string, string> = {
   simulations: "Simulations",
   reports: "After-Action Reports",
   comparative: "Comparative Analysis",
-  monte_carlo: "Monte Carlo Analysis",
-  counterfactual: "Counterfactual Analysis",
+  monte_carlo: "Stress Testing",
+  counterfactual: "What-If Analysis",
   exercise_report: "Exercise Report",
 };
 
@@ -67,6 +68,10 @@ interface PipelineDetailPanelProps {
   projectId: string;
   allSimIds: string[];
   onSimChange?: (index: number) => void;
+  mcCfSimStatus?: SimulationStatus | null;
+  mcCfSimActions?: AgentAction[];
+  mcCfSimId?: string | null;
+  researchProgress?: ResearchProgress;
 }
 
 export default function PipelineDetailPanel({
@@ -87,6 +92,9 @@ export default function PipelineDetailPanel({
   projectId,
   allSimIds,
   onSimChange,
+  mcCfSimStatus,
+  mcCfSimActions,
+  researchProgress,
 }: PipelineDetailPanelProps) {
   const state = steps[stageId];
   const status = state?.status || "pending";
@@ -178,6 +186,9 @@ export default function PipelineDetailPanel({
           configs={configs}
           projectId={projectId}
           allSimIds={allSimIds}
+          mcCfSimActions={mcCfSimActions}
+          mcCfSimStatus={mcCfSimStatus}
+          researchProgress={researchProgress}
         />
       </div>
     </div>
@@ -258,6 +269,132 @@ function ExerciseReportSummary({ projectId, message }: { projectId: string; mess
   );
 }
 
+// ── Research live activity view ──────────────────────────────────────────
+
+const RESEARCH_STEPS = [
+  { threshold: 0,  label: "Starting research" },
+  { threshold: 5,  label: "Scraping company website" },
+  { threshold: 25, label: "Searching for intelligence" },
+  { threshold: 45, label: "Processing documents" },
+  { threshold: 55, label: "Synthesizing dossier" },
+  { threshold: 85, label: "Indexing to knowledge graph" },
+];
+
+function ResearchActivityView({ progress }: { progress: ResearchProgress }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!progress.startedAt) return;
+    const tick = () => setElapsed(Math.floor((Date.now() - progress.startedAt!) / 1000));
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [progress.startedAt]);
+
+  const minutes = String(Math.floor(elapsed / 60)).padStart(2, "0");
+  const seconds = String(elapsed % 60).padStart(2, "0");
+
+  // Determine which step is active
+  const activeStepIndex = RESEARCH_STEPS.reduce((acc, step, i) =>
+    progress.progress >= step.threshold ? i : acc, 0);
+
+  return (
+    <div className="space-y-5">
+      {/* Progress bar */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Progress</span>
+          <span className="text-[10px] font-mono text-verdigris-600 tabular-nums">{progress.progress}%</span>
+        </div>
+        <div className="h-1.5 bg-verdigris-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-verdigris-500 rounded-full transition-all duration-700 ease-out"
+            style={{ width: `${progress.progress}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Elapsed time */}
+      {progress.startedAt && (
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Elapsed</span>
+          <span className="text-xs font-mono text-foreground/70 tabular-nums">{minutes}:{seconds}</span>
+        </div>
+      )}
+
+      {/* Research steps timeline */}
+      <div className="space-y-0">
+        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Activity</p>
+        <div className="relative">
+          {RESEARCH_STEPS.map((step, i) => {
+            const isCompleted = i < activeStepIndex;
+            const isActive = i === activeStepIndex;
+            const isPending = i > activeStepIndex;
+
+            return (
+              <div key={step.threshold} className="flex items-start gap-3 relative">
+                {/* Vertical connector line */}
+                {i < RESEARCH_STEPS.length - 1 && (
+                  <div
+                    className={`absolute left-[7px] top-[18px] w-[2px] h-[calc(100%-2px)] ${
+                      isCompleted ? "bg-verdigris-300" : "bg-border/30"
+                    }`}
+                  />
+                )}
+                {/* Dot / Check */}
+                <div className="relative z-10 shrink-0 mt-0.5">
+                  {isCompleted ? (
+                    <div className="w-4 h-4 rounded-full bg-verdigris-500 flex items-center justify-center">
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M2 5L4.5 7.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  ) : isActive ? (
+                    <div className="w-4 h-4 rounded-full bg-verdigris-500 animate-pulse-dot" />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full bg-border/30" />
+                  )}
+                </div>
+                {/* Label */}
+                <div className="pb-4 min-w-0">
+                  <span
+                    className={`text-xs font-mono leading-tight ${
+                      isCompleted
+                        ? "text-verdigris-700"
+                        : isActive
+                          ? "text-foreground font-medium"
+                          : "text-muted-foreground/40"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                  {isActive && progress.progressMessage && (
+                    <p className="text-[10px] font-mono text-muted-foreground mt-0.5 truncate">
+                      {progress.progressMessage}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Placeholder counters */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-royal-azure-50/50 rounded-lg px-3 py-2 text-center">
+          <div className="text-xl font-bold font-mono text-royal-azure-300">--</div>
+          <div className="text-[10px] font-mono text-royal-azure-400 uppercase">Entities</div>
+        </div>
+        <div className="bg-verdigris-50/50 rounded-lg px-3 py-2 text-center">
+          <div className="text-xl font-bold font-mono text-verdigris-300">--</div>
+          <div className="text-[10px] font-mono text-verdigris-400 uppercase">Relationships</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StageDetail({
   stageId,
   state,
@@ -266,6 +403,9 @@ function StageDetail({
   configs,
   projectId,
   allSimIds,
+  mcCfSimActions,
+  mcCfSimStatus,
+  researchProgress,
 }: {
   stageId: string;
   state: StepState | undefined;
@@ -274,9 +414,20 @@ function StageDetail({
   configs: SimulationConfig[] | null;
   projectId: string;
   allSimIds: string[];
+  mcCfSimActions?: AgentAction[];
+  mcCfSimStatus?: SimulationStatus | null;
+  researchProgress?: ResearchProgress;
 }) {
-  // Research — entity summary
+  // Research — live activity or entity summary
   if (stageId === "research") {
+    const isRunning = state?.status === "running";
+
+    // Running state — show live progress timeline
+    if (isRunning && researchProgress) {
+      return <ResearchActivityView progress={researchProgress} />;
+    }
+
+    // Completed state — show entity summary
     const entityCount = graphData.nodes.length;
     const edgeCount = graphData.edges.length;
     const typeCounts = new Map<string, number>();
@@ -590,28 +741,67 @@ function StageDetail({
 
   // Monte Carlo Analysis
   if (stageId === "monte_carlo") {
-    let parsed: { batchId?: string; iterations?: number; totalCost?: number } | null = null;
+    let parsed: { iterations?: number; completed?: number; totalCost?: number; scenarioTitle?: string; variation_description?: string } | null = null;
     if (state?.detail) {
       try { parsed = JSON.parse(state.detail); } catch { /* detail is plain text */ }
     }
 
     if (state?.status === "running") {
+      if (mcCfSimStatus && mcCfSimActions) {
+        const title = parsed?.scenarioTitle
+          ? `Stress Test: ${parsed.scenarioTitle}`
+          : "Stress Test Variation";
+
+        const variationDesc = parsed?.variation_description;
+        const mcChanges: string[] = [];
+        if (variationDesc) {
+          if (variationDesc.includes("temp=")) {
+            const tempMatch = variationDesc.match(/temp=([\d.]+)/);
+            if (tempMatch) {
+              const temp = parseFloat(tempMatch[1]);
+              mcChanges.push(temp > 0.7 ? "Team under higher stress" : temp < 0.6 ? "Team more cautious" : "Normal stress levels");
+            }
+          }
+          if (variationDesc.includes("timing_shifts")) mcChanges.push("Attack timing shifted");
+          if (variationDesc.includes("order=")) mcChanges.push("Team response order shuffled");
+          if (variationDesc.includes("persona_mods")) mcChanges.push("Team response patterns varied");
+        }
+
+        return (
+          <PipelineSimulationPanel
+            simStatus={mcCfSimStatus}
+            simActions={mcCfSimActions}
+            graphData={graphData}
+            activeSimIndex={0}
+            totalSims={1}
+            scenarioTitle={title}
+            contextHeader={{
+              title: `Stress Test: ${parsed?.scenarioTitle || "scenario"}`,
+              subtitle: `Variation ${(parsed?.completed || 0) + 1}/${parsed?.iterations || 1}`,
+              changes: mcChanges.length > 0 ? mcChanges : ["Testing with controlled variations"],
+            }}
+          />
+        );
+      }
+
+      const completed = parsed?.completed || 0;
+      const total = parsed?.iterations || 1;
+      const pct = Math.round((completed / total) * 100);
+
       return (
-        <div className="space-y-4">
+        <div className="space-y-3" aria-live="polite">
           <div className="flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
-            <span className="text-sm font-mono text-muted-foreground">
-              {parsed?.iterations
-                ? `Running ${parsed.iterations} iterations...`
-                : state.message || "Running Monte Carlo iterations..."}
+            <div className="w-5 h-5 border-2 border-tuscan-sun-500 border-t-transparent rounded-full animate-spin shrink-0" />
+            <span className="text-sm font-mono text-foreground/80">
+              Iteration {completed}/{total}
             </span>
           </div>
-          {parsed?.batchId && (
-            <div className="bg-muted/30 rounded-md px-3 py-2">
-              <span className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-wider">Batch ID</span>
-              <p className="text-xs font-mono text-foreground/80 mt-0.5">{parsed.batchId.slice(0, 12)}...</p>
-            </div>
-          )}
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-tuscan-sun-500 rounded-full transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
           {!parsed && state.detail && (
             <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>
           )}
@@ -628,10 +818,10 @@ function StageDetail({
               <div className="text-xl font-bold font-mono text-tuscan-sun-700">{parsed?.iterations || "?"}</div>
               <div className="text-[10px] font-mono text-tuscan-sun-600 uppercase">Iterations</div>
             </div>
-            {parsed?.batchId && (
+            {state.durationMs && (
               <div className="bg-royal-azure-50 rounded-lg px-3 py-2 text-center">
-                <div className="text-sm font-bold font-mono text-royal-azure-700 truncate">{parsed.batchId.slice(0, 8)}</div>
-                <div className="text-[10px] font-mono text-royal-azure-600 uppercase">Batch</div>
+                <div className="text-sm font-bold font-mono text-royal-azure-700 truncate">{formatDuration(state.durationMs)}</div>
+                <div className="text-[10px] font-mono text-royal-azure-600 uppercase">Duration</div>
               </div>
             )}
           </div>
@@ -659,7 +849,7 @@ function StageDetail({
         {state?.message && <p className="text-xs font-mono text-foreground/80">{state.message}</p>}
         {state?.detail && <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>}
         {!state?.message && !state?.detail && (
-          <p className="text-xs font-mono text-muted-foreground/50">No details available</p>
+          <p className="text-xs font-mono text-muted-foreground/50">Monte Carlo will run the simulation multiple times with controlled variations to produce probabilistic outcomes.</p>
         )}
       </div>
     );
@@ -667,7 +857,7 @@ function StageDetail({
 
   // Counterfactual Analysis
   if (stageId === "counterfactual") {
-    let parsed: { decisions?: number; branches?: number } | null = null;
+    let parsed: { decisions?: number; branches?: number; forkAgent?: string; forkRound?: number } | null = null;
     if (state?.detail) {
       try { parsed = JSON.parse(state.detail); } catch { /* detail is plain text */ }
     }
@@ -677,15 +867,47 @@ function StageDetail({
     const decisionsCount = parsed?.decisions ?? (msgMatch ? parseInt(msgMatch[1], 10) : null);
     const branchesCount = parsed?.branches ?? (msgMatch ? parseInt(msgMatch[2], 10) : null);
 
+    const forkAgent = parsed?.forkAgent;
+    const forkRound = parsed?.forkRound;
+
     if (state?.status === "running") {
+      if (mcCfSimStatus && mcCfSimActions) {
+        const title = parsed?.forkAgent && parsed?.forkRound
+          ? `What If: Round ${parsed.forkRound} — ${parsed.forkAgent}'s decision`
+          : "Alternate Timeline";
+        return (
+          <PipelineSimulationPanel
+            simStatus={mcCfSimStatus}
+            simActions={mcCfSimActions}
+            graphData={graphData}
+            activeSimIndex={0}
+            totalSims={1}
+            scenarioTitle={title}
+            contextHeader={{
+              title: `What If: Round ${parsed?.forkRound || "?"}`,
+              subtitle: `${parsed?.forkAgent || "Agent"}'s decision`,
+              changes: ["Testing alternate outcome from this decision point"],
+            }}
+          />
+        );
+      }
+
       return (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
             <span className="text-sm font-mono text-muted-foreground">
-              {state.message || "Analyzing critical decisions..."}
+              {forkAgent && forkRound
+                ? `Forking round ${forkRound} \u2014 ${forkAgent}\u2019s decision...`
+                : state.message || "Analyzing critical decisions..."}
             </span>
           </div>
+          {parsed?.decisions != null && (
+            <div className="bg-muted/30 rounded-md px-3 py-2">
+              <span className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-wider">Critical Decisions</span>
+              <p className="text-xs font-mono text-foreground/80 mt-0.5">{parsed.decisions} identified</p>
+            </div>
+          )}
           {state.detail && !parsed && (
             <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>
           )}
@@ -729,7 +951,7 @@ function StageDetail({
         {state?.message && <p className="text-xs font-mono text-foreground/80">{state.message}</p>}
         {state?.detail && <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>}
         {!state?.message && !state?.detail && (
-          <p className="text-xs font-mono text-muted-foreground/50">No details available</p>
+          <p className="text-xs font-mono text-muted-foreground/50">Counterfactual analysis will identify critical decisions and test alternate outcomes.</p>
         )}
       </div>
     );
@@ -814,12 +1036,29 @@ function StageDetail({
     );
   }
 
+  // Pending stage descriptions
+  const pendingDescriptions: Record<string, string> = {
+    research: "Company research will gather public intelligence on the target organization.",
+    dossier_review: "The company dossier will be presented for your review before proceeding.",
+    threat_analysis: "Threat analysis will map vulnerabilities and identify attack scenarios.",
+    scenario_selection: "The most impactful scenarios will be selected for simulation.",
+    config_expansion: "Simulation configs will be generated with agents, pressures, and timed events.",
+    simulations: "Multi-agent simulations will model how the organization responds under pressure.",
+    monte_carlo: "Monte Carlo will run the simulation multiple times with controlled variations to produce probabilistic outcomes.",
+    counterfactual: "Counterfactual analysis will identify critical decisions and test alternate outcomes.",
+    exercise_report: "A comprehensive exercise report will be generated combining all simulation data.",
+    reports: "After-action reports will summarize the key findings from each simulation.",
+    comparative: "A comparative analysis will highlight differences across simulation runs.",
+  };
+
   return (
     <div className="space-y-3">
       {state?.message && <p className="text-xs font-mono text-foreground/80">{state.message}</p>}
       {state?.detail && <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>}
       {!state?.message && !state?.detail && (
-        <p className="text-xs font-mono text-muted-foreground/50">No details available</p>
+        <p className="text-xs font-mono text-muted-foreground/50">
+          {pendingDescriptions[stageId] || "This stage has not started yet."}
+        </p>
       )}
     </div>
   );

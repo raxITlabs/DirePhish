@@ -22,6 +22,7 @@ from ..config import Config
 from ..utils.cost_tracker import CostTracker, _get_model_pricing
 from ..utils.logger import get_logger
 from ..utils.console import MissionControl
+from .crucible_manager import _simulations
 
 logger = get_logger("monte_carlo_engine")
 
@@ -436,11 +437,27 @@ async def _run_iteration(
         logger.info("Starting iteration %d/%d for batch %s", iteration_index + 1, batch.iterations_total, batch.batch_id)
         MissionControl.mc_iteration(iteration_index + 1, batch.iterations_total, "running")
 
+        # Register iteration sim so frontend can poll its actions
+        _simulations[iteration_id] = {
+            "sim_id": iteration_id,
+            "status": "running",
+            "current_round": 0,
+            "total_rounds": base_config.get("total_rounds", 5),
+            "action_count": 0,
+            "graph_id": batch.project_id,
+            "output_dir": str(iter_dir),
+            "variation_description": "",  # Will be set after variation generation
+        }
+
         try:
             # Generate variation
             varied_config, variation_desc = var_gen.generate(
                 iteration_index, base_config, variation_params or {}
             )
+
+            # Update simulation entry with variation description
+            if iteration_id in _simulations:
+                _simulations[iteration_id]["variation_description"] = variation_desc
 
             # Extract temperature override if set
             temp_override = varied_config.pop("_temperature_override", None)
@@ -473,6 +490,8 @@ async def _run_iteration(
                 })
 
             batch.iterations_completed += 1
+            if iteration_id in _simulations:
+                _simulations[iteration_id]["status"] = "completed"
             iter_cost = result.get("cost_usd", 0) if isinstance(result, dict) else 0
             MissionControl.mc_iteration(
                 iteration_index + 1, batch.iterations_total, "completed",
@@ -488,6 +507,8 @@ async def _run_iteration(
 
         except Exception as e:
             logger.error("Iteration %d failed for batch %s: %s", iteration_index, batch.batch_id, e)
+            if iteration_id in _simulations:
+                _simulations[iteration_id]["status"] = "failed"
             batch.iterations_failed += 1
             batch.results.append({
                 "iteration_index": iteration_index,

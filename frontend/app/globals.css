@@ -392,3 +392,31 @@
     animation: none;
   }
 }
+
+/* ── Active node ring pulse (simulation) ── */
+@keyframes ring-pulse {
+  0% { box-shadow: 0 0 0 0px var(--ring-pulse-color, oklch(0.5 0.15 250)); opacity: 0.7; }
+  100% { box-shadow: 0 0 0 12px var(--ring-pulse-color, oklch(0.5 0.15 250)); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ring-pulse {
+    animation: none;
+  }
+}
+
+/* ── Node appear animation ── */
+@keyframes node-appear {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-node-appear {
+  animation: node-appear 0.4s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-node-appear {
+    animation: none;
+  }
+}

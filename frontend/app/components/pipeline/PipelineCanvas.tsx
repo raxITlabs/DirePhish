@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useMemo, useEffect } from "react";
+import { useCallback, useState, useMemo, useEffect, useRef } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -20,7 +20,7 @@ import "@xyflow/react/dist/style.css";
 
 import GraphEntityNode from "./nodes/GraphEntityNode";
 import KnowledgeEdge from "./edges/KnowledgeEdge";
-import type { GraphData, GraphNode as GNode } from "@/app/types";
+import type { GraphData, GraphNode as GNode, AgentAction } from "@/app/types";
 import { useGraphLayout } from "./useGraphLayout";
 import { useForceLayout } from "./useForceLayout";
 
@@ -30,6 +30,7 @@ export interface PipelineCanvasProps {
   onSelectNode: (node: GNode | null) => void;
   error: string | null;
   isSimRunning?: boolean;
+  simActions?: AgentAction[];
 }
 
 const nodeTypes = {
@@ -100,10 +101,63 @@ function PipelineCanvasInner({
   onSelectNode,
   error,
   isSimRunning = false,
+  simActions,
 }: PipelineCanvasProps) {
   const [clickPos, setClickPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [showEdgeLabels, setShowEdgeLabels] = useState(false);
+
+  // Track previously seen node IDs for "new node" animation
+  const prevNodeIdsRef = useRef<Set<string>>(new Set());
+
+  // Compute active node IDs from the latest round of sim actions
+  const activeNodeIds = useMemo(() => {
+    if (!simActions?.length || !graphData.nodes.length) return new Set<string>();
+
+    // Build name -> id lookup
+    const nameToId = new Map<string, string>();
+    for (const node of graphData.nodes) {
+      nameToId.set(node.name.toLowerCase(), node.id);
+    }
+
+    const active = new Set<string>();
+
+    // Get latest round's actions (highest round number)
+    const maxRound = Math.max(...simActions.map(a => a.round || 0));
+    const latestActions = simActions.filter(a => a.round === maxRound);
+
+    for (const action of latestActions) {
+      // Match agent name to person node
+      const agentId = nameToId.get(action.agent?.toLowerCase() || "");
+      if (agentId) active.add(agentId);
+
+      // Match system/threat names mentioned in content
+      const content = JSON.stringify(action.args || {}).toLowerCase();
+      for (const [name, id] of nameToId) {
+        if (name.length > 2 && content.includes(name)) {
+          active.add(id);
+        }
+      }
+    }
+
+    return active;
+  }, [simActions, graphData.nodes]);
+
+  // Compute new node IDs (nodes that weren't in the previous render)
+  const newNodeIds = useMemo(() => {
+    const currentIds = new Set(graphData.nodes.map(n => n.id));
+    const prevIds = prevNodeIdsRef.current;
+    const newIds = new Set<string>();
+
+    if (prevIds.size > 0) {
+      for (const id of currentIds) {
+        if (!prevIds.has(id)) newIds.add(id);
+      }
+    }
+
+    prevNodeIdsRef.current = currentIds;
+    return newIds;
+  }, [graphData.nodes]);
 
   // Compute available types from graphData
   const entityTypes = useMemo(() => {
@@ -134,7 +188,7 @@ function PipelineCanvasInner({
   }, [graphData, activeFilters, entityTypes.length]);
 
   // Pure synchronous layout for initial positions
-  const { nodes: layoutNodes, edges: layoutEdges } = useGraphLayout(filteredGraphData, isSimRunning);
+  const { nodes: layoutNodes, edges: layoutEdges } = useGraphLayout(filteredGraphData, isSimRunning, activeNodeIds, newNodeIds);
   const hasGraphNodes = graphData.nodes.length > 0;
 
   // Stable identity key — only changes when the actual node set changes
@@ -162,6 +216,20 @@ function PipelineCanvasInner({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphKey, showEdgeLabels]);
+
+  // Update node/edge data when active state changes (without resetting positions)
+  useEffect(() => {
+    if (activeNodeIds.size === 0 && newNodeIds.size === 0) return;
+    setRfNodes(prev => prev.map(n => ({
+      ...n,
+      data: { ...n.data, isActive: activeNodeIds.has(n.id), isNew: newNodeIds.has(n.id) },
+    })));
+    setRfEdges(prev => prev.map(e => ({
+      ...e,
+      data: { ...e.data, isActive: activeNodeIds.has(e.source) && activeNodeIds.has(e.target) },
+    })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeNodeIds, newNodeIds]);
 
   // Force layout hook — returns drag event handlers
   // Uses useReactFlow() internally (we're inside ReactFlowProvider)

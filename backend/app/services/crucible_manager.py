@@ -201,7 +201,8 @@ def get_simulation_status(sim_id: str) -> dict | None:
     if not state:
         return None
 
-    actions_path = SIMULATIONS_DIR / sim_id / "actions.jsonl"
+    sim_dir = Path(state["output_dir"]) if state.get("output_dir") else SIMULATIONS_DIR / sim_id
+    actions_path = sim_dir / "actions.jsonl"
     actions = _read_actions(actions_path)
     if actions:
         state["action_count"] = len(actions)
@@ -221,7 +222,9 @@ def get_simulation_status(sim_id: str) -> dict | None:
 
 def get_simulation_actions(sim_id: str, world: str | None = None, from_round: int | None = None) -> list[dict]:
     """Read actions from actions.jsonl with optional filters."""
-    actions_path = SIMULATIONS_DIR / sim_id / "actions.jsonl"
+    state = _simulations.get(sim_id, {})
+    sim_dir = Path(state["output_dir"]) if state.get("output_dir") else SIMULATIONS_DIR / sim_id
+    actions_path = sim_dir / "actions.jsonl"
     actions = _read_actions(actions_path)
     if world:
         actions = [a for a in actions if a.get("world") == world]

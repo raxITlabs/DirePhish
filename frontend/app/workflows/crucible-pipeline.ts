@@ -177,9 +177,11 @@ async function pollMonteCarlo(batchId: string): Promise<void> {
     const totalIterations = (json.data?.total_iterations as number) || 10;
     if (completedIterations > lastReportedIteration) {
       lastReportedIteration = completedIterations;
+      const runningIterIndex = completedIterations; // if 0 completed, iter_0000 is running; if 1 completed, iter_0001 is running
+      const currentSimId = `${batchId}_iter_${String(runningIterIndex).padStart(4, '0')}`;
       await emitProgress("monte_carlo", "running",
-        `Running Monte Carlo — ${completedIterations}/${totalIterations} iterations...`,
-        JSON.stringify({ batchId, iterations: totalIterations, completed: completedIterations }));
+        `Stress testing — ${completedIterations}/${totalIterations} variation${totalIterations !== 1 ? 's' : ''} complete...`,
+        JSON.stringify({ batchId, iterations: totalIterations, completed: completedIterations, currentSimId }));
     }
     await new Promise(r => setTimeout(r, 5000));
   }
@@ -370,7 +372,7 @@ export async function cruciblePipeline(input: {
 
     stageStart = Date.now();
     await emitProgress("monte_carlo", "running",
-      `Launching Monte Carlo analysis (${mcIterations} iterations, ${mcMode} mode)...`);
+      "Stress testing — re-running with variations...");
 
     let mcBatchId = "";
     let mcResults: Record<string, unknown> = {};
@@ -392,7 +394,14 @@ export async function cruciblePipeline(input: {
       mcBatchId = mcLaunch.batchId;
 
       await emitProgress("monte_carlo", "running",
-        `Running ${mcIterations} Monte Carlo iterations...`, mcBatchId);
+        `Stress testing — re-running with variations...`,
+        JSON.stringify({
+          batchId: mcBatchId,
+          iterations: mcIterations,
+          completed: 0,
+          currentSimId: `${mcBatchId}_iter_0000`,
+          scenarioTitle: scenarioTitles[0] || "scenario"
+        }));
       await pollMonteCarlo(mcBatchId);
 
       mcResults = await flaskApi<Record<string, unknown>>(
@@ -401,20 +410,20 @@ export async function cruciblePipeline(input: {
 
       stageDurations.monte_carlo = Date.now() - stageStart;
       await emitProgress("monte_carlo", "completed",
-        "Monte Carlo analysis complete",
+        "Stress testing complete",
         JSON.stringify({ batchId: mcBatchId, iterations: mcIterations }),
         stageDurations.monte_carlo);
     } catch (mcError) {
       stageDurations.monte_carlo = Date.now() - stageStart;
       const msg = mcError instanceof Error ? mcError.message : String(mcError);
       await emitProgress("monte_carlo", "failed",
-        `Monte Carlo failed: ${msg}`, undefined, stageDurations.monte_carlo);
+        `Stress testing failed: ${msg}`, undefined, stageDurations.monte_carlo);
       // Non-fatal — continue pipeline
     }
 
     // ─── STEP 8: Counterfactual analysis ───
     stageStart = Date.now();
-    await emitProgress("counterfactual", "running", "Analyzing critical decisions...");
+    await emitProgress("counterfactual", "running", "Identifying key decision points...");
 
     let branchIds: string[] = [];
     try {
@@ -433,7 +442,12 @@ export async function cruciblePipeline(input: {
         .slice(0, maxForks);
 
       await emitProgress("counterfactual", "running",
-        `Found ${topDecisions.length} critical decisions, forking...`);
+        `Found a critical moment — testing what happens differently...`,
+        JSON.stringify({
+          decisions: topDecisions.length,
+          forkAgent: topDecisions[0]?.agent,
+          forkRound: topDecisions[0]?.round,
+        }));
 
       // Fork and launch top 2
       for (const decision of topDecisions) {
@@ -446,6 +460,9 @@ export async function cruciblePipeline(input: {
             })},
           );
           if (fork.sim_id) {
+            await emitProgress("counterfactual", "running",
+              `Testing alternate timeline from round ${decision.round}...`,
+              JSON.stringify({ forkSimId: fork.sim_id, forkAgent: decision.agent, forkRound: decision.round }));
             branchIds.push(fork.sim_id);
             await pollSimulation(fork.sim_id);
           }
@@ -456,14 +473,14 @@ export async function cruciblePipeline(input: {
 
       stageDurations.counterfactual = Date.now() - stageStart;
       await emitProgress("counterfactual", "completed",
-        `Analyzed ${topDecisions.length} decisions, ${branchIds.length} branches complete`,
+        `Tested ${topDecisions.length} alternate decisions, ${branchIds.length} branches complete`,
         JSON.stringify({ decisions: topDecisions.length, branches: branchIds.length }),
         stageDurations.counterfactual);
     } catch (cfError) {
       stageDurations.counterfactual = Date.now() - stageStart;
       const msg = cfError instanceof Error ? cfError.message : String(cfError);
       await emitProgress("counterfactual", "failed",
-        `Counterfactual failed: ${msg}`, undefined, stageDurations.counterfactual);
+        `What-if analysis failed: ${msg}`, undefined, stageDurations.counterfactual);
       // Non-fatal — continue to report
     }
 

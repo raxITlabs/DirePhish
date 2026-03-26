@@ -147,7 +147,7 @@ export default function MonteCarloLauncher({
                 <span className="text-sm text-muted-foreground">estimated</span>
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground font-mono">
-                <span>{estimate.iterations} iterations</span>
+                <span>{estimate.iterations} iteration{estimate.iterations !== 1 ? 's' : ''}</span>
                 <span className="text-border">|</span>
                 <span>${estimate.perSimCostUsd.toFixed(3)}/sim</span>
                 <span className="text-border">|</span>
@@ -200,7 +200,7 @@ export default function MonteCarloLauncher({
           </Badge>
           <span className="text-xs text-tuscan-sun-700">
             Run a test batch first to validate config and measure per-sim cost before launching{" "}
-            {MODE_CONFIG[mode].iterations} iterations.
+            {MODE_CONFIG[mode].iterations} iteration{MODE_CONFIG[mode].iterations !== 1 ? 's' : ''}.
           </span>
         </div>
       )}

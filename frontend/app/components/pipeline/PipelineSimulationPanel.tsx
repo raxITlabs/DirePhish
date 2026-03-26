@@ -119,6 +119,11 @@ interface PipelineSimulationPanelProps {
   totalSims: number;
   scenarioTitle?: string;
   onSimChange?: (index: number) => void;
+  contextHeader?: {
+    title: string;
+    subtitle?: string;
+    changes?: string[];
+  };
 }
 
 export default function PipelineSimulationPanel({
@@ -129,6 +134,7 @@ export default function PipelineSimulationPanel({
   totalSims,
   scenarioTitle,
   onSimChange,
+  contextHeader,
 }: PipelineSimulationPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [activeWorld, setActiveWorld] = useState<WorldTab>("all");
@@ -276,6 +282,25 @@ export default function PipelineSimulationPanel({
         </div>
       )}
 
+      {/* Context header (for MC / CF modes) */}
+      {contextHeader && (
+        <div className="mx-5 mt-3 mb-1 rounded-lg border border-border/30 bg-card p-3 space-y-1.5 shrink-0">
+          <h3 className="text-sm font-mono font-bold text-foreground">{contextHeader.title}</h3>
+          {contextHeader.subtitle && (
+            <p className="text-xs font-mono text-muted-foreground">{contextHeader.subtitle}</p>
+          )}
+          {contextHeader.changes && contextHeader.changes.length > 0 && (
+            <ul className="space-y-0.5 mt-1">
+              {contextHeader.changes.map((change, i) => (
+                <li key={i} className="text-xs font-mono text-muted-foreground/80 flex items-center gap-1.5">
+                  <span className="text-tuscan-sun-500">&#9658;</span> {change}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {/* World tabs */}
       <div className="px-5 py-2 border-b border-border/10 shrink-0 flex gap-1">
         {worldTabs.map((tab) => (
@@ -337,6 +362,10 @@ function TimelineView({ actions }: { actions: AgentAction[] }) {
           ? (action.args.subject as string) || content.slice(0, 120)
           : content.length > 120 ? content.slice(0, 120) + "..." : content;
 
+        const isInject = action.type === "inject" || action.action === "inject";
+        const isArbiter = action.type === "arbiter";
+        const isThreatActor = action.role === "threat_actor" || action.type === "threat_actor";
+
         return (
           <div key={i}>
             {showRoundDivider && (
@@ -348,39 +377,66 @@ function TimelineView({ actions }: { actions: AgentAction[] }) {
                 </div>
               </div>
             )}
-            <div className="relative flex items-start gap-3 py-1.5">
-              {/* Node dot */}
-              <div className={`absolute -left-[17px] top-2.5 w-2 h-2 rounded-full ring-2 ring-card ${getRoleDotColor(action.role)}`} />
 
-              {/* Time label */}
-              <div className="text-[10px] font-mono text-muted-foreground/50 w-14 shrink-0 pt-0.5 tabular-nums">
-                {time}
-              </div>
-
-              {/* Card */}
-              <div className={`flex-1 min-w-0 rounded-md px-3 py-2 bg-muted/20 ${getActionBorderColor(action.action)}`}>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-semibold text-foreground">{action.agent}</span>
-                  <Badge
-                    variant="secondary"
-                    className={`text-[9px] font-mono py-0 h-4 ${getRoleColor(action.role)}`}
-                  >
-                    {action.role}
-                  </Badge>
-                  <span className="text-[9px] font-mono text-muted-foreground/50 ml-auto">
-                    {action.action === "send_message" ? "slack" : action.action === "send_email" ? "email" : action.action}
-                  </span>
+            {isInject ? (
+              <div className="relative flex items-start gap-3 py-1.5">
+                <div className="absolute -left-[17px] top-2.5 w-2 h-2 rounded-full ring-2 ring-card bg-tuscan-sun-400" />
+                <div className="text-[10px] font-mono text-muted-foreground/50 w-14 shrink-0 pt-0.5 tabular-nums">{time}</div>
+                <div className="flex-1 min-w-0 rounded-md bg-tuscan-sun-50 border border-tuscan-sun-200 px-3 py-2 text-xs font-mono">
+                  <span className="text-tuscan-sun-700 font-bold">!! INJECT</span>
+                  <span className="text-tuscan-sun-600 ml-2">{action.description || (action.args?.content as string)}</span>
+                  {action.kill_chain_step && (
+                    <span className="ml-2 text-[10px] bg-tuscan-sun-100 text-tuscan-sun-700 px-1.5 py-0.5 rounded uppercase">{action.kill_chain_step}</span>
+                  )}
                 </div>
-                {meta && (
-                  <p className="text-[9px] font-mono text-muted-foreground/60 mt-1 truncate">{meta}</p>
-                )}
-                {preview && (
-                  <p className="text-[11px] text-foreground/70 mt-1 leading-relaxed line-clamp-2">
-                    {preview}
-                  </p>
-                )}
               </div>
-            </div>
+            ) : isArbiter ? (
+              <div className="relative flex items-start gap-3 py-1.5">
+                <div className="absolute -left-[17px] top-2.5 w-2 h-2 rounded-full ring-2 ring-card bg-verdigris-400" />
+                <div className="text-[10px] font-mono text-muted-foreground/50 w-14 shrink-0 pt-0.5 tabular-nums">{time}</div>
+                <div className="flex-1 min-w-0 rounded-md bg-verdigris-50 border border-verdigris-200 px-3 py-2 text-xs font-mono">
+                  <span className="text-verdigris-700 font-bold">~ SCENARIO</span>
+                  <span className="text-verdigris-600 ml-2">{action.reason || action.complication}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="relative flex items-start gap-3 py-1.5">
+                {/* Node dot */}
+                <div className={`absolute -left-[17px] top-2.5 w-2 h-2 rounded-full ring-2 ring-card ${isThreatActor ? "bg-burnt-peach-400" : getRoleDotColor(action.role)}`} />
+
+                {/* Time label */}
+                <div className="text-[10px] font-mono text-muted-foreground/50 w-14 shrink-0 pt-0.5 tabular-nums">
+                  {time}
+                </div>
+
+                {/* Card */}
+                <div className={`flex-1 min-w-0 rounded-md px-3 py-2 bg-muted/20 ${getActionBorderColor(action.action)} ${isThreatActor ? "bg-burnt-peach-50/50 border-l-2 border-l-burnt-peach-400" : ""}`}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-foreground">
+                      {isThreatActor && <span className="text-burnt-peach-600 mr-1 text-[9px] font-mono uppercase">ATTACKER</span>}
+                      {action.agent}
+                    </span>
+                    <Badge
+                      variant="secondary"
+                      className={`text-[9px] font-mono py-0 h-4 ${getRoleColor(action.role)}`}
+                    >
+                      {action.role}
+                    </Badge>
+                    <span className="text-[9px] font-mono text-muted-foreground/50 ml-auto">
+                      {action.action === "send_message" ? "slack" : action.action === "send_email" ? "email" : action.action}
+                    </span>
+                  </div>
+                  {meta && (
+                    <p className="text-[9px] font-mono text-muted-foreground/60 mt-1 truncate">{meta}</p>
+                  )}
+                  {preview && (
+                    <p className="text-[11px] text-foreground/70 mt-1 leading-relaxed line-clamp-2">
+                      {preview}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         );
       })}
@@ -419,6 +475,13 @@ function ActionFeed({
         const displayContent = isLong && !isExpanded ? content.slice(0, 300) + "..." : content;
         const time = formatTime(action.timestamp);
 
+        // Inject event — amber banner
+        const isInject = action.type === "inject" || action.action === "inject";
+        // Arbiter event — teal notification
+        const isArbiter = action.type === "arbiter";
+        // Threat actor — red-tinted card
+        const isThreatActor = action.role === "threat_actor" || action.type === "threat_actor";
+
         return (
           <div key={i}>
             {showRoundDivider && (
@@ -430,60 +493,80 @@ function ActionFeed({
                 <div className="h-px flex-1 bg-border/20" />
               </div>
             )}
-            <div className={`flex gap-2 py-1.5 pl-2 rounded-sm ${getActionBorderColor(action.action)}`}>
-              <div
-                className={`w-7 h-7 rounded-md flex-shrink-0 flex items-center justify-center text-xs font-bold ${getRoleColor(action.role)}`}
-              >
-                {initials}
+
+            {/* Inject event banner */}
+            {isInject ? (
+              <div className="rounded-md bg-tuscan-sun-50 border border-tuscan-sun-200 px-3 py-2 text-xs font-mono my-1">
+                <span className="text-tuscan-sun-700 font-bold">!! INJECT</span>
+                <span className="text-tuscan-sun-600 ml-2">{action.description || (action.args?.content as string)}</span>
+                {action.kill_chain_step && (
+                  <span className="ml-2 text-[10px] bg-tuscan-sun-100 text-tuscan-sun-700 px-1.5 py-0.5 rounded uppercase">{action.kill_chain_step}</span>
+                )}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-foreground">
-                    {action.agent}
-                  </span>
-                  <Badge
-                    variant="secondary"
-                    className={`text-[10px] font-mono ${getRoleColor(action.role)}`}
-                  >
-                    {action.role}
-                  </Badge>
-                  <span className="text-[10px] font-mono text-muted-foreground">
-                    {action.world}:{action.action}
-                  </span>
-                  {time && (
-                    <span className="text-[10px] font-mono text-muted-foreground/40 ml-auto tabular-nums">
-                      {time}
+            ) : isArbiter ? (
+              /* Arbiter event notification */
+              <div className="rounded-md bg-verdigris-50 border border-verdigris-200 px-3 py-2 text-xs font-mono my-1">
+                <span className="text-verdigris-700 font-bold">~ SCENARIO</span>
+                <span className="text-verdigris-600 ml-2">{action.reason || action.complication}</span>
+              </div>
+            ) : (
+              /* Regular / threat actor action card */
+              <div className={`flex gap-2 py-1.5 pl-2 rounded-sm ${getActionBorderColor(action.action)} ${isThreatActor ? "bg-burnt-peach-50/50 border-l-2 border-l-burnt-peach-400" : ""}`}>
+                <div
+                  className={`w-7 h-7 rounded-md flex-shrink-0 flex items-center justify-center text-xs font-bold ${getRoleColor(action.role)}`}
+                >
+                  {initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-foreground">
+                      {isThreatActor && <span className="text-burnt-peach-600 mr-1 text-[10px] font-mono uppercase">ATTACKER</span>}
+                      {action.agent}
                     </span>
+                    <Badge
+                      variant="secondary"
+                      className={`text-[10px] font-mono ${getRoleColor(action.role)}`}
+                    >
+                      {action.role}
+                    </Badge>
+                    <span className="text-[10px] font-mono text-muted-foreground">
+                      {action.world}:{action.action}
+                    </span>
+                    {time && (
+                      <span className="text-[10px] font-mono text-muted-foreground/40 ml-auto tabular-nums">
+                        {time}
+                      </span>
+                    )}
+                  </div>
+                  {meta && (
+                    <div className="text-[10px] font-mono text-muted-foreground/70 mt-1 space-y-0.5">
+                      {(action.args.to as string) && (
+                        <div>To: {action.args.to as string}</div>
+                      )}
+                      {(action.args.cc as string) && (
+                        <div>Cc: {action.args.cc as string}</div>
+                      )}
+                      {(action.args.subject as string) && (
+                        <div className="font-semibold text-foreground/70">Sub: {action.args.subject as string}</div>
+                      )}
+                    </div>
+                  )}
+                  {content && (
+                    <div className="text-sm text-foreground mt-1 whitespace-pre-wrap">
+                      {displayContent}
+                      {isLong && (
+                        <button
+                          onClick={() => onToggleExpand(i)}
+                          className="text-[10px] font-mono text-primary hover:text-primary/80 ml-1"
+                        >
+                          {isExpanded ? "Show less" : "Show more"}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
-                {meta && (
-                  <div className="text-[10px] font-mono text-muted-foreground/70 mt-1 space-y-0.5">
-                    {(action.args.to as string) && (
-                      <div>To: {action.args.to as string}</div>
-                    )}
-                    {(action.args.cc as string) && (
-                      <div>Cc: {action.args.cc as string}</div>
-                    )}
-                    {(action.args.subject as string) && (
-                      <div className="font-semibold text-foreground/70">Sub: {action.args.subject as string}</div>
-                    )}
-                  </div>
-                )}
-                {content && (
-                  <div className="text-sm text-foreground mt-1 whitespace-pre-wrap">
-                    {displayContent}
-                    {isLong && (
-                      <button
-                        onClick={() => onToggleExpand(i)}
-                        className="text-[10px] font-mono text-primary hover:text-primary/80 ml-1"
-                      >
-                        {isExpanded ? "Show less" : "Show more"}
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
-            </div>
+            )}
           </div>
         );
       })}

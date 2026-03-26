@@ -587,7 +587,7 @@ export default function AggregateResults({
         <CardTitle className="flex items-center gap-2">
           <span>Monte Carlo Analysis</span>
           <span className="text-xs font-mono font-normal text-muted-foreground">
-            {iterationCount} iterations
+            {iterationCount} iteration{iterationCount !== 1 ? 's' : ''}
           </span>
         </CardTitle>
       </CardHeader>

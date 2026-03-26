@@ -58,6 +58,8 @@ export interface GraphEntityData {
   isSimRunning?: boolean;
   isHighlighted?: boolean;
   isDimmed?: boolean;
+  isActive?: boolean;
+  isNew?: boolean;
 }
 
 function GraphEntityNode({ data }: NodeProps) {
@@ -74,25 +76,36 @@ function GraphEntityNode({ data }: NodeProps) {
     <>
       <Handle type="target" position={Position.Top} className="!bg-transparent !border-0 !w-0 !h-0" />
       <div
-        className="flex flex-col items-center gap-1 cursor-pointer"
+        className={`flex flex-col items-center gap-1 cursor-pointer ${d.isNew ? "animate-node-appear" : ""}`}
         style={{
           opacity: d.isDimmed ? 0.15 : 1,
           transition: "opacity 0.3s ease",
         }}
       >
-        <div
-          className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-mono font-bold shadow-sm ${
-            d.isSimRunning ? "animate-breathe" : ""
-          }`}
-          style={{
-            backgroundColor: color,
-            "--breathe-color": breatheColor,
-            boxShadow: d.isHighlighted
-              ? "0 0 0 3px var(--color-royal-azure-400), 0 0 12px var(--color-royal-azure-400)"
-              : undefined,
-          } as React.CSSProperties}
-        >
-          {initials}
+        <div className="relative">
+          <div
+            className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-mono font-bold shadow-sm ${
+              d.isSimRunning ? "animate-breathe" : ""
+            }`}
+            style={{
+              backgroundColor: color,
+              "--breathe-color": breatheColor,
+              boxShadow: d.isHighlighted
+                ? "0 0 0 3px var(--color-royal-azure-400), 0 0 12px var(--color-royal-azure-400)"
+                : undefined,
+            } as React.CSSProperties}
+          >
+            {initials}
+          </div>
+          {d.isActive && (
+            <div
+              className="absolute inset-0 rounded-full pointer-events-none"
+              style={{
+                animation: "ring-pulse 1.5s ease-out 3",
+                "--ring-pulse-color": breatheColor,
+              } as React.CSSProperties}
+            />
+          )}
         </div>
         <span className="text-[10px] font-mono text-muted-foreground max-w-[140px] text-center leading-tight bg-card/90 px-1.5 py-0.5 rounded">
           {d.name}

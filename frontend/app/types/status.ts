@@ -19,6 +19,12 @@ export interface AgentAction {
   action: string;
   args: Record<string, unknown>;
   result: { success: boolean; action: string; agentId: string } | null;
+  type?: string;           // "inject" | "arbiter" | undefined (regular action)
+  description?: string;    // inject event description
+  kill_chain_step?: string; // MITRE technique
+  decision?: string;       // arbiter: "continue" | "halt"
+  reason?: string;         // arbiter reason
+  complication?: string;   // arbiter injected complication
 }
 
 export interface ActivePressureState {

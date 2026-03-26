@@ -69,15 +69,16 @@ function getInlineSummary(
       if (state?.detail) {
         try {
           const parsed = JSON.parse(state.detail);
-          return `${parsed.iterations || "?"} iterations${parsed.batchId ? ` — ${parsed.batchId.slice(0, 8)}` : ""}`;
+          const count = parsed.iterations || 0;
+          return `${count || "?"} variation${count !== 1 ? 's' : ''} tested`;
         } catch {
           return state.detail;
         }
       }
-      return state?.message || "Monte Carlo analysis";
+      return state?.message || "Stress testing";
     }
     case "counterfactual":
-      return state?.message || "Counterfactual analysis";
+      return state?.message || "Testing alternate decisions";
     case "exercise_report":
       return state?.message || "Exercise report complete";
     default:
