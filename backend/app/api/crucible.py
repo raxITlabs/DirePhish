@@ -411,7 +411,10 @@ def get_comparative_report(project_id):
 @crucible_bp.route("/projects/<project_id>/exercise-report", methods=["POST"])
 def trigger_exercise_report(project_id):
     from ..services.exercise_report_agent import run_exercise_report
-    run_exercise_report(project_id)
+    data = request.get_json(silent=True) or {}
+    batch_id = data.get("batch_id")
+    branch_ids = data.get("branch_ids", [])
+    run_exercise_report(project_id, batch_id=batch_id, branch_ids=branch_ids)
     return jsonify({"data": {"status": "generating"}}), 202
 
 

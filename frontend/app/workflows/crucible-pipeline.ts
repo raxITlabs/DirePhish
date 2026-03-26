@@ -491,7 +491,13 @@ export async function cruciblePipeline(input: {
     try {
       await flaskApi<{ status: string }>(
         `/api/crucible/projects/${projectId}/exercise-report`,
-        { method: "POST" },
+        {
+          method: "POST",
+          body: JSON.stringify({
+            batch_id: mcBatchId || undefined,
+            branch_ids: branchIds.length > 0 ? branchIds : undefined,
+          }),
+        },
       );
       await pollExerciseReport(projectId);
       stageDurations.exercise_report = Date.now() - stageStart;

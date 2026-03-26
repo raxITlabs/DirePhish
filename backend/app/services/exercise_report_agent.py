@@ -309,17 +309,113 @@ def _build_rich_context(sim_data_list: list[dict], graph_data: dict) -> str:
     return "\n".join(sections)
 
 
+# ─── Playbook generation ───
+
+_PLAYBOOK_SYSTEM_PROMPT = """You are an incident response playbook generator following NIST SP 800-61r2.
+
+Generate a structured incident response playbook based on the simulation exercise data provided.
+The playbook must be specific to the actual systems, threats, and attack paths from the exercise.
+
+Output JSON with this exact structure:
+{
+  "overview": {
+    "incidentType": "string",
+    "scope": "string (systems affected, data at risk)",
+    "regulatoryContext": "string (compliance requirements)"
+  },
+  "evidenceAcquisition": {
+    "logSources": ["string (specific log sources mapped to actual systems)"],
+    "awsSpecific": ["CloudTrail queries", "VPC Flow Log filters", "S3 access log patterns"],
+    "chainOfCustody": ["string (requirements)"],
+    "dataClassification": "string (sensitivity of affected data)"
+  },
+  "containment": {
+    "immediateActions": ["string (from simulation's successful containment steps)"],
+    "iamRevocation": ["string (specific IAM roles/policies)"],
+    "networkIsolation": ["string (specific subnets/VPCs/security groups)"],
+    "serviceSuspension": ["string (specific services from graph)"]
+  },
+  "eradication": {
+    "rootCauseRemoval": ["string (from 5 Whys root cause)"],
+    "credentialRotation": ["string (scope of rotation needed)"],
+    "patchRequirements": ["string"],
+    "configRemediation": ["string"]
+  },
+  "recovery": {
+    "restorationSequence": ["string (ordered service restoration)"],
+    "verificationSteps": ["string"],
+    "communicationPlan": ["string (from simulation comms patterns)"],
+    "regulatoryTimeline": ["string (notification deadlines)"]
+  },
+  "postIncident": {
+    "lessonsLearned": ["string (from exercise conclusions)"],
+    "policyUpdates": ["string (from root cause analysis)"],
+    "trainingRecommendations": ["string"],
+    "nextExerciseSchedule": "string"
+  }
+}
+
+Make every item SPECIFIC to the exercise data — reference actual system names, actual attack techniques,
+actual team responses. Do not generate generic boilerplate."""
+
+
+def _generate_playbook(
+    llm: LLMClient,
+    sim_data_list: list[dict],
+    graph_data: dict,
+    root_causes: list,
+    conclusions: dict,
+    mc_aggregation: dict | None,
+    cost_tracker: CostTracker,
+) -> dict | None:
+    """Generate NIST SP 800-61r2 incident response playbook."""
+    try:
+        context = _build_rich_context(sim_data_list, graph_data)
+
+        mc_section = json.dumps(mc_aggregation, indent=2) if mc_aggregation else "Not available"
+        user_prompt = (
+            f"Exercise Context:\n{context}\n\n"
+            f"Root Cause Analysis:\n{json.dumps(root_causes, indent=2)}\n\n"
+            f"Conclusions & Action Items:\n{json.dumps(conclusions, indent=2)}\n\n"
+            f"Monte Carlo Statistics (if available):\n{mc_section}\n\n"
+            f"Generate the incident response playbook."
+        )
+
+        playbook = llm.chat_json(
+            system=_PLAYBOOK_SYSTEM_PROMPT,
+            user=user_prompt,
+        )
+        _track_call(llm, cost_tracker, "playbook_generation")
+        logger.info("Playbook generated successfully")
+        return playbook
+
+    except Exception as e:
+        logger.warning(f"Playbook generation failed: {e}")
+        return None
+
+
 # ─── Main pipeline ───
 
-def run_exercise_report(project_id: str) -> None:
+def run_exercise_report(
+    project_id: str,
+    batch_id: str | None = None,
+    branch_ids: list[str] | None = None,
+) -> None:
     """Generate unified exercise report in a background thread."""
     thread = threading.Thread(
-        target=_generate_exercise_report, args=(project_id,), daemon=True
+        target=_generate_exercise_report,
+        args=(project_id,),
+        kwargs={"batch_id": batch_id, "branch_ids": branch_ids},
+        daemon=True,
     )
     thread.start()
 
 
-def _generate_exercise_report(project_id: str) -> None:
+def _generate_exercise_report(
+    project_id: str,
+    batch_id: str | None = None,
+    branch_ids: list[str] | None = None,
+) -> None:
     """Full exercise report generation pipeline with multiple focused LLM calls."""
     out_dir = SIMULATIONS_DIR / f"exercise_{project_id}"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -407,7 +503,57 @@ def _generate_exercise_report(project_id: str) -> None:
         logger.info("Step 10: Generating appendix analysis...")
         appendix = _generate_appendix(llm, sim_data_list, cost_tracker)
 
-        # ─── Step 11: Collect pipeline costs ───
+        # ─── Step 11: Load MC aggregation data ───
+        mc_aggregation = None
+        if batch_id:
+            projects_dir = Path(Config.UPLOAD_FOLDER) / "crucible_projects" / project_id
+            agg_path = projects_dir / "monte_carlo" / batch_id / "aggregation.json"
+            if agg_path.exists():
+                with open(agg_path) as f:
+                    mc_aggregation = json.load(f)
+                logger.info(f"Loaded MC aggregation from {agg_path}")
+            else:
+                logger.warning(f"MC aggregation not found at {agg_path}")
+
+        # ─── Step 12: Load stress test results + resilience score ───
+        stress_results = []
+        resilience = None
+        projects_dir = Path(Config.UPLOAD_FOLDER) / "crucible_projects" / project_id
+        stress_dir = projects_dir / "stress_test"
+        if stress_dir.exists():
+            from .config_mutator import ConfigMutator
+            for entry in sorted(stress_dir.iterdir()):
+                summary_path = entry / "summary.json"
+                if summary_path.exists():
+                    with open(summary_path) as f:
+                        stress_results.append(json.load(f))
+            if stress_results:
+                try:
+                    resilience = ConfigMutator.score_resilience(stress_results)
+                    logger.info(f"Resilience score: {resilience.get('overall', 'N/A')}")
+                except Exception as e:
+                    logger.warning(f"Resilience scoring failed: {e}")
+
+        # ─── Step 13: Load counterfactual comparison ───
+        cf_comparison = None
+        if branch_ids:
+            try:
+                from .counterfactual_engine import CounterfactualEngine
+                original_sim_id = sim_ids[0] if sim_ids else None
+                if original_sim_id:
+                    cf_comparison = CounterfactualEngine.compare_branches(original_sim_id, branch_ids)
+                    logger.info(f"Loaded CF comparison: {len(branch_ids)} branches")
+            except Exception as e:
+                logger.warning(f"Counterfactual comparison failed: {e}")
+
+        # ─── Step 14: Generate playbook ───
+        logger.info("Step 14: Generating incident response playbook...")
+        playbook = _generate_playbook(
+            llm, sim_data_list, graph_data, root_causes, conclusions,
+            mc_aggregation, cost_tracker,
+        )
+
+        # ─── Step 15: Collect pipeline costs ───
         # Save exercise report costs first so _collect_pipeline_costs can read them
         cost_tracker.save(str(out_dir))
         logger.info("Step 11: Collecting pipeline costs...")
@@ -442,6 +588,13 @@ def _generate_exercise_report(project_id: str) -> None:
             "methodology": methodology,
             "appendix": appendix,
             "costs": costs,
+
+            # New 4-view report data
+            "monteCarloStats": mc_aggregation,
+            "stressTestResults": stress_results if stress_results else None,
+            "resilience": resilience,
+            "counterfactualComparison": cf_comparison,
+            "playbook": playbook,
         }
 
         with open(report_path, "w") as f:

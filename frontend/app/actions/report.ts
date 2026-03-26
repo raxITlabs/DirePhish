@@ -314,6 +314,98 @@ export interface ExerciseReport {
     model?: string;
   };
 
+  // Monte Carlo aggregation stats
+  monteCarloStats?: {
+    iteration_count: number;
+    outcome_distribution: {
+      contained_early: number;
+      contained_late: number;
+      not_contained: number;
+      escalated: number;
+    };
+    containment_round_stats?: {
+      mean: number;
+      median: number;
+      std: number;
+      min: number;
+      max: number;
+      histogram: Record<string, number>;
+    };
+    decision_divergence_points: Array<{
+      round: number;
+      agent: string;
+      divergence_score: number;
+      action_distribution: Record<string, number>;
+    }>;
+    agent_consistency: Record<string, number>;
+  };
+
+  // Resilience scoring
+  resilience?: {
+    overall: number;
+    dimensions: {
+      detection_speed: number;
+      containment_speed: number;
+      communication_quality: number;
+      compliance_adherence: number;
+    };
+    robustness_index: number;
+    weakest_link: string;
+    failure_modes: string[];
+  };
+
+  // Stress test results
+  stressTestResults?: Array<{
+    label: string;
+    containment_round: number | null;
+    detection_round: number | null;
+    total_rounds: number;
+    compliance_score: number;
+    communication_score: number;
+  }>;
+
+  // Counterfactual comparison
+  counterfactualComparison?: {
+    original: { sim_id: string; containment_round: number | null; total_actions: number };
+    branches: Array<{ sim_id: string; containment_round: number | null; total_actions: number }>;
+    divergence_summary: string;
+  };
+
+  // NIST SP 800-61r2 playbook
+  playbook?: {
+    overview: { incidentType: string; scope: string; regulatoryContext: string };
+    evidenceAcquisition: {
+      logSources: string[];
+      awsSpecific: string[];
+      chainOfCustody: string[];
+      dataClassification: string;
+    };
+    containment: {
+      immediateActions: string[];
+      iamRevocation: string[];
+      networkIsolation: string[];
+      serviceSuspension: string[];
+    };
+    eradication: {
+      rootCauseRemoval: string[];
+      credentialRotation: string[];
+      patchRequirements: string[];
+      configRemediation: string[];
+    };
+    recovery: {
+      restorationSequence: string[];
+      verificationSteps: string[];
+      communicationPlan: string[];
+      regulatoryTimeline: string[];
+    };
+    postIncident: {
+      lessonsLearned: string[];
+      policyUpdates: string[];
+      trainingRecommendations: string[];
+      nextExerciseSchedule: string;
+    };
+  };
+
   appendix?: {
     scenarioDetails: Array<{
       scenarioId: string;
@@ -343,11 +435,19 @@ export interface ExerciseReport {
 }
 
 export async function generateExerciseReport(
-  projectId: string
+  projectId: string,
+  batchId?: string,
+  branchIds?: string[],
 ): Promise<{ data: { status: string } } | { error: string }> {
   return fetchApi<{ status: string }>(
     `/api/crucible/projects/${projectId}/exercise-report`,
-    { method: "POST" }
+    {
+      method: "POST",
+      body: JSON.stringify({
+        batch_id: batchId,
+        branch_ids: branchIds || [],
+      }),
+    },
   );
 }
 
