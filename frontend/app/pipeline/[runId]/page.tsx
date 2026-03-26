@@ -2,7 +2,12 @@
 "use client";
 
 import { use, useEffect, useRef, useState, useCallback } from "react";
-import PipelineCanvas from "@/app/components/pipeline/PipelineCanvas";
+import dynamic from "next/dynamic";
+
+const PipelineCanvas = dynamic(
+  () => import("@/app/components/pipeline/PipelineCanvas"),
+  { ssr: false },
+);
 import PipelineStagesPanel from "@/app/components/pipeline/PipelineStagesPanel";
 import PipelineDetailPanel from "@/app/components/pipeline/PipelineDetailPanel";
 import {
@@ -207,11 +212,8 @@ export default function PipelinePage({
                   if (parsed.forkSimId) setMcCfSimId(parsed.forkSimId);
                 } catch { /* detail is plain text */ }
               }
-              // Clear when MC/CF completes or fails
-              if ((update.step === "monte_carlo" || update.step === "counterfactual") &&
-                  (update.status === "completed" || update.status === "failed")) {
-                setMcCfSimId(null);
-              }
+              // Keep mcCfSimId after completion so action history stays visible.
+              // CF running update naturally switches to forkSimId when it starts.
             }
             return newSteps;
           });
