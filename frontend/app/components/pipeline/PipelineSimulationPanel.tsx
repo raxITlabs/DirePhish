@@ -63,7 +63,19 @@ function getActionContent(action: AgentAction): { content: string; meta?: string
       .join(" · ");
     return { content: body, meta };
   }
-  return { content: (action.args.content as string) || "" };
+  // Fallback chain: args.content → args.body → description (inject) → reason (arbiter) → complication (arbiter)
+  const content =
+    (action.args?.content as string) ||
+    (action.args?.body as string) ||
+    action.description ||
+    action.reason ||
+    action.complication ||
+    "";
+  return { content };
+}
+
+function getAgentName(action: AgentAction): string {
+  return action.agent || (action.type === "inject" ? "SYSTEM" : action.type === "arbiter" ? "ARBITER" : "");
 }
 
 function getActionBorderColor(action: string): string {
@@ -150,23 +162,25 @@ export default function PipelineSimulationPanel({
   }, [simActions.length, activeWorld]);
 
   // Filter actions by world tab (timeline uses all actions but different view)
-  const filteredActions =
-    activeWorld === "all" || activeWorld === "timeline"
-      ? simActions
-      : simActions.filter((a) => {
-          if (activeWorld === "slack") return a.action === "send_message";
-          if (activeWorld === "email") return a.action === "send_email";
-          return true;
-        });
+  // Also exclude do_nothing actions — agent chose not to act, nothing to show
+  const filteredActions = simActions
+    .filter((a) => a.action !== "do_nothing")
+    .filter((a) => {
+      if (activeWorld === "all" || activeWorld === "timeline") return true;
+      if (activeWorld === "slack") return a.action === "send_message";
+      if (activeWorld === "email") return a.action === "send_email";
+      return true;
+    });
 
-  const slackCount = simActions.filter((a) => a.action === "send_message").length;
-  const emailCount = simActions.filter((a) => a.action === "send_email").length;
+  const visibleActions = simActions.filter((a) => a.action !== "do_nothing");
+  const slackCount = visibleActions.filter((a) => a.action === "send_message").length;
+  const emailCount = visibleActions.filter((a) => a.action === "send_email").length;
 
   const worldTabs: { id: WorldTab; label: string; count: number }[] = [
-    { id: "all", label: "All", count: simActions.length },
+    { id: "all", label: "All", count: visibleActions.length },
     { id: "slack", label: "Slack", count: slackCount },
     { id: "email", label: "Email", count: emailCount },
-    { id: "timeline", label: "Timeline", count: simActions.length },
+    { id: "timeline", label: "Timeline", count: visibleActions.length },
   ];
 
   const toggleExpand = (index: number) => {
@@ -414,7 +428,7 @@ function TimelineView({ actions }: { actions: AgentAction[] }) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-semibold text-foreground">
                       {isThreatActor && <span className="text-burnt-peach-600 mr-1 text-[9px] font-mono uppercase">ATTACKER</span>}
-                      {action.agent}
+                      {getAgentName(action)}
                     </span>
                     <Badge
                       variant="secondary"
@@ -463,7 +477,8 @@ function ActionFeed({
         const showRoundDivider = action.round !== lastRound;
         lastRound = action.round;
 
-        const initials = action.agent
+        const agentName = getAgentName(action);
+        const initials = agentName
           .split(" ")
           .map((n) => n[0])
           .join("")
@@ -521,7 +536,7 @@ function ActionFeed({
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold text-foreground">
                       {isThreatActor && <span className="text-burnt-peach-600 mr-1 text-[10px] font-mono uppercase">ATTACKER</span>}
-                      {action.agent}
+                      {agentName}
                     </span>
                     <Badge
                       variant="secondary"

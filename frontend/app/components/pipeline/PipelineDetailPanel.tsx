@@ -291,11 +291,14 @@ const RESEARCH_STEPS = [
     label: "Synthesizing company dossier",
     substeps: [
       "People — executives, security leadership, reporting chains",
-      "Systems — cloud, databases, SIEM, identity, CI/CD, vendors",
-      "Compliance — regulatory frameworks, certifications",
+      "Systems — cloud, databases, SIEM, identity, CI/CD, firewalls",
+      "Vendors — supply chain entities, SPoF analysis, contracts",
+      "Data flows — system-to-system data movement, encryption, protocols",
+      "Access mappings — role-to-system privileges, MFA requirements",
+      "Network topology — DMZ, internal zones, cloud VPC, exposure",
       "Risks — company-specific threats, affected systems, mitigations",
       "Events — breaches, acquisitions, lawsuits, leadership changes",
-      "Security posture — team size, tools, IR plan, bug bounty",
+      "Compliance & security posture — frameworks, tools, IR plan",
     ],
   },
   { threshold: 85, label: "Indexing dossier to knowledge graph" },
@@ -789,19 +792,29 @@ function StageDetail({
           ? `Stress Test: ${parsed.scenarioTitle}`
           : "Stress Test Variation";
 
-        const variationDesc = parsed?.variation_description;
+        const variationDesc = parsed?.variation_description || mcCfSimStatus?.variation_description || "";
         const mcChanges: string[] = [];
         if (variationDesc) {
-          if (variationDesc.includes("temp=")) {
-            const tempMatch = variationDesc.match(/temp=([\d.]+)/);
-            if (tempMatch) {
-              const temp = parseFloat(tempMatch[1]);
-              mcChanges.push(temp > 0.7 ? "Team under higher stress" : temp < 0.6 ? "Team more cautious" : "Normal stress levels");
-            }
+          // Parse "temp=0.74"
+          const tempMatch = variationDesc.match(/temp=([\d.]+)/);
+          if (tempMatch) {
+            const temp = parseFloat(tempMatch[1]);
+            if (temp > 0.75) mcChanges.push("Team under higher pressure");
+            else if (temp < 0.6) mcChanges.push("Team responds more cautiously");
+            else mcChanges.push("Slightly varied decision-making");
           }
-          if (variationDesc.includes("timing_shifts")) mcChanges.push("Attack timing shifted");
-          if (variationDesc.includes("order=")) mcChanges.push("Team response order shuffled");
-          if (variationDesc.includes("persona_mods")) mcChanges.push("Team response patterns varied");
+          // Parse timing shifts
+          if (variationDesc.includes("timing_shift")) {
+            mcChanges.push("Attack events shifted in timing");
+          }
+          // Parse order shuffle
+          if (variationDesc.includes("order=")) {
+            mcChanges.push("Team response order changed");
+          }
+          // Parse persona mods
+          if (variationDesc.includes("persona_mods")) {
+            mcChanges.push("Team members respond with different priorities");
+          }
         }
 
         return (
@@ -849,11 +862,11 @@ function StageDetail({
     if (state?.status === "completed") {
       return (
         <div className="space-y-4">
-          <p className="text-xs font-mono text-verdigris-700">{state.message || "Monte Carlo analysis complete"}</p>
+          <p className="text-xs font-mono text-verdigris-700">{state.message || "Stress testing complete"}</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-tuscan-sun-50 rounded-lg px-3 py-2 text-center">
               <div className="text-xl font-bold font-mono text-tuscan-sun-700">{parsed?.iterations || "?"}</div>
-              <div className="text-[10px] font-mono text-tuscan-sun-600 uppercase">Iterations</div>
+              <div className="text-[10px] font-mono text-tuscan-sun-600 uppercase">Variations</div>
             </div>
             {state.durationMs && (
               <div className="bg-royal-azure-50 rounded-lg px-3 py-2 text-center">
@@ -867,6 +880,16 @@ function StageDetail({
               <span className="text-[10px] font-mono text-muted-foreground/60 uppercase">Total Cost</span>
               <span className="text-xs font-mono font-semibold text-foreground/80">${parsed.totalCost.toFixed(2)}</span>
             </div>
+          )}
+          {mcCfSimStatus && mcCfSimActions && mcCfSimActions.length > 0 && (
+            <PipelineSimulationPanel
+              simStatus={mcCfSimStatus}
+              simActions={mcCfSimActions}
+              graphData={graphData}
+              activeSimIndex={0}
+              totalSims={1}
+              scenarioTitle={parsed?.scenarioTitle ? `Stress Test: ${parsed.scenarioTitle}` : "Stress Test Results"}
+            />
           )}
         </div>
       );
@@ -955,7 +978,7 @@ function StageDetail({
     if (state?.status === "completed") {
       return (
         <div className="space-y-4">
-          <p className="text-xs font-mono text-verdigris-700">{state.message || "Counterfactual analysis complete"}</p>
+          <p className="text-xs font-mono text-verdigris-700">{state.message || "What-if analysis complete"}</p>
           <div className="grid grid-cols-2 gap-3">
             {decisionsCount != null && (
               <div className="bg-burnt-peach-50 rounded-lg px-3 py-2 text-center">
@@ -966,10 +989,22 @@ function StageDetail({
             {branchesCount != null && (
               <div className="bg-verdigris-50 rounded-lg px-3 py-2 text-center">
                 <div className="text-xl font-bold font-mono text-verdigris-700">{branchesCount}</div>
-                <div className="text-[10px] font-mono text-verdigris-600 uppercase">Branches Forked</div>
+                <div className="text-[10px] font-mono text-verdigris-600 uppercase">Branches Tested</div>
               </div>
             )}
           </div>
+          {mcCfSimStatus && mcCfSimActions && mcCfSimActions.length > 0 && (
+            <PipelineSimulationPanel
+              simStatus={mcCfSimStatus}
+              simActions={mcCfSimActions}
+              graphData={graphData}
+              activeSimIndex={0}
+              totalSims={1}
+              scenarioTitle={parsed?.forkAgent && parsed?.forkRound
+                ? `What If: Round ${parsed.forkRound} — ${parsed.forkAgent}'s decision`
+                : "Alternate Timeline"}
+            />
+          )}
         </div>
       );
     }

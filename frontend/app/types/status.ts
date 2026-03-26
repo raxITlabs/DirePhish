@@ -7,6 +7,7 @@ export interface SimulationStatus {
   recentActions: AgentAction[];
   pressures: ActivePressureState[];
   graphPush?: { pushing: boolean; version: number };
+  variation_description?: string;
 }
 
 export interface AgentAction {
