@@ -273,11 +273,32 @@ function ExerciseReportSummary({ projectId, message }: { projectId: string; mess
 
 const RESEARCH_STEPS = [
   { threshold: 0,  label: "Starting research" },
-  { threshold: 5,  label: "Scraping company website" },
-  { threshold: 25, label: "Searching for intelligence" },
-  { threshold: 45, label: "Processing documents" },
-  { threshold: 55, label: "Synthesizing dossier" },
-  { threshold: 85, label: "Indexing to knowledge graph" },
+  { threshold: 5,  label: "Crawling company website" },
+  {
+    threshold: 25,
+    label: "Grounded web search",
+    substeps: [
+      "Security intel — breaches, certifications, CISO, bug bounty",
+      "Tech & org — stack, infrastructure, executives, headcount",
+      "Industry context — regulations, geopolitical risks, threat landscape",
+      "Recent news — acquisitions, lawsuits, incidents, AI adoption",
+      "Emerging tech — AI strategy, model security, IoT, shadow AI",
+    ],
+  },
+  { threshold: 45, label: "Processing uploaded documents" },
+  {
+    threshold: 55,
+    label: "Synthesizing company dossier",
+    substeps: [
+      "People — executives, security leadership, reporting chains",
+      "Systems — cloud, databases, SIEM, identity, CI/CD, vendors",
+      "Compliance — regulatory frameworks, certifications",
+      "Risks — company-specific threats, affected systems, mitigations",
+      "Events — breaches, acquisitions, lawsuits, leadership changes",
+      "Security posture — team size, tools, IR plan, bug bounty",
+    ],
+  },
+  { threshold: 85, label: "Indexing dossier to knowledge graph" },
 ];
 
 function ResearchActivityView({ progress }: { progress: ResearchProgress }) {
@@ -304,11 +325,11 @@ function ResearchActivityView({ progress }: { progress: ResearchProgress }) {
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Progress</span>
-          <span className="text-[10px] font-mono text-verdigris-600 tabular-nums">{progress.progress}%</span>
+          <span className="text-[10px] font-mono text-royal-azure-600 tabular-nums">{progress.progress}%</span>
         </div>
-        <div className="h-1.5 bg-verdigris-100 rounded-full overflow-hidden">
+        <div className="h-1.5 bg-royal-azure-100 rounded-full overflow-hidden">
           <div
-            className="h-full bg-verdigris-500 rounded-full transition-all duration-700 ease-out"
+            className="h-full bg-royal-azure-500 rounded-full transition-all duration-700 ease-out"
             style={{ width: `${progress.progress}%` }}
           />
         </div>
@@ -337,20 +358,20 @@ function ResearchActivityView({ progress }: { progress: ResearchProgress }) {
                 {i < RESEARCH_STEPS.length - 1 && (
                   <div
                     className={`absolute left-[7px] top-[18px] w-[2px] h-[calc(100%-2px)] ${
-                      isCompleted ? "bg-verdigris-300" : "bg-border/30"
+                      isCompleted ? "bg-royal-azure-300" : "bg-border/30"
                     }`}
                   />
                 )}
                 {/* Dot / Check */}
                 <div className="relative z-10 shrink-0 mt-0.5">
                   {isCompleted ? (
-                    <div className="w-4 h-4 rounded-full bg-verdigris-500 flex items-center justify-center">
+                    <div className="w-4 h-4 rounded-full bg-royal-azure-500 flex items-center justify-center">
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                         <path d="M2 5L4.5 7.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </div>
                   ) : isActive ? (
-                    <div className="w-4 h-4 rounded-full bg-verdigris-500 animate-pulse-dot" />
+                    <div className="w-4 h-4 rounded-full bg-royal-azure-500 animate-pulse-dot" />
                   ) : (
                     <div className="w-4 h-4 rounded-full bg-border/30" />
                   )}
@@ -360,7 +381,7 @@ function ResearchActivityView({ progress }: { progress: ResearchProgress }) {
                   <span
                     className={`text-xs font-mono leading-tight ${
                       isCompleted
-                        ? "text-verdigris-700"
+                        ? "text-royal-azure-700"
                         : isActive
                           ? "text-foreground font-medium"
                           : "text-muted-foreground/40"
@@ -372,6 +393,22 @@ function ResearchActivityView({ progress }: { progress: ResearchProgress }) {
                     <p className="text-[10px] font-mono text-muted-foreground mt-0.5 truncate">
                       {progress.progressMessage}
                     </p>
+                  )}
+                  {"substeps" in step && step.substeps && (isActive || isCompleted) && (
+                    <ul className="mt-1.5 space-y-1">
+                      {step.substeps.map((sub: string) => (
+                        <li key={sub} className="flex items-start gap-1.5">
+                          <span className={`mt-[5px] shrink-0 block w-1 h-1 rounded-full ${
+                            isCompleted ? "bg-royal-azure-400" : "bg-royal-azure-400 animate-pulse-dot"
+                          }`} />
+                          <span className={`text-[10px] font-mono leading-snug ${
+                            isCompleted ? "text-royal-azure-600" : "text-muted-foreground"
+                          }`}>
+                            {sub}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </div>
               </div>
