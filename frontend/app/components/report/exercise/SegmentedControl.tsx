@@ -5,6 +5,7 @@ const VIEWS = [
   { id: "ciso", label: "CISO" },
   { id: "security", label: "Security Team" },
   { id: "playbook", label: "Playbook" },
+  { id: "risk-score", label: "Risk Score" },
 ] as const;
 
 export type ReportView = (typeof VIEWS)[number]["id"];

@@ -10,6 +10,7 @@ import BoardView from "@/app/components/report/exercise/BoardView";
 import CISOView from "@/app/components/report/exercise/CISOView";
 import SecurityTeamView from "@/app/components/report/exercise/SecurityTeamView";
 import PlaybookView from "@/app/components/report/exercise/PlaybookView";
+import RiskScoreView from "@/app/components/report/exercise/RiskScoreView";
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { AlertTriangle, Home, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/app/components/ui/card";
@@ -148,6 +149,7 @@ export default function ExerciseReportPage({
       {view === "ciso" && <CISOView report={report} />}
       {view === "security" && <SecurityTeamView report={report} />}
       {view === "playbook" && <PlaybookView report={report} />}
+      {view === "risk-score" && <RiskScoreView report={report} projectId={projectId} />}
     </div>
   );
 }

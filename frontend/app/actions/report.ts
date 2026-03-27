@@ -364,6 +364,35 @@ export interface ExerciseReport {
     communication_score: number;
   }>;
 
+  // Risk score (computed independently via POST /risk-score/compute)
+  riskScore?: {
+    score_id: string;
+    composite_score: number;
+    confidence_interval: { lower: number; upper: number };
+    confidence_flag: "high" | "low";
+    interpretation: { tier: string; label: string; description: string };
+    dimensions: {
+      detection_speed: number;
+      containment_effectiveness: number;
+      communication_quality: number;
+      decision_consistency: number;
+      compliance_adherence: number;
+      escalation_resistance: number;
+    };
+    fair_estimates: {
+      ale: number;
+      p10_loss: number;
+      p90_loss: number;
+      calibration_inputs: Record<string, number>;
+    };
+    drivers: Array<{
+      description: string;
+      evidence: string;
+      impact: number;
+      correlation: string;
+    }>;
+  };
+
   // Counterfactual comparison
   counterfactualComparison?: {
     original: { sim_id: string; containment_round: number | null; total_actions: number };
@@ -537,4 +566,27 @@ export async function getComparativeReport(
       error: d.error as string | undefined,
     },
   };
+}
+
+// --- Risk Score ---
+
+export async function computeRiskScore(
+  projectId: string,
+  calibration?: Record<string, number>,
+): Promise<{ data: ExerciseReport["riskScore"] } | { error: string }> {
+  return fetchApi<NonNullable<ExerciseReport["riskScore"]>>(
+    `/api/crucible/projects/${projectId}/risk-score/compute`,
+    {
+      method: "POST",
+      body: JSON.stringify({ calibration }),
+    },
+  );
+}
+
+export async function getRiskScore(
+  projectId: string,
+): Promise<{ data: ExerciseReport["riskScore"] } | { error: string }> {
+  return fetchApi<NonNullable<ExerciseReport["riskScore"]>>(
+    `/api/crucible/projects/${projectId}/risk-score`,
+  );
 }
