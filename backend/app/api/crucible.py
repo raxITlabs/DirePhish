@@ -754,18 +754,23 @@ def compute_risk_score(project_id):
 
     batch_id = latest_batch.get("batch_id", "")
 
-    # Load MC aggregation
+    # Load MC aggregation from disk (same path pattern as monte_carlo_results endpoint)
     try:
-        memory = FirestoreMemory()
-        mc_agg = memory.get_mc_aggregation(batch_id) if hasattr(memory, "get_mc_aggregation") else None
-        if mc_agg is None:
-            # Fallback: try to load from disk
-            agg_path = SIMULATIONS_DIR / batch_id / "aggregation.json"
-            if agg_path.exists():
-                with open(agg_path) as f:
-                    mc_agg = json.load(f)
+        agg_path = (
+            Path(__file__).parent.parent.parent / "uploads" / "crucible_projects"
+            / project_id / "monte_carlo" / batch_id / "aggregation.json"
+        )
+        if agg_path.exists():
+            with open(agg_path) as f:
+                mc_agg = json.load(f)
+        else:
+            # Fallback: try Firestore mc_aggregates collection
+            memory = FirestoreMemory()
+            aggregates = memory.get_project_aggregates(project_id, limit=1)
+            if aggregates:
+                mc_agg = aggregates[0]
             else:
-                return jsonify({"error": "MC aggregation data not found"}), 404
+                return jsonify({"error": "MC aggregation data not found. Run a Monte Carlo batch first."}), 404
     except Exception as e:
         return jsonify({"error": f"Failed to load MC aggregation: {e}"}), 500
 
