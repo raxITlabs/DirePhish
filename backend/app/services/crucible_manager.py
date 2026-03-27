@@ -152,11 +152,16 @@ def launch_simulation(config: dict) -> str:
         except Exception:
             pass
 
+    # Use adaptive_depth.max_rounds as the effective total when available,
+    # since the arbiter can extend the sim beyond the initial total_rounds.
+    ad = config.get("adaptive_depth", {})
+    effective_total = ad.get("max_rounds", config.get("total_rounds", 5)) if ad.get("enabled") else config.get("total_rounds", 5)
+
     _simulations[sim_id] = {
         "sim_id": sim_id,
         "status": "starting",
         "current_round": 0,
-        "total_rounds": config.get("total_rounds", 5),
+        "total_rounds": effective_total,
         "action_count": 0,
         "graph_id": graph_id,
     }
@@ -278,7 +283,8 @@ def _rehydrate_simulations():
                 config = json.load(f)
             actions_path = sim_dir / "actions.jsonl"
             actions = _read_actions(actions_path)
-            total_rounds = config.get("total_rounds", 5)
+            ad = config.get("adaptive_depth", {})
+            total_rounds = ad.get("max_rounds", config.get("total_rounds", 5)) if ad.get("enabled") else config.get("total_rounds", 5)
             current_round = max((a.get("round", 0) for a in actions), default=0) if actions else 0
             status = "completed" if actions else "unknown"
 

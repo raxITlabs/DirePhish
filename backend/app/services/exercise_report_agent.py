@@ -91,6 +91,138 @@ def _track_call(llm: LLMClient, cost_tracker: CostTracker, description: str):
         )
 
 
+# ─── Synthesis helpers (fallbacks when MC/stress data is unavailable) ───
+
+def _synthesize_mc_stats_from_sim(sim_data_list: list[dict]) -> dict | None:
+    """Produce MC-stats-compatible dict from raw simulation action data.
+
+    Reuses the same keyword classification as monte_carlo_aggregator so that
+    containment/escalation detection is consistent.
+    """
+    import statistics
+    from .monte_carlo_aggregator import (
+        CONTAINMENT_KEYWORDS,
+        ESCALATION_KEYWORDS,
+        _action_text,
+    )
+
+    if not sim_data_list:
+        return None
+
+    outcome_counts: dict[str, int] = {
+        "contained_early": 0,
+        "contained_late": 0,
+        "not_contained": 0,
+        "escalated": 0,
+    }
+    containment_rounds: list[int] = []
+
+    for sim in sim_data_list:
+        actions = sim.get("actions", [])
+        if not actions:
+            continue
+
+        total_rounds = max((a.get("round", 0) for a in actions), default=1) or 1
+        midpoint = total_rounds / 2.0
+        containment_round: int | None = None
+        has_escalation = False
+
+        for action in actions:
+            text = _action_text(action)
+            rnd = action.get("round", 0)
+
+            if ESCALATION_KEYWORDS.search(text):
+                has_escalation = True
+            if containment_round is None and CONTAINMENT_KEYWORDS.search(text):
+                containment_round = rnd
+
+        if has_escalation and containment_round is None:
+            outcome_counts["escalated"] += 1
+        elif containment_round is not None:
+            label = "contained_early" if containment_round <= midpoint else "contained_late"
+            outcome_counts[label] += 1
+            containment_rounds.append(containment_round)
+        else:
+            outcome_counts["not_contained"] += 1
+
+    containment_round_stats = None
+    if containment_rounds:
+        histogram: dict[str, int] = {}
+        for r in containment_rounds:
+            histogram[str(r)] = histogram.get(str(r), 0) + 1
+        containment_round_stats = {
+            "mean": statistics.mean(containment_rounds),
+            "median": statistics.median(containment_rounds),
+            "std": statistics.stdev(containment_rounds) if len(containment_rounds) >= 2 else 0.0,
+            "min": min(containment_rounds),
+            "max": max(containment_rounds),
+            "histogram": histogram,
+        }
+
+    return {
+        "iteration_count": len(sim_data_list),
+        "outcome_distribution": outcome_counts,
+        "containment_round_stats": containment_round_stats,
+        "decision_divergence_points": [],
+        "agent_consistency": {},
+        "source": "synthesized",
+    }
+
+
+def _synthesize_resilience_from_teams(team_scores: list[dict], sim_data_list: list[dict]) -> dict | None:
+    """Derive a resilience estimate from team performance scores (1-10 scale).
+
+    Maps the 5 team dimensions to the 4 resilience dimensions the frontend
+    expects, scaling from 1-10 to 0-100.
+    """
+    import statistics
+
+    if not team_scores:
+        return None
+
+    # Collect per-dimension averages across all teams
+    dims_raw: dict[str, list[float]] = {
+        "responseSpeed": [],
+        "containmentEffectiveness": [],
+        "communicationQuality": [],
+        "complianceAdherence": [],
+    }
+    for team in team_scores:
+        scores = team.get("scores", {})
+        for key in dims_raw:
+            val = scores.get(key)
+            if val is not None:
+                dims_raw[key].append(float(val))
+
+    if not any(dims_raw.values()):
+        return None
+
+    def _avg(vals: list[float]) -> float:
+        return (sum(vals) / len(vals)) * 10 if vals else 50.0
+
+    dimensions = {
+        "detection_speed": round(_avg(dims_raw["responseSpeed"]), 1),
+        "containment_speed": round(_avg(dims_raw["containmentEffectiveness"]), 1),
+        "communication_quality": round(_avg(dims_raw["communicationQuality"]), 1),
+        "compliance_adherence": round(_avg(dims_raw["complianceAdherence"]), 1),
+    }
+
+    dim_values = list(dimensions.values())
+    overall = statistics.mean(dim_values)
+    std = statistics.stdev(dim_values) if len(dim_values) >= 2 else 0.0
+
+    weakest_link = min(dimensions, key=dimensions.get)  # type: ignore[arg-type]
+
+    return {
+        "overall": round(overall, 1),
+        "dimensions": dimensions,
+        "robustness_index": round(max(0, overall - std), 1),
+        "weakest_link": weakest_link,
+        "failure_modes": [],
+        "source": "synthesized",
+    }
+
+
 # ─── Data collection helpers ───
 
 def _load_sim_data(sim_id: str) -> dict:
@@ -406,6 +538,11 @@ def _playbook_containment(
                     "action": content[:200],
                 })
 
+    root_cause_summary = json.dumps(
+        [{"issue": rc.get("issue"), "rootCause": rc.get("rootCause")} for rc in root_causes[:5]],
+        indent=2,
+    )
+
     prompt = f"""{_PLAYBOOK_PREAMBLE}
 
 TASK: Generate the Containment section. Base it on containment actions that ACTUALLY WORKED in the simulation.
@@ -420,7 +557,7 @@ CONTAINMENT ACTIONS OBSERVED IN SIMULATION ({len(containment_actions)} found):
 {json.dumps(containment_actions[:15], indent=2)}
 
 ROOT CAUSES IDENTIFIED:
-{json.dumps([{{"issue": rc.get("issue"), "rootCause": rc.get("rootCause")}} for rc in root_causes[:5]], indent=2)}
+{root_cause_summary}
 
 PREDICTED CASCADING EFFECTS:
 {json.dumps(cascading_effects, indent=2)}
@@ -454,6 +591,17 @@ def _playbook_eradication(
         if ap:
             attack_paths.append(ap)
 
+    rc_mitre = json.dumps(
+        [{"issue": rc.get("issue"), "rootCause": rc.get("rootCause"),
+          "mitreReference": rc.get("mitreReference", ""),
+          "preventionStrategies": rc.get("preventionStrategies", [])}
+         for rc in root_causes], indent=2,
+    )
+    ap_techniques = json.dumps(
+        [{"kill_chain": ap.get("kill_chain", []), "threat_name": ap.get("threat_name", "")}
+         for ap in attack_paths], indent=2,
+    )
+
     prompt = f"""{_PLAYBOOK_PREAMBLE}
 
 TASK: Generate the Eradication section. Tie each remediation step to a specific root cause from the exercise.
@@ -462,18 +610,10 @@ CONTAINMENT ACTIONS TAKEN (from previous step):
 {json.dumps(previous.get("containment", {}), indent=2)}
 
 ROOT CAUSES WITH MITRE REFERENCES:
-{json.dumps([{{
-    "issue": rc.get("issue"),
-    "rootCause": rc.get("rootCause"),
-    "mitreReference": rc.get("mitreReference", ""),
-    "preventionStrategies": rc.get("preventionStrategies", []),
-}} for rc in root_causes], indent=2)}
+{rc_mitre}
 
 ATTACK PATH TECHNIQUES:
-{json.dumps([{{
-    "kill_chain": ap.get("kill_chain", []),
-    "threat_name": ap.get("threat_name", ""),
-}} for ap in attack_paths], indent=2)}
+{ap_techniques}
 
 Output JSON:
 {{
@@ -519,6 +659,19 @@ def _playbook_recovery(
     compliance = graph_data.get("compliance", [])
     relationships = graph_data.get("relationships", [])[:20]
 
+    worlds_summary = json.dumps(
+        [{"name": w.get("name"), "type": w.get("type", ""), "description": w.get("description", "")} for w in unique_worlds], indent=2,
+    )
+    roles_summary = json.dumps(
+        [{"name": ap.get("name"), "role": ap.get("role")} for ap in agent_profiles[:10]], indent=2,
+    )
+    systems_summary = json.dumps(
+        [{"name": s.get("name"), "summary": s.get("summary", "")} for s in systems], indent=2,
+    )
+    compliance_summary = json.dumps(
+        [{"name": c.get("name"), "summary": c.get("summary", "")} for c in compliance], indent=2,
+    )
+
     prompt = f"""{_PLAYBOOK_PREAMBLE}
 
 TASK: Generate the Recovery section. Base restoration on actual system dependencies and communication patterns from the exercise.
@@ -527,17 +680,17 @@ ERADICATION STEPS TAKEN (from previous step):
 {json.dumps(previous.get("eradication", {}), indent=2)}
 
 COMMUNICATION CHANNELS USED IN EXERCISE:
-{json.dumps([{{"name": w.get("name"), "type": w.get("type", ""), "description": w.get("description", "")}} for w in unique_worlds], indent=2)}
+{worlds_summary}
 
 TEAM ROLES IN EXERCISE:
-{json.dumps([{{"name": ap.get("name"), "role": ap.get("role")}} for ap in agent_profiles[:10]], indent=2)}
+{roles_summary}
 
 SYSTEM DEPENDENCIES (from knowledge graph):
-{json.dumps([{{"name": s.get("name"), "summary": s.get("summary", "")}} for s in systems], indent=2)}
+{systems_summary}
 {chr(10).join(relationships)}
 
 COMPLIANCE REQUIREMENTS:
-{json.dumps([{{"name": c.get("name"), "summary": c.get("summary", "")}} for c in compliance], indent=2)}
+{compliance_summary}
 
 ACTION ITEMS FROM EXERCISE CONCLUSIONS:
 {json.dumps(action_items[:5], indent=2)}
@@ -575,6 +728,11 @@ def _playbook_post_incident(
             f"Agent consistency: {json.dumps(mc_aggregation.get('agent_consistency', {}))}"
         )
 
+    findings_summary = json.dumps(
+        [{"finding": f.get("finding"), "severity": f.get("severity"), "businessImpact": f.get("businessImpact", "")}
+         for f in key_findings[:5]], indent=2,
+    )
+
     prompt = f"""{_PLAYBOOK_PREAMBLE}
 
 TASK: Generate the Post-Incident section. Synthesize lessons from the entire exercise.
@@ -587,7 +745,7 @@ PLAYBOOK SECTIONS SO FAR:
 - Recovery sequence: {len(previous_sections.get("recovery", {}).get("restorationSequence", []))} systems
 
 KEY FINDINGS FROM EXERCISE:
-{json.dumps([{{"finding": f.get("finding"), "severity": f.get("severity"), "businessImpact": f.get("businessImpact", "")}} for f in key_findings[:5]], indent=2)}
+{findings_summary}
 
 STRATEGIC ACTION ITEMS:
 {json.dumps(action_items[:5], indent=2)}
@@ -795,22 +953,99 @@ def _generate_exercise_report(
         logger.info("Step 10: Generating appendix analysis...")
         appendix = _generate_appendix(llm, sim_data_list, cost_tracker)
 
-        # ─── Step 11: Load MC aggregation data ───
+        # ─── Step 11: Load MC aggregation data (3-tier fallback) ───
         mc_aggregation = None
+        projects_dir = Path(Config.UPLOAD_FOLDER) / "crucible_projects" / project_id
+
+        # Tier 1a: Use provided batch_id
         if batch_id:
-            projects_dir = Path(Config.UPLOAD_FOLDER) / "crucible_projects" / project_id
             agg_path = projects_dir / "monte_carlo" / batch_id / "aggregation.json"
             if agg_path.exists():
                 with open(agg_path) as f:
                     mc_aggregation = json.load(f)
                 logger.info(f"Loaded MC aggregation from {agg_path}")
-            else:
-                logger.warning(f"MC aggregation not found at {agg_path}")
+
+        # Tier 1b: Auto-detect newest batch with aggregation.json
+        if mc_aggregation is None:
+            mc_root = projects_dir / "monte_carlo"
+            if mc_root.exists():
+                for batch_dir in sorted(mc_root.iterdir(), reverse=True):
+                    if not batch_dir.is_dir() or batch_dir.name.startswith("."):
+                        continue
+                    agg_path = batch_dir / "aggregation.json"
+                    if agg_path.exists():
+                        with open(agg_path) as f:
+                            mc_aggregation = json.load(f)
+                        logger.info(f"Auto-detected MC aggregation from {agg_path}")
+                        break
+
+        # Tier 1c: On-the-fly aggregate from MC iteration dirs on disk
+        if mc_aggregation is None:
+            mc_root = projects_dir / "monte_carlo"
+            if mc_root.exists():
+                from dataclasses import asdict as _asdict
+                from .monte_carlo_aggregator import (
+                    aggregate_batch as _aggregate_batch,
+                    IterationResult as _IterationResult,
+                    _action_text as _at,
+                )
+                for batch_dir in sorted(mc_root.iterdir(), reverse=True):
+                    if not batch_dir.is_dir() or batch_dir.name.startswith("."):
+                        continue
+                    iter_results = []
+                    for iter_dir in sorted(batch_dir.iterdir()):
+                        if not iter_dir.is_dir() or "_iter_" not in iter_dir.name:
+                            continue
+                        actions_path = iter_dir / "actions.jsonl"
+                        summary_path = iter_dir / "summary.json"
+                        if not summary_path.exists():
+                            continue
+                        actions = []
+                        if actions_path.exists():
+                            with open(actions_path) as f:
+                                for line in f:
+                                    line = line.strip()
+                                    if line:
+                                        try:
+                                            actions.append(json.loads(line))
+                                        except json.JSONDecodeError:
+                                            continue
+                        with open(summary_path) as f:
+                            summary = json.load(f)
+                        iter_results.append(_IterationResult(
+                            iteration_id=iter_dir.name,
+                            seed=summary.get("seed", 0),
+                            total_rounds=summary.get("total_rounds", 0),
+                            total_actions=summary.get("total_actions", len(actions)),
+                            actions=actions,
+                            summary=summary,
+                            cost_usd=summary.get("cost_usd", 0),
+                            variation_description=summary.get("variation_description", ""),
+                            completed_at=summary.get("completed_at", ""),
+                            output_dir=str(iter_dir),
+                        ))
+                    if iter_results:
+                        try:
+                            agg = _aggregate_batch(iter_results)
+                            mc_aggregation = _asdict(agg)
+                            # Write back so next time Tier 1b picks it up
+                            agg_out = batch_dir / "aggregation.json"
+                            with open(agg_out, "w") as f:
+                                json.dump(mc_aggregation, f, indent=2, default=str)
+                            logger.info(f"On-the-fly aggregated {len(iter_results)} iteration(s) from {batch_dir}")
+                            break
+                        except Exception as e:
+                            logger.warning(f"On-the-fly aggregation failed for {batch_dir}: {e}")
+
+        # Tier 2: Synthesize from original simulation data
+        if mc_aggregation is None:
+            mc_aggregation = _synthesize_mc_stats_from_sim(sim_data_list)
+            if mc_aggregation:
+                logger.info("Synthesized MC stats from simulation data")
 
         # ─── Step 12: Load stress test results + resilience score ───
         stress_results = []
         resilience = None
-        projects_dir = Path(Config.UPLOAD_FOLDER) / "crucible_projects" / project_id
         stress_dir = projects_dir / "stress_test"
         if stress_dir.exists():
             from .config_mutator import ConfigMutator
@@ -825,6 +1060,12 @@ def _generate_exercise_report(
                     logger.info(f"Resilience score: {resilience.get('overall', 'N/A')}")
                 except Exception as e:
                     logger.warning(f"Resilience scoring failed: {e}")
+
+        # Fallback: synthesize resilience from team performance scores
+        if resilience is None and team_scores:
+            resilience = _synthesize_resilience_from_teams(team_scores, sim_data_list)
+            if resilience:
+                logger.info(f"Synthesized resilience score: {resilience.get('overall', 'N/A')}")
 
         # ─── Step 13: Load counterfactual comparison ───
         cf_comparison = None
@@ -1085,8 +1326,10 @@ Score this TEAM on each dimension (1-10) based on what the simulation predicts a
 
 Write a 2-3 sentence narrative using predictive language about what the simulation suggests regarding this team's organizational readiness. Reference specific evidence from the simulation data. Do NOT name individuals.
 
+IMPORTANT: Derive scores from the simulation evidence. Each team should have DIFFERENT scores reflecting their specific strengths and weaknesses. Do NOT use the same scores for every team.
+
 Return ONLY valid JSON:
-{{"responseSpeed": 7, "containmentEffectiveness": 5, "communicationQuality": 6, "complianceAdherence": 4, "leadershipDecisiveness": 8, "narrative": "..."}}"""
+{{"responseSpeed": <1-10>, "containmentEffectiveness": <1-10>, "communicationQuality": <1-10>, "complianceAdherence": <1-10>, "leadershipDecisiveness": <1-10>, "narrative": "2-3 sentence assessment with evidence"}}"""
 
         try:
             result = llm.chat_json([{"role": "user", "content": prompt}])

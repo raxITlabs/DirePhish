@@ -39,6 +39,10 @@ export interface CompanyDossier {
   risks: RiskInfo[];
   recentEvents: EventInfo[];
   securityPosture?: SecurityPosture;
+  vendorEntities?: VendorEntity[];
+  dataFlows?: DataFlow[];
+  accessMappings?: AccessMapping[];
+  networkTopology?: NetworkZone[];
 }
 
 export interface OrgRole {
@@ -72,6 +76,38 @@ export interface EventInfo {
   source: string;
   category?: "breach" | "acquisition" | "leadership_change" | "regulatory" | "product_launch" | "layoff" | "other";
   impact?: string;
+}
+
+export interface VendorEntity {
+  name: string;
+  category: string;
+  criticality: "low" | "medium" | "high" | "critical";
+  systemsProvided: string[];
+  contractType?: string;
+  singlePointOfFailure?: boolean;
+}
+
+export interface DataFlow {
+  source: string;
+  target: string;
+  dataTypes: string[];
+  protocol?: string;
+  encrypted?: boolean;
+  frequency?: string;
+}
+
+export interface AccessMapping {
+  role: string;
+  systems: string[];
+  privilegeLevel: "admin" | "read-write" | "read-only" | "operator";
+  mfaRequired?: boolean;
+}
+
+export interface NetworkZone {
+  zone: string;
+  systems: string[];
+  exposedToInternet: boolean;
+  connectedZones?: string[];
 }
 
 export interface SecurityPosture {

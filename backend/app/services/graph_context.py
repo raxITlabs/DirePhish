@@ -294,14 +294,145 @@ class GraphContext:
         if unprotected:
             lines.append(f"- Defender blind spots: {', '.join(unprotected)}")
 
+        # Supply chain attack vectors: vendors marked as SPoF
+        vendors = self._nodes_by_type("vendor")
+        spof_vendors = [
+            v.get("name", "?") for v in vendors
+            if "single point of failure" in v.get("summary", "").lower()
+        ]
+        if spof_vendors:
+            lines.append(f"- Supply chain SPoF vendors: {', '.join(spof_vendors)}")
+
+        # Internet-exposed entry points from network zones
+        zones = self._nodes_by_type("network_zone")
+        for z in zones:
+            summary = z.get("summary", "")
+            if "internet" in summary.lower():
+                zone_name = z.get("name", "?")
+                exposed_systems = self._edge_targets(zone_name, "contains")
+                located_in = [
+                    e.get("source", "?") for e in self.edges
+                    if e.get("label") == "located_in" and e.get("target") == zone_name
+                ]
+                all_exposed = list(dict.fromkeys(exposed_systems + located_in))
+                if all_exposed:
+                    lines.append(f"- Internet-exposed ({zone_name}): {', '.join(all_exposed)}")
+
+        # Data flow paths: sensitive data movement for exfiltration targets
+        sensitive_flows = [
+            e for e in self.edges
+            if e.get("label") == "sends_data_to"
+        ]
+        if sensitive_flows:
+            flow_strs = [f"{e.get('source', '?')} → {e.get('target', '?')}" for e in sensitive_flows[:8]]
+            lines.append(f"- Data exfiltration paths: {'; '.join(flow_strs)}")
+
         return "\n".join(lines) if len(lines) > 1 else ""
 
+    def vendor_supply_chain(self) -> str:
+        """Build vendor supply chain map from vendor nodes and their edges."""
+        vendors = self._nodes_by_type("vendor")
+        if not vendors:
+            return ""
+
+        lines = ["Supply Chain:"]
+        for v in vendors:
+            name = v.get("name", "Unknown")
+            summary = v.get("summary", "")
+
+            details: list[str] = []
+
+            supplies = self._edge_targets(name, "supplies")
+            if supplies:
+                details.append(f"supplies: {', '.join(supplies)}")
+
+            contracted_by = self._edge_targets(name, "contracted_by")
+            if contracted_by:
+                details.append(f"contracted by: {', '.join(contracted_by)}")
+
+            # Check if any system depends on this vendor (reverse lookup)
+            supplied_by_edges = [
+                e.get("source", "?") for e in self.edges
+                if e.get("label") == "supplied_by" and e.get("target") == name
+            ]
+            if supplied_by_edges:
+                details.append(f"supplies: {', '.join(supplied_by_edges)}")
+
+            # Flag SPoF from summary
+            spof = " [SPoF]" if "single point of failure" in summary.lower() else ""
+
+            suffix = f" — {'; '.join(details)}" if details else ""
+            lines.append(f"- {name}{spof}{suffix}")
+
+        return "\n".join(lines)
+
+    def data_flow_map(self) -> str:
+        """Map data flows between systems using sends_data_to and receives_data_from edges."""
+        # Collect all data flow edges
+        flow_labels = {"sends_data_to", "receives_data_from"}
+        flow_edges = [e for e in self.edges if e.get("label") in flow_labels]
+        if not flow_edges:
+            return ""
+
+        lines = ["Data Flows:"]
+        seen: set[str] = set()
+        for e in flow_edges:
+            src = e.get("source", "?")
+            tgt = e.get("target", "?")
+            label = e.get("label", "")
+            # Normalize direction
+            if label == "receives_data_from":
+                src, tgt = tgt, src
+            key = f"{src} → {tgt}"
+            if key in seen:
+                continue
+            seen.add(key)
+            lines.append(f"- {key}")
+
+        return "\n".join(lines)
+
+    def network_zones(self) -> str:
+        """Map network zones and which systems they contain."""
+        zones = self._nodes_by_type("network_zone")
+        if not zones:
+            return ""
+
+        lines = ["Network Topology:"]
+        for z in zones:
+            name = z.get("name", "Unknown")
+            summary = z.get("summary", "")
+
+            contains = self._edge_targets(name, "contains")
+            # Also check reverse: systems with located_in pointing to this zone
+            located_in = [
+                e.get("source", "?") for e in self.edges
+                if e.get("label") == "located_in" and e.get("target") == name
+            ]
+            all_systems = list(dict.fromkeys(contains + located_in))
+
+            connects_to = self._edge_targets(name, "connects_to")
+
+            parts: list[str] = []
+            if all_systems:
+                parts.append(f"systems: {', '.join(all_systems)}")
+            if connects_to:
+                parts.append(f"connects to: {', '.join(connects_to)}")
+
+            internet = " (internet-facing)" if "internet" in summary.lower() else ""
+            suffix = f" — {'; '.join(parts)}" if parts else ""
+            lines.append(f"- {name}{internet}{suffix}")
+
+        return "\n".join(lines)
+
     def full_context(self) -> str:
-        """Combine org_hierarchy + system_dependencies + threat_surface for report generation."""
+        """Combine all context sections for report generation."""
         sections = [
             self.org_hierarchy(),
             self.system_dependencies(),
             self.threat_surface(),
+            self.vendor_supply_chain(),
+            self.data_flow_map(),
+            self.network_zones(),
         ]
         # Filter empty sections and join with blank line separator
         return "\n\n".join(s for s in sections if s)

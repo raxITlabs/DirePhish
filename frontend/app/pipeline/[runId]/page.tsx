@@ -72,6 +72,7 @@ export default function PipelinePage({
   const [allSimIds, setAllSimIds] = useState<string[]>([]);
   const [activeSimId, setActiveSimId] = useState<string | null>(null);
   const [activeSimIndex, setActiveSimIndex] = useState(0);
+  const userSelectedSim = useRef(false);
 
   // Project graph (from research phase, before simulations)
   const [projectGraph, setProjectGraph] = useState<GraphData>({ nodes: [], edges: [] });
@@ -137,6 +138,7 @@ export default function PipelinePage({
   // Handle simulation switching
   const handleSimChange = useCallback((newIndex: number) => {
     if (newIndex >= 0 && newIndex < allSimIds.length) {
+      userSelectedSim.current = true;
       setActiveSimIndex(newIndex);
       setActiveSimId(allSimIds[newIndex]);
     }
@@ -200,11 +202,16 @@ export default function PipelinePage({
               }
 
               // Track sim index from message pattern "Simulation N/M running..."
-              if (update.step === "simulations" && update.message) {
+              // Skip if user manually switched sims — don't yank them back.
+              if (update.step === "simulations" && update.message && !userSelectedSim.current) {
                 const simMatch = update.message.match(/Simulation (\d+)\/(\d+)/);
                 if (simMatch) {
                   setActiveSimIndex(parseInt(simMatch[1], 10) - 1);
                 }
+              }
+              // Reset manual selection when sims phase completes
+              if (update.step === "simulations" && update.status === "completed") {
+                userSelectedSim.current = false;
               }
 
               // MC/CF live action feed — extract active sub-simulation ID

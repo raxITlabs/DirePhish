@@ -27,9 +27,17 @@ interface Props {
 
 export default function SlackWorld({ actions, scheduledEvents }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Only auto-scroll if user is near the bottom (within 150px)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom < 150) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [actions.length]);
 
   const slackActions = actions.filter(
@@ -39,7 +47,7 @@ export default function SlackWorld({ actions, scheduledEvents }: Props) {
   let lastRound = 0;
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-1">
+    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1">
       {slackActions.length === 0 && (
         <p className="text-muted-foreground text-sm text-center py-8">
           Waiting for messages...

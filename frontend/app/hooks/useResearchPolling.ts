@@ -10,22 +10,23 @@ export interface ResearchProgress {
   startedAt: number | null;
 }
 
+const INITIAL_STATE: ResearchProgress = {
+  progress: 0,
+  progressMessage: "",
+  status: "",
+  startedAt: null,
+};
+
 export function useResearchPolling(
   projectId: string | null,
   isActive: boolean,
 ): ResearchProgress {
-  const [progress, setProgress] = useState(0);
-  const [progressMessage, setProgressMessage] = useState("");
-  const [status, setStatus] = useState("");
-  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [state, setState] = useState<ResearchProgress>(INITIAL_STATE);
   const startedAtRef = useRef<number | null>(null);
 
   // Reset when projectId changes
   useEffect(() => {
-    setProgress(0);
-    setProgressMessage("");
-    setStatus("");
-    setStartedAt(null);
+    setState(INITIAL_STATE);
     startedAtRef.current = null;
   }, [projectId]);
 
@@ -34,22 +35,26 @@ export function useResearchPolling(
     const result = await getProjectStatus(projectId);
     if ("error" in result) return;
     const d = result.data;
-    setProgress(d.progress);
-    setProgressMessage(d.progressMessage);
-    setStatus(d.status);
-    if (d.progress > 0 && !startedAtRef.current) {
-      startedAtRef.current = Date.now();
-      setStartedAt(Date.now());
+    let startedAt = startedAtRef.current;
+    if (d.progress > 0 && !startedAt) {
+      startedAt = Date.now();
+      startedAtRef.current = startedAt;
     }
+    // Single setState — one re-render per poll instead of four
+    setState({
+      progress: d.progress,
+      progressMessage: d.progressMessage,
+      status: d.status,
+      startedAt,
+    });
   }, [projectId]);
 
   useEffect(() => {
     if (!isActive || !projectId) return;
-    // Initial fetch
     poll();
     const interval = setInterval(poll, 2500);
     return () => clearInterval(interval);
   }, [isActive, projectId, poll]);
 
-  return { progress, progressMessage, status, startedAt };
+  return state;
 }

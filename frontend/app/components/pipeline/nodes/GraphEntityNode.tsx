@@ -12,6 +12,8 @@ const KNOWN_TYPE_COLORS: Record<string, string> = {
   compliance: "var(--color-tuscan-sun-500)",
   system: "var(--color-verdigris-500)",
   event: "var(--color-tuscan-sun-600)",
+  vendor: "var(--color-sandy-brown-600)",
+  network_zone: "var(--color-pitch-black-500)",
   default: "var(--color-pitch-black-400)",
 };
 
@@ -43,6 +45,8 @@ const KNOWN_BREATHE_COLORS: Record<string, string> = {
   compliance: "oklch(0.65 0.12 85 / 0.5)",
   system: "oklch(0.6 0.15 170 / 0.5)",
   event: "oklch(0.7 0.12 85 / 0.5)",
+  vendor: "oklch(0.6 0.15 52 / 0.5)",
+  network_zone: "oklch(0.45 0.05 67 / 0.4)",
   default: "oklch(0.5 0 0 / 0.3)",
 };
 

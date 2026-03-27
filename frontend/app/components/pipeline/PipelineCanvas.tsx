@@ -14,6 +14,7 @@ import {
   useOnSelectionChange,
   getConnectedEdges,
   useReactFlow,
+  SelectionMode,
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -265,25 +266,37 @@ function PipelineCanvasInner({
         onNodeDragStop={dragEvents.onNodeDragStop}
         onPaneClick={onPaneClick}
         fitView
+        fitViewOptions={{ padding: 0.2, duration: 300 }}
         minZoom={0.1}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
+        colorMode="light"
+        elevateNodesOnSelect
+        selectionMode={SelectionMode.Partial}
+        panOnScroll
+        selectionOnDrag
+        nodesFocusable
+        edgesFocusable
+        disableKeyboardA11y={false}
+        aria-label="Company knowledge graph — use Tab to focus nodes, Enter to select, arrow keys to move"
       >
         <Background variant={BackgroundVariant.Dots} gap={24} size={3} color="var(--color-pitch-black-400)" style={{ opacity: 0.4 }} />
-        <Controls position="bottom-right" />
+        <Controls position="bottom-left" aria-label="Graph controls" showInteractive />
         {hasGraphNodes && (
-          <MiniMap position="bottom-right" style={{ marginBottom: 50 }} nodeColor={() => "var(--color-pitch-black-400)"} />
+          <MiniMap position="bottom-right" pannable zoomable nodeColor={() => "var(--color-pitch-black-400)"} aria-label="Knowledge graph minimap — click to navigate, scroll to zoom" />
         )}
 
         {/* Interactive filter toolbar */}
         {hasGraphNodes && (
           <Panel position="top-left">
-            <div className="flex flex-wrap gap-1 mt-3 ml-3 max-w-[300px]">
+            <div className="flex flex-wrap gap-1 mt-3 ml-3 max-w-[300px]" role="toolbar" aria-label="Filter graph by entity type">
               {entityTypes.map(([type, count]) => {
                 const isActive = activeFilters.has(type);
+                const label = getTypeLabel(type);
                 return (
                   <button
                     key={type}
+                    aria-label={`${isActive ? "Hide" : "Show"} ${label} (${count})`}
                     onClick={() => {
                       setActiveFilters(prev => {
                         const next = new Set(prev);
@@ -311,6 +324,7 @@ function PipelineCanvasInner({
               <button
                 onClick={() => setShowEdgeLabels(prev => !prev)}
                 aria-pressed={showEdgeLabels}
+                aria-label={`${showEdgeLabels ? "Hide" : "Show"} relationship labels`}
                 className={`flex items-center gap-1.5 px-2 py-1 min-h-11 rounded-md text-[10px] font-mono transition-all ${
                   showEdgeLabels
                     ? "bg-card border border-primary/30 text-primary shadow-sm"
@@ -446,8 +460,11 @@ const KNOWN_TYPE_LABELS: Record<string, string> = {
   compliance: "Compliance",
   system: "System",
   event: "Event",
+  vendor: "Vendor",
+  network_zone: "Network Zone",
 };
 
 function getTypeLabel(type: string): string {
-  return KNOWN_TYPE_LABELS[type] || type.charAt(0).toUpperCase() + type.slice(1);
+  if (KNOWN_TYPE_LABELS[type]) return KNOWN_TYPE_LABELS[type];
+  return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }

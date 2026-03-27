@@ -341,6 +341,30 @@ async def _run_batch(
         from .monte_carlo_aggregator import aggregate_batch, IterationResult
 
         valid_results = []
+
+        # Disk-based recovery: if batch.results is empty (e.g. Flask reloader
+        # cleared in-memory state), rebuild from iteration dirs on disk.
+        if not batch.results:
+            logger.info("batch.results empty — recovering from disk for %s", batch.batch_id)
+            for iter_dir_candidate in sorted(mc_dir.iterdir()):
+                if iter_dir_candidate.is_dir() and "_iter_" in iter_dir_candidate.name:
+                    summary_path = iter_dir_candidate / "summary.json"
+                    if summary_path.exists():
+                        with open(summary_path) as f:
+                            s = json.load(f)
+                        batch.results.append({
+                            "iteration_id": iter_dir_candidate.name,
+                            "status": "completed",
+                            "output_dir": str(iter_dir_candidate),
+                            "seed": s.get("seed", 0),
+                            "total_rounds": s.get("total_rounds", 0),
+                            "total_actions": s.get("total_actions", 0),
+                            "cost_usd": s.get("cost_usd", 0),
+                            "variation_description": s.get("variation_description", ""),
+                            "completed_at": s.get("completed_at", ""),
+                        })
+            logger.info("Recovered %d iteration(s) from disk", len(batch.results))
+
         for r in batch.results:
             if r.get("status") != "completed":
                 continue
@@ -479,12 +503,16 @@ async def _run_iteration(
         logger.info("Starting iteration %d/%d for batch %s", iteration_index + 1, batch.iterations_total, batch.batch_id)
         MissionControl.mc_iteration(iteration_index + 1, batch.iterations_total, "running")
 
-        # Register iteration sim so frontend can poll its actions
+        # Register iteration sim so frontend can poll its actions.
+        # Use adaptive_depth.max_rounds when enabled so the round counter
+        # doesn't show "20/14" when the arbiter extends the sim.
+        ad = base_config.get("adaptive_depth", {})
+        effective_total = ad.get("max_rounds", base_config.get("total_rounds", 5)) if ad.get("enabled") else base_config.get("total_rounds", 5)
         _simulations[iteration_id] = {
             "sim_id": iteration_id,
             "status": "running",
             "current_round": 0,
-            "total_rounds": base_config.get("total_rounds", 5),
+            "total_rounds": effective_total,
             "action_count": 0,
             "graph_id": batch.project_id,
             "output_dir": str(iter_dir),
@@ -521,6 +549,8 @@ async def _run_iteration(
                 result["iteration_index"] = iteration_index
                 result["variation_description"] = variation_desc
                 result["iteration_id"] = iteration_id
+                result.setdefault("status", "completed")
+                result.setdefault("output_dir", str(iter_dir))
                 batch.results.append(result)
             else:
                 batch.results.append({

@@ -173,8 +173,8 @@ async function pollMonteCarlo(batchId: string): Promise<void> {
       throw new Error(`Monte Carlo batch ${batchId} ${status}: ${json.data?.error || ""}`);
     }
     // Emit intermediate progress if iteration count advanced
-    const completedIterations = (json.data?.completed_iterations as number) || 0;
-    const totalIterations = (json.data?.total_iterations as number) || 10;
+    const completedIterations = (json.data?.iterations_completed as number) || 0;
+    const totalIterations = (json.data?.iterations_total as number) || 10;
     if (completedIterations > lastReportedIteration) {
       lastReportedIteration = completedIterations;
       const runningIterIndex = completedIterations; // if 0 completed, iter_0000 is running; if 1 completed, iter_0001 is running

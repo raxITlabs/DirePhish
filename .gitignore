@@ -65,3 +65,4 @@ data/
 
 # Graphiti/Kuzu local graph databases
 backend/data/.stitch/
+.gstack/

@@ -563,20 +563,60 @@ Return ONLY valid JSON matching this exact structure. Fields marked "// optional
     "securityTools": ["CrowdStrike", "Splunk"],  // optional
     "incidentResponsePlan": true,                // optional — boolean
     "bugBountyProgram": false                    // optional — boolean
-  }}
+  }},
+  "vendorEntities": [
+    {{
+      "name": "Vendor Name",
+      "category": "security|cloud|infrastructure|saas|consulting|networking|identity",
+      "criticality": "low|medium|high|critical",
+      "systemsProvided": ["System Name 1", "System Name 2"],
+      "contractType": "subscription|license|managed_service",  // optional
+      "singlePointOfFailure": true                             // optional — true if no alternative vendor
+    }}
+  ],
+  "dataFlows": [
+    {{
+      "source": "Source System Name",
+      "target": "Target System Name",
+      "dataTypes": ["PII", "financial", "credentials", "logs", "operational"],
+      "protocol": "API/REST|gRPC|JDBC|SFTP|streaming|internal",  // optional
+      "encrypted": true,                                          // optional
+      "frequency": "real-time|batch|hourly|daily"                 // optional
+    }}
+  ],
+  "accessMappings": [
+    {{
+      "role": "Role Title from org.roles",
+      "systems": ["System Name 1", "System Name 2"],
+      "privilegeLevel": "admin|read-write|read-only|operator",
+      "mfaRequired": true                                         // optional
+    }}
+  ],
+  "networkTopology": [
+    {{
+      "zone": "Zone Name",
+      "systems": ["System Name 1", "System Name 2"],
+      "exposedToInternet": true,
+      "connectedZones": ["Other Zone Name"]                       // optional
+    }}
+  ]
 }}
 
 IMPORTANT GUIDELINES:
 - For securityPosture, extract from security/trust pages and search results. If not available, infer from company size and industry.
-- For roles, PRIORITIZE security-relevant positions: CISO, Head of Risk, Head of Compliance, VP of Security, SOC Manager, General Counsel. Include their real names and responsibilities where publicly known. Generic "Partner" roles are less useful than security/risk roles.
-- For systems, include at least: their cloud provider, primary database, SIEM/monitoring tool, identity provider, communication tools (Slack/Teams/email), and CI/CD pipeline. Infer from industry norms if not explicitly found.
-- For risks, return 5-6 risks specific to this company. The "mitigations" and "affectedSystems" fields MUST be arrays of strings, never a single string.
-- For recentEvents, include ALL newsworthy events from the last 6-12 months: regulatory actions, breaches, leadership changes, acquisitions, layoffs, product launches, lawsuits, earnings. Aim for 5-8 events.
+- For roles, PRIORITIZE security-relevant positions: CISO, Head of Risk, Head of Compliance, VP of Security, SOC Manager, General Counsel, SOC Analyst, IR Lead. Include their real names and responsibilities where publicly known. Generic "Partner" roles are less useful than security/risk roles.
+- For systems, include at least: their cloud provider, primary database, SIEM/monitoring tool, identity provider, communication tools (Slack/Teams/email), CI/CD pipeline, firewall/WAF, and backup systems. Infer from industry norms if not explicitly found.
+- For risks, return 6-8 risks specific to this company. The "mitigations" and "affectedSystems" fields MUST be arrays of strings, never a single string.
+- For recentEvents, include ALL newsworthy events from the last 6-12 months: regulatory actions, breaches, leadership changes, acquisitions, layoffs, product launches, lawsuits, earnings. Aim for 6-8 events.
+- For vendorEntities, extract EVERY third-party vendor referenced in systems. Mark singlePointOfFailure=true if the company has no alternative for that vendor's service. Cross-reference systemsProvided with the systems list.
+- For dataFlows, map how sensitive data moves between systems. Every system that stores PII, financial data, or credentials should have at least one inbound and one outbound flow. Infer from industry norms where not explicit.
+- For accessMappings, map which roles have access to which systems. Security roles should have broad read access. Admin/operator access should be limited to relevant system owners. Infer from role responsibilities.
+- For networkTopology, define at least: a DMZ/edge zone (internet-facing), an internal/corporate zone, and a data/backend zone. Map systems to their zones based on their category and exposure. Cloud systems go in a cloud VPC zone.
 - Be thorough but realistic. If information is not available, make reasonable inferences based on the industry and company size.
 
-MINIMUMS: at least 8 roles with names, 7 systems with vendors, 3 compliance frameworks, 5 risks with descriptions, and 5 recent events."""
+MINIMUMS: at least 12 roles with names, 12 systems with vendors, 3 compliance frameworks, 8 risks with descriptions, 8 recent events, 4 vendors, 6 data flows, 6 access mappings, and 3 network zones."""
 
-    dossier = llm.chat_json([{"role": "user", "content": prompt}])
+    dossier = llm.chat_json([{"role": "user", "content": prompt}], max_tokens=8192)
     if cost_tracker and llm.last_usage:
         cost_tracker.track_llm("research", llm.model, llm.last_usage["input_tokens"], llm.last_usage["output_tokens"], "synthesize_dossier")
     return dossier
