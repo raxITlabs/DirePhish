@@ -335,6 +335,77 @@ class FirestoreMemory:
                 "category": "dossier",
             })
 
+        # --- Vendor entities ---
+        for i, vendor in enumerate(dossier_dict.get("vendorEntities", [])):
+            vendor_text = (
+                f"Vendor: {vendor.get('name', 'Unknown')} "
+                f"({vendor.get('category', '')}, criticality: {vendor.get('criticality', '')})."
+            )
+            systems_provided = vendor.get("systemsProvided", [])
+            if systems_provided:
+                vendor_text += f" Provides: {', '.join(systems_provided)}."
+            if vendor.get("contractType"):
+                vendor_text += f" Contract: {vendor['contractType']}."
+            if vendor.get("singlePointOfFailure"):
+                vendor_text += " SINGLE POINT OF FAILURE — no alternative vendor."
+            episodes.append({
+                "content": vendor_text,
+                "action": f"vendor_{i}",
+                "category": "dossier",
+            })
+
+        # --- Data flows ---
+        for i, flow in enumerate(dossier_dict.get("dataFlows", [])):
+            flow_text = (
+                f"Data flow: {flow.get('source', '?')} → {flow.get('target', '?')}."
+            )
+            data_types = flow.get("dataTypes", [])
+            if data_types:
+                flow_text += f" Data types: {', '.join(data_types)}."
+            if flow.get("protocol"):
+                flow_text += f" Protocol: {flow['protocol']}."
+            if flow.get("encrypted") is not None:
+                flow_text += f" Encrypted: {'Yes' if flow['encrypted'] else 'No'}."
+            if flow.get("frequency"):
+                flow_text += f" Frequency: {flow['frequency']}."
+            episodes.append({
+                "content": flow_text,
+                "action": f"data_flow_{i}",
+                "category": "dossier",
+            })
+
+        # --- Access mappings ---
+        for i, access in enumerate(dossier_dict.get("accessMappings", [])):
+            systems_list = access.get("systems", [])
+            access_text = (
+                f"Access: {access.get('role', '?')} has {access.get('privilegeLevel', '?')} "
+                f"access to: {', '.join(systems_list)}."
+            )
+            if access.get("mfaRequired") is not None:
+                access_text += f" MFA required: {'Yes' if access['mfaRequired'] else 'No'}."
+            episodes.append({
+                "content": access_text,
+                "action": f"access_{i}",
+                "category": "dossier",
+            })
+
+        # --- Network topology ---
+        for i, zone in enumerate(dossier_dict.get("networkTopology", [])):
+            zone_systems = zone.get("systems", [])
+            zone_text = f"Network zone: {zone.get('zone', '?')}."
+            if zone_systems:
+                zone_text += f" Systems: {', '.join(zone_systems)}."
+            if zone.get("exposedToInternet") is not None:
+                zone_text += f" Internet-facing: {'Yes' if zone['exposedToInternet'] else 'No'}."
+            connected = zone.get("connectedZones", [])
+            if connected:
+                zone_text += f" Connected to: {', '.join(connected)}."
+            episodes.append({
+                "content": zone_text,
+                "action": f"network_zone_{i}",
+                "category": "dossier",
+            })
+
         count = self.add_episodes_bulk(project_id, episodes)
         logger.info(f"Pushed {count} dossier episodes for project={project_id}")
 
@@ -368,7 +439,7 @@ class FirestoreMemory:
                                 "name": {"type": "string"},
                                 "entity_type": {
                                     "type": "string",
-                                    "enum": ["person", "system", "threat", "compliance", "organization", "event"],
+                                    "enum": ["person", "system", "threat", "compliance", "organization", "event", "vendor", "network_zone"],
                                 },
                                 "summary": {"type": "string"},
                             },
@@ -424,9 +495,9 @@ class FirestoreMemory:
             logger.info(f"Cleared existing graph for {sim_id}")
 
         combined_text = "\n\n".join(text_chunks)
-        # Truncate if very long (keep under ~8K tokens for efficiency)
-        if len(combined_text) > 30000:
-            combined_text = combined_text[:30000]
+        # Truncate if very long (keep under ~12K tokens for efficiency)
+        if len(combined_text) > 45000:
+            combined_text = combined_text[:45000]
 
         llm = LLMClient()
         prompt = (
@@ -437,17 +508,24 @@ class FirestoreMemory:
             "- threat: Threats, risks, vulnerabilities, attack techniques, threat actor groups\n"
             "- compliance: Regulatory frameworks, certifications, legal standards\n"
             "- organization: Companies, departments, teams, committees, business units\n"
-            "- event: Incidents, breaches, acquisitions, regulatory actions, product launches\n\n"
+            "- event: Incidents, breaches, acquisitions, regulatory actions, product launches\n"
+            "- vendor: Third-party vendors, suppliers, service providers\n"
+            "- network_zone: Network segments, security zones (DMZ, internal, cloud VPC)\n\n"
             "CRITICAL — Extract MANY relationships. A good extraction has 2-3x more relationships than entities.\n"
             "For EVERY person, extract:\n"
             "  - reports_to: who they report to\n"
             "  - manages/operates: which systems or teams they manage\n"
             "  - responsible_for: which compliance areas or security domains they own\n"
             "  - member_of: which organization/department they belong to\n"
+            "  - has_access: which systems they can access (with privilege level in label, e.g. 'has_admin_access')\n"
             "For EVERY system, extract:\n"
             "  - depends_on: other systems it depends on\n"
             "  - managed_by: which person/team operates it\n"
             "  - protected_by: which security systems protect it\n"
+            "  - supplied_by: which vendor provides it\n"
+            "  - located_in: which network zone it sits in\n"
+            "  - sends_data_to: which systems it sends data to (for data flow mapping)\n"
+            "  - receives_data_from: which systems it receives data from\n"
             "For EVERY threat, extract:\n"
             "  - threatens: which systems it targets\n"
             "  - mitigated_by: which systems or controls mitigate it\n"
@@ -458,7 +536,14 @@ class FirestoreMemory:
             "  - exploited: which threat/vulnerability was exploited\n"
             "For EVERY compliance framework, extract:\n"
             "  - applies_to: which systems or data it governs\n"
-            "  - owned_by: which person is responsible\n\n"
+            "  - owned_by: which person is responsible\n"
+            "For EVERY vendor, extract:\n"
+            "  - supplies: which systems it provides\n"
+            "  - contracted_by: the organization that contracts them\n"
+            "For EVERY network_zone, extract:\n"
+            "  - contains: which systems are in this zone\n"
+            "  - connects_to: which other zones it connects to\n"
+            "  - exposes_to_internet: mark if the zone is internet-facing\n\n"
             "Be thorough. Extract EVERY relationship you can infer from the text.\n\n"
             "DOSSIER:\n"
             f"{combined_text}"
@@ -477,7 +562,7 @@ class FirestoreMemory:
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.1,
-                max_tokens=8192,
+                max_tokens=12288,
                 response_format=self._GRAPH_SCHEMA,
             )
 
@@ -1207,6 +1292,70 @@ class FirestoreMemory:
             total_iterations += total
 
         return total_contained / total_iterations if total_iterations > 0 else 0.5
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Risk Score storage
+    # ──────────────────────────────────────────────────────────────────────
+
+    def store_risk_score(self, score_doc: dict) -> str:
+        """Store a computed risk score to the risk_scores collection.
+
+        Returns the auto-generated document ID.
+        """
+        doc_ref = self.db.collection("risk_scores").document()
+        score_doc["created_at"] = firestore.SERVER_TIMESTAMP
+        doc_ref.set(score_doc)
+        logger.info(
+            "Stored risk score %.1f for project %s",
+            score_doc.get("composite_score", 0),
+            score_doc.get("project_id", ""),
+        )
+        return doc_ref.id
+
+    def get_risk_score(self, project_id: str) -> dict | None:
+        """Retrieve the latest risk score for a project.
+
+        Returns the score document dict, or None if no scores exist.
+        """
+        docs = (
+            self.db.collection("risk_scores")
+            .where("project_id", "==", project_id)
+            .order_by("created_at", direction=firestore.Query.DESCENDING)
+            .limit(1)
+            .get()
+        )
+        results = list(docs)
+        if not results:
+            return None
+        doc = results[0]
+        data = doc.to_dict()
+        data["score_id"] = doc.id
+        return data
+
+    def get_risk_score_by_id(self, score_id: str) -> dict | None:
+        """Retrieve a specific risk score by document ID."""
+        doc = self.db.collection("risk_scores").document(score_id).get()
+        if not doc.exists:
+            return None
+        data = doc.to_dict()
+        data["score_id"] = doc.id
+        return data
+
+    def get_risk_score_history(self, project_id: str, limit: int = 20) -> list[dict]:
+        """Retrieve historical risk scores for a project, most recent first."""
+        docs = (
+            self.db.collection("risk_scores")
+            .where("project_id", "==", project_id)
+            .order_by("created_at", direction=firestore.Query.DESCENDING)
+            .limit(limit)
+            .get()
+        )
+        results = []
+        for doc in docs:
+            data = doc.to_dict()
+            data["score_id"] = doc.id
+            results.append(data)
+        return results
 
     # ──────────────────────────────────────────────────────────────────────
     # Private helpers

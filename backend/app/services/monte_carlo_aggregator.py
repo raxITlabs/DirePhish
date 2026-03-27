@@ -82,6 +82,23 @@ class CostExtrapolation:
 
 
 @dataclass
+class PerIterationResult:
+    """Cached per-iteration classification for risk scoring."""
+
+    iteration_id: str
+    outcome: str                    # contained_early, contained_late, escalated, not_contained
+    containment_round: int | None
+    total_rounds: int
+    total_actions: int
+    actions: list[dict]             # raw action records
+    first_alert_round: int | None   # round of first detection/alert action
+    first_compliance_notification_round: int | None  # round of first compliance/legal action
+    cross_channel_messages: int     # messages across multiple worlds
+    total_messages: int             # total messages
+    consistency_score: float        # agent consistency for this iteration
+
+
+@dataclass
 class BatchAggregation:
     """Full statistical summary of a Monte Carlo batch."""
 
@@ -92,6 +109,7 @@ class BatchAggregation:
     agent_consistency: dict[str, float]
     cost_summary: CostSummary
     cost_extrapolation: CostExtrapolation
+    per_iteration_results: list[PerIterationResult] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +133,7 @@ def _action_text(action: dict) -> str:
     return " ".join(parts)
 
 
-def _classify_iteration(result: IterationResult) -> tuple[str, int | None]:
+def classify_iteration(result: IterationResult) -> tuple[str, int | None]:
     """Classify an iteration outcome and return (label, containment_round|None)."""
     containment_round: int | None = None
     has_escalation = False
@@ -191,12 +209,52 @@ def aggregate_batch(results: list[IterationResult]) -> BatchAggregation:
         "escalated": 0,
     }
     containment_rounds: list[int] = []
+    per_iter_results: list[PerIterationResult] = []
 
     for r in results:
-        label, c_round = _classify_iteration(r)
+        label, c_round = classify_iteration(r)
         outcome_counts[label] += 1
         if c_round is not None:
             containment_rounds.append(c_round)
+
+        # Cache per-iteration data for risk scoring
+        first_alert = None
+        first_compliance = None
+        worlds_seen: set[str] = set()
+        total_msgs = 0
+        for act in r.actions:
+            rnd = act.get("round", 0)
+            action_text = _action_text(act)
+            world = act.get("world", "")
+            total_msgs += 1
+            if world:
+                worlds_seen.add(world)
+            if first_alert is None and CONTAINMENT_KEYWORDS.search(action_text):
+                first_alert = rnd
+            if first_compliance is None and re.search(
+                r"\b(legal|compliance|regulat|notif|report\s+breach)\w*\b",
+                action_text,
+                re.IGNORECASE,
+            ):
+                first_compliance = rnd
+
+        cross_channel = total_msgs if len(worlds_seen) > 1 else 0
+
+        per_iter_results.append(
+            PerIterationResult(
+                iteration_id=r.iteration_id,
+                outcome=label,
+                containment_round=c_round,
+                total_rounds=r.total_rounds,
+                total_actions=r.total_actions,
+                actions=r.actions,
+                first_alert_round=first_alert,
+                first_compliance_notification_round=first_compliance,
+                cross_channel_messages=cross_channel,
+                total_messages=total_msgs,
+                consistency_score=0.0,  # filled after agent consistency computed
+            )
+        )
 
     # ----- 2. Containment round stats -------------------------------------
     containment_stats: ContainmentRoundStats | None = None
@@ -264,6 +322,13 @@ def aggregate_batch(results: list[IterationResult]) -> BatchAggregation:
         else:
             agent_consistency[agent] = 0.0
 
+    # ----- 4b. Backfill per-iteration consistency scores -------------------
+    # Use overall agent consistency mean as proxy per iteration
+    if agent_consistency:
+        avg_consistency = statistics.mean(agent_consistency.values())
+        for pir in per_iter_results:
+            pir.consistency_score = avg_consistency
+
     # ----- 5. Cost summary ------------------------------------------------
     costs = [r.cost_usd for r in results]
     cost_summary = CostSummary(
@@ -291,4 +356,5 @@ def aggregate_batch(results: list[IterationResult]) -> BatchAggregation:
         agent_consistency=agent_consistency,
         cost_summary=cost_summary,
         cost_extrapolation=cost_extrapolation,
+        per_iteration_results=per_iter_results,
     )

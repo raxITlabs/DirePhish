@@ -721,3 +721,218 @@ def launch_stress_test(project_id):
         "sim_ids": sim_ids,
         "labels": labels,
     }}), 201
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Risk Score endpoints
+# ──────────────────────────────────────────────────────────────────────────────
+
+@crucible_bp.route("/projects/<project_id>/risk-score/compute", methods=["POST"])
+def compute_risk_score(project_id):
+    """Compute risk score from MC aggregation data.
+
+    Accepts optional calibration inputs in request body.
+    Returns 404 if no MC batch, 409 if MC in progress, 422 if TEST mode.
+    """
+    from ..services.monte_carlo_engine import MonteCarloEngine
+    from ..services.risk_score_engine import compute_composite_score, interpret_score
+    from ..services.fair_loss_mapper import compute_fair_loss
+    from ..services.risk_explainer import compute_drivers
+    from ..services.firestore_memory import FirestoreMemory
+
+    mc = MonteCarloEngine()
+    batches = mc.list_batches(project_id=project_id)
+    if not batches:
+        return jsonify({"error": "No Monte Carlo batch found for this project"}), 404
+
+    latest_batch = batches[0]
+    if latest_batch.get("status") in ("pending", "running"):
+        return jsonify({"error": "Monte Carlo aggregation is still in progress"}), 409
+
+    if latest_batch.get("mode") == "test":
+        return jsonify({"error": "TEST mode has insufficient iterations for risk scoring (minimum: QUICK/10)"}), 422
+
+    batch_id = latest_batch.get("batch_id", "")
+
+    # Load MC aggregation
+    try:
+        memory = FirestoreMemory()
+        mc_agg = memory.get_mc_aggregation(batch_id) if hasattr(memory, "get_mc_aggregation") else None
+        if mc_agg is None:
+            # Fallback: try to load from disk
+            agg_path = SIMULATIONS_DIR / batch_id / "aggregation.json"
+            if agg_path.exists():
+                with open(agg_path) as f:
+                    mc_agg = json.load(f)
+            else:
+                return jsonify({"error": "MC aggregation data not found"}), 404
+    except Exception as e:
+        return jsonify({"error": f"Failed to load MC aggregation: {e}"}), 500
+
+    # Load exercise report resilience data
+    report_path = SIMULATIONS_DIR / f"exercise_{project_id}" / "report.json"
+    resilience = None
+    if report_path.exists():
+        try:
+            with open(report_path) as f:
+                report = json.load(f)
+            resilience = report.get("resilience")
+        except Exception:
+            pass
+
+    # Load per-iteration data from aggregation cache
+    per_iteration_data = mc_agg.get("per_iteration_results")
+
+    # Get calibration from request body or use defaults
+    body = request.get_json(silent=True) or {}
+    calibration = body.get("calibration")
+
+    # Compute score
+    try:
+        score_result = compute_composite_score(
+            aggregation=mc_agg,
+            resilience=resilience,
+            per_iteration_data=per_iteration_data,
+            batch_id=batch_id,
+        )
+
+        fair_result = compute_fair_loss(
+            aggregation=mc_agg,
+            calibration=calibration,
+            per_iteration_data=per_iteration_data,
+        )
+
+        # Compute drivers
+        drivers = []
+        if per_iteration_data:
+            per_iter_scores = []
+            for it in per_iteration_data:
+                from ..services.risk_score_engine import _compute_per_iteration_score
+                s = _compute_per_iteration_score(it, mc_agg)
+                per_iter_scores.append(s)
+
+            divergence_points = mc_agg.get("decision_divergence_points", [])
+            drivers = compute_drivers(
+                per_iteration_scores=per_iter_scores,
+                per_iteration_data=per_iteration_data,
+                divergence_points=divergence_points,
+            )
+    except Exception as e:
+        return jsonify({"error": f"Risk score computation failed: {e}"}), 500
+
+    # Build score document
+    score_doc = {
+        "project_id": project_id,
+        "batch_id": batch_id,
+        "mc_mode": latest_batch.get("mode", ""),
+        "iterations": mc_agg.get("iteration_count", 0),
+        "composite_score": score_result["composite_score"],
+        "confidence_interval": score_result["confidence_interval"],
+        "dimensions": score_result["dimensions"],
+        "confidence_flag": score_result["confidence_flag"],
+        "interpretation": score_result["interpretation"],
+        "fair_estimates": {
+            "ale": fair_result["ale"],
+            "p10_loss": fair_result["p10_loss"],
+            "p90_loss": fair_result["p90_loss"],
+            "calibration_inputs": fair_result["calibration_inputs"],
+        },
+        "drivers": drivers,
+    }
+
+    # Store to Firestore
+    try:
+        score_id = memory.store_risk_score(score_doc)
+        score_doc["score_id"] = score_id
+    except Exception as e:
+        return jsonify({"error": f"Failed to store risk score: {e}"}), 500
+
+    return jsonify({"data": score_doc}), 201
+
+
+@crucible_bp.route("/projects/<project_id>/risk-score", methods=["GET"])
+def get_risk_score(project_id):
+    """Return the latest risk score for a project."""
+    from ..services.firestore_memory import FirestoreMemory
+
+    try:
+        memory = FirestoreMemory()
+        score = memory.get_risk_score(project_id)
+    except Exception as e:
+        return jsonify({"error": f"Failed to retrieve risk score: {e}"}), 500
+
+    if score is None:
+        return jsonify({"error": "No risk score computed for this project"}), 404
+
+    return jsonify({"data": score}), 200
+
+
+@crucible_bp.route("/projects/<project_id>/risk-score/compare", methods=["GET"])
+def compare_risk_scores(project_id):
+    """Compare current risk score against a baseline.
+
+    Query param: baseline=<score_id>
+    """
+    from ..services.firestore_memory import FirestoreMemory
+
+    baseline_id = request.args.get("baseline")
+    if not baseline_id:
+        return jsonify({"error": "Missing 'baseline' query parameter"}), 400
+
+    try:
+        memory = FirestoreMemory()
+        current = memory.get_risk_score(project_id)
+        baseline = memory.get_risk_score_by_id(baseline_id)
+    except Exception as e:
+        return jsonify({"error": f"Failed to retrieve scores: {e}"}), 500
+
+    if current is None:
+        return jsonify({"error": "No current risk score for this project"}), 404
+    if baseline is None:
+        return jsonify({"error": "Baseline score not found"}), 404
+
+    # Compute deltas
+    delta = {
+        "composite_score": round(current["composite_score"] - baseline["composite_score"], 1),
+        "dimensions": {},
+        "ale_delta": round(
+            current.get("fair_estimates", {}).get("ale", 0)
+            - baseline.get("fair_estimates", {}).get("ale", 0),
+            2,
+        ),
+    }
+
+    for dim in current.get("dimensions", {}):
+        delta["dimensions"][dim] = round(
+            current["dimensions"].get(dim, 0) - baseline.get("dimensions", {}).get(dim, 0),
+            1,
+        )
+
+    # Driver changes
+    current_drivers = {d["description"]: d for d in current.get("drivers", [])}
+    baseline_drivers = {d["description"]: d for d in baseline.get("drivers", [])}
+
+    delta["drivers_added"] = [
+        d for desc, d in current_drivers.items() if desc not in baseline_drivers
+    ]
+    delta["drivers_removed"] = [
+        d for desc, d in baseline_drivers.items() if desc not in current_drivers
+    ]
+    delta["drivers_changed"] = []
+    for desc in set(current_drivers) & set(baseline_drivers):
+        impact_delta = round(
+            current_drivers[desc]["impact"] - baseline_drivers[desc]["impact"], 1
+        )
+        if abs(impact_delta) > 0.5:
+            delta["drivers_changed"].append({
+                "driver": current_drivers[desc],
+                "impact_delta": impact_delta,
+            })
+
+    return jsonify({
+        "data": {
+            "baseline": baseline,
+            "current": current,
+            "delta": delta,
+        }
+    }), 200
