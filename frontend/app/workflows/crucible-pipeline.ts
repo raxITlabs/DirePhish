@@ -7,7 +7,7 @@
  * Uses Vercel WDK for durable execution. Each step calls Flask API endpoints.
  * Progress streamed via getWritable() inside step functions (WDK requirement).
  */
-import { getWritable, createHook, sleep } from "workflow";
+import { getWritable, createHook } from "workflow";
 
 const API_BASE = process.env.FLASK_API_URL || "http://localhost:5001";
 
@@ -85,161 +85,105 @@ async function flaskApi<T>(path: string, options?: RequestInit): Promise<T> {
 
 // --- Step: poll Flask until condition met ---
 
-// --- Step: single project status check (durable) ---
-
-async function checkProjectStatus(projectId: string): Promise<Record<string, unknown>> {
-  "use step";
-  const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/status`);
-  const json = await res.json();
-  return json.data as Record<string, unknown>;
-}
-
-// --- Poll project status using WDK-durable sleep ---
-
 async function pollStatus(
   projectId: string,
   targetStatuses: string[],
   failStatuses: string[] = ["failed"],
 ): Promise<Record<string, unknown>> {
+  "use step";
   for (let i = 0; i < 120; i++) {
-    const data = await checkProjectStatus(projectId);
-    const status = data?.status as string;
-    if (targetStatuses.includes(status)) return data;
+    const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/status`);
+    const json = await res.json();
+    const status = json.data?.status as string;
+    if (targetStatuses.includes(status)) return json.data;
     if (failStatuses.includes(status)) {
-      throw new Error(`Pipeline failed: ${(data?.error_message as string) || status}`);
+      throw new Error(`Pipeline failed: ${json.data?.error_message || status}`);
     }
-    await sleep("5s");
+    await new Promise(r => setTimeout(r, 5000));
   }
   throw new Error("Pipeline timed out waiting for status: " + targetStatuses.join(", "));
 }
 
-// --- Step: check simulation status (single check, durable) ---
-
-async function checkSimStatus(simId: string): Promise<string> {
-  "use step";
-  const res = await fetch(`${API_BASE}/api/crucible/simulations/${simId}/status`);
-  const json = await res.json();
-  return (json.data?.status as string) || "unknown";
-}
-
-// --- Poll simulation using WDK-durable sleep ---
+// --- Step: poll simulation status ---
 
 async function pollSimulation(simId: string): Promise<void> {
+  "use step";
   for (let i = 0; i < 180; i++) {
-    const status = await checkSimStatus(simId);
+    const res = await fetch(`${API_BASE}/api/crucible/simulations/${simId}/status`);
+    const json = await res.json();
+    const status = json.data?.status as string;
     if (status === "completed") return;
     if (status === "failed") throw new Error(`Simulation ${simId} failed`);
-    await sleep("5s");
+    await new Promise(r => setTimeout(r, 5000));
   }
   throw new Error(`Simulation ${simId} timed out`);
 }
 
-// --- Poll report using WDK-durable sleep ---
-
-async function checkReportStatus(simId: string): Promise<string> {
-  "use step";
-  const res = await fetch(`${API_BASE}/api/crucible/simulations/${simId}/report`);
-  const json = await res.json();
-  return (json.data?.status as string) || "pending";
-}
+// --- Step: poll report ---
 
 async function pollReport(simId: string): Promise<void> {
+  "use step";
   for (let i = 0; i < 60; i++) {
-    const status = await checkReportStatus(simId);
-    if (status === "complete") return;
-    await sleep("5s");
+    const res = await fetch(`${API_BASE}/api/crucible/simulations/${simId}/report`);
+    const json = await res.json();
+    if (json.data?.status === "complete") return;
+    await new Promise(r => setTimeout(r, 5000));
   }
   throw new Error(`Report for ${simId} timed out`);
 }
 
-// --- Poll comparative report using WDK-durable sleep ---
-
-async function checkComparativeReportStatus(projectId: string): Promise<string> {
-  "use step";
-  const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/comparative-report`);
-  const json = await res.json();
-  return (json.data?.status as string) || "pending";
-}
+// --- Step: poll comparative report ---
 
 async function pollComparativeReport(projectId: string): Promise<void> {
+  "use step";
   for (let i = 0; i < 60; i++) {
-    const status = await checkComparativeReportStatus(projectId);
-    if (status === "complete") return;
-    await sleep("5s");
+    const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/comparative-report`);
+    const json = await res.json();
+    if (json.data?.status === "complete") return;
+    await new Promise(r => setTimeout(r, 5000));
   }
   throw new Error("Comparative report timed out");
 }
 
-// --- Poll exercise report using WDK-durable sleep ---
-
-async function checkExerciseReportStatus(projectId: string): Promise<{ status: string; error?: string }> {
-  "use step";
-  const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/exercise-report`);
-  const json = await res.json();
-  return { status: (json.data?.status as string) || "pending", error: json.data?.error };
-}
+// --- Step: poll exercise report ---
 
 async function pollExerciseReport(projectId: string): Promise<void> {
+  "use step";
   for (let i = 0; i < 120; i++) {
-    const result = await checkExerciseReportStatus(projectId);
-    if (result.status === "complete") return;
-    if (result.status === "failed") throw new Error(`Exercise report failed: ${result.error || "unknown"}`);
-    await sleep("5s");
+    const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/exercise-report`);
+    const json = await res.json();
+    if (json.data?.status === "complete") return;
+    if (json.data?.status === "failed") throw new Error(`Exercise report failed: ${json.data?.error || "unknown"}`);
+    await new Promise(r => setTimeout(r, 5000));
   }
   throw new Error("Exercise report timed out");
 }
 
-// --- Poll Monte Carlo batch using WDK-durable sleep ---
-
-interface MCStatusResult {
-  status: string;
-  error?: string;
-  iterationsCompleted: number;
-  iterationsTotal: number;
-}
-
-async function checkMCStatus(batchId: string): Promise<MCStatusResult> {
-  "use step";
-  const res = await fetch(`${API_BASE}/api/crucible/monte-carlo/${batchId}/status`);
-  const json = await res.json();
-  return {
-    status: (json.data?.status as string) || "unknown",
-    error: json.data?.error,
-    iterationsCompleted: (json.data?.iterations_completed as number) || 0,
-    iterationsTotal: (json.data?.iterations_total as number) || 10,
-  };
-}
-
-async function checkIterationVariation(simId: string): Promise<string> {
-  "use step";
-  try {
-    const res = await fetch(`${API_BASE}/api/crucible/simulations/${simId}/status`);
-    const json = await res.json();
-    return (json.data?.variation_description as string) || "";
-  } catch {
-    return "";
-  }
-}
+// --- Step: poll Monte Carlo batch status ---
 
 async function pollMonteCarlo(batchId: string): Promise<void> {
+  "use step";
   let lastReportedIteration = 0;
   for (let i = 0; i < 360; i++) {
-    const mc = await checkMCStatus(batchId);
-    if (mc.status === "completed") return;
-    if (["failed", "cost_exceeded", "stopped"].includes(mc.status)) {
-      throw new Error(`Monte Carlo batch ${batchId} ${mc.status}: ${mc.error || ""}`);
+    const res = await fetch(`${API_BASE}/api/crucible/monte-carlo/${batchId}/status`);
+    const json = await res.json();
+    const status = json.data?.status as string;
+    if (status === "completed") return;
+    if (["failed", "cost_exceeded", "stopped"].includes(status)) {
+      throw new Error(`Monte Carlo batch ${batchId} ${status}: ${json.data?.error || ""}`);
     }
     // Emit intermediate progress if iteration count advanced
-    if (mc.iterationsCompleted > lastReportedIteration) {
-      lastReportedIteration = mc.iterationsCompleted;
-      const runningIterIndex = mc.iterationsCompleted;
+    const completedIterations = (json.data?.completed_iterations as number) || 0;
+    const totalIterations = (json.data?.total_iterations as number) || 10;
+    if (completedIterations > lastReportedIteration) {
+      lastReportedIteration = completedIterations;
+      const runningIterIndex = completedIterations; // if 0 completed, iter_0000 is running; if 1 completed, iter_0001 is running
       const currentSimId = `${batchId}_iter_${String(runningIterIndex).padStart(4, '0')}`;
-      const variationDesc = await checkIterationVariation(currentSimId);
       await emitProgress("monte_carlo", "running",
-        `Stress testing — ${mc.iterationsCompleted}/${mc.iterationsTotal} variation${mc.iterationsTotal !== 1 ? 's' : ''} complete...`,
-        JSON.stringify({ batchId, iterations: mc.iterationsTotal, completed: mc.iterationsCompleted, currentSimId, variation_description: variationDesc }));
+        `Stress testing — ${completedIterations}/${totalIterations} variation${totalIterations !== 1 ? 's' : ''} complete...`,
+        JSON.stringify({ batchId, iterations: totalIterations, completed: completedIterations, currentSimId }));
     }
-    await sleep("5s");
+    await new Promise(r => setTimeout(r, 5000));
   }
   throw new Error(`Monte Carlo batch ${batchId} timed out`);
 }
