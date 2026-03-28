@@ -1,5 +1,41 @@
 import { getRun } from "workflow/api";
 
+// Cache: collect updates from the WDK stream into an array that grows over time.
+// Each poll returns the full history (not a new stream reader), avoiding the
+// MaxListenersExceededWarning that crashed Turbopack when getReadable() was
+// called on every request.
+const runUpdates = new Map<string, { updates: unknown[]; draining: boolean }>();
+
+function ensureDraining(runId: string) {
+  let entry = runUpdates.get(runId);
+  if (entry) return entry;
+
+  entry = { updates: [], draining: false };
+  runUpdates.set(runId, entry);
+
+  // Start a single background drain for this run
+  if (!entry.draining) {
+    entry.draining = true;
+    (async () => {
+      try {
+        const run = getRun(runId);
+        const readable = run.getReadable({ namespace: "pipeline" });
+        const reader = readable.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          entry!.updates.push(value);
+        }
+        reader.releaseLock();
+      } catch {
+        // stream ended or not available
+      }
+    })();
+  }
+
+  return entry;
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const runId = url.searchParams.get("runId");
@@ -10,38 +46,13 @@ export async function GET(req: Request) {
 
   try {
     const run = getRun(runId);
-    const readable = run.getReadable({ namespace: "pipeline" });
-
-    // Collect all available updates
-    const updates: unknown[] = [];
-    const reader = readable.getReader();
-
-    // Read with a short timeout to get all available chunks
-    const readWithTimeout = async () => {
-      try {
-        while (true) {
-          const readPromise = reader.read();
-          const timeoutPromise = new Promise<{ done: true; value: undefined }>((resolve) =>
-            setTimeout(() => resolve({ done: true, value: undefined }), 500)
-          );
-          const result = await Promise.race([readPromise, timeoutPromise]);
-          if (result.done) break;
-          updates.push(result.value);
-        }
-      } catch {
-        // stream may not be available yet
-      } finally {
-        reader.releaseLock();
-      }
-    };
-
-    await readWithTimeout();
+    const entry = ensureDraining(runId);
 
     return Response.json({
       data: {
         runId,
         status: run.status,
-        updates,
+        updates: entry.updates,
       },
     });
   } catch {

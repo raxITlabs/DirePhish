@@ -511,6 +511,7 @@ def monte_carlo_status(batch_id):
     """Get batch progress."""
     status = MonteCarloEngine.get_batch_status(batch_id)
     if not status:
+        _mc_logger.warning("Batch %s not found in memory — possible Flask reload cleared state", batch_id)
         return jsonify({"error": f"Batch '{batch_id}' not found"}), 404
     return jsonify({"data": status})
 
@@ -518,8 +519,10 @@ def monte_carlo_status(batch_id):
 @crucible_bp.route("/monte-carlo/<batch_id>/results", methods=["GET"])
 def monte_carlo_results(batch_id):
     """Get aggregate results."""
+    _mc_logger.info("MC results requested for batch %s", batch_id)
     results = MonteCarloEngine.get_batch_results(batch_id)
     if results is None:
+        _mc_logger.warning("MC results: batch %s not found in memory", batch_id)
         return jsonify({"error": f"Batch '{batch_id}' not found"}), 404
 
     # Also try to load aggregation from disk
@@ -557,6 +560,40 @@ def monte_carlo_stop(batch_id):
     if result == "not_found":
         return jsonify({"error": f"Batch '{batch_id}' not found"}), 404
     return jsonify({"data": {"status": result}})
+
+
+@crucible_bp.route("/monte-carlo/<batch_id>/iterations", methods=["GET"])
+def get_mc_iterations(batch_id):
+    """Return summary of each completed MC iteration from disk."""
+    from pathlib import Path
+    from ..config import Config
+
+    # Search all project dirs for this batch
+    projects_dir = Path(Config.UPLOAD_FOLDER) / "crucible_projects"
+    iterations = []
+
+    if projects_dir.exists():
+        for proj_dir in projects_dir.iterdir():
+            mc_dir = proj_dir / "monte_carlo" / batch_id
+            if mc_dir.exists():
+                for iter_dir in sorted(mc_dir.iterdir()):
+                    if not iter_dir.is_dir() or "_iter_" not in iter_dir.name:
+                        continue
+                    summary_path = iter_dir / "summary.json"
+                    if not summary_path.exists():
+                        continue
+                    with open(summary_path) as f:
+                        summary = json.load(f)
+                    iterations.append({
+                        "iteration_id": iter_dir.name,
+                        "variation_description": summary.get("variation_description", ""),
+                        "total_rounds": summary.get("total_rounds", 0),
+                        "total_actions": summary.get("total_actions", 0),
+                        "cost_usd": summary.get("cost_usd", 0),
+                    })
+                break
+
+    return jsonify({"data": iterations})
 
 
 # ─── Counterfactual Branching Endpoints ───
@@ -740,32 +777,40 @@ def compute_risk_score(project_id):
     from ..services.risk_explainer import compute_drivers
     from ..services.firestore_memory import FirestoreMemory
 
+    # Find MC batch — try in-memory first, then discover from disk
     mc = MonteCarloEngine()
+    memory = FirestoreMemory()
     batches = mc.list_batches(project_id=project_id)
-    if not batches:
+
+    batch_id = None
+    batch_mode = None
+    mc_dir_base = Path(__file__).parent.parent.parent / "uploads" / "crucible_projects" / project_id / "monte_carlo"
+
+    if batches:
+        latest_batch = batches[0]
+        if latest_batch.get("status") in ("pending", "running"):
+            return jsonify({"error": "Monte Carlo aggregation is still in progress"}), 409
+        batch_id = latest_batch.get("batch_id", "")
+        batch_mode = latest_batch.get("mode", "")
+    elif mc_dir_base.exists():
+        # Server restarted — discover batches from disk
+        batch_dirs = sorted(mc_dir_base.iterdir(), key=lambda d: d.stat().st_mtime, reverse=True)
+        for d in batch_dirs:
+            if d.is_dir() and (d / "aggregation.json").exists():
+                batch_id = d.name
+                break
+
+    if not batch_id:
         return jsonify({"error": "No Monte Carlo batch found for this project"}), 404
 
-    latest_batch = batches[0]
-    if latest_batch.get("status") in ("pending", "running"):
-        return jsonify({"error": "Monte Carlo aggregation is still in progress"}), 409
-
-    if latest_batch.get("mode") == "test":
-        return jsonify({"error": "TEST mode has insufficient iterations for risk scoring (minimum: QUICK/10)"}), 422
-
-    batch_id = latest_batch.get("batch_id", "")
-
-    # Load MC aggregation from disk (same path pattern as monte_carlo_results endpoint)
+    # Load MC aggregation from disk
     try:
-        agg_path = (
-            Path(__file__).parent.parent.parent / "uploads" / "crucible_projects"
-            / project_id / "monte_carlo" / batch_id / "aggregation.json"
-        )
+        agg_path = mc_dir_base / batch_id / "aggregation.json"
         if agg_path.exists():
             with open(agg_path) as f:
                 mc_agg = json.load(f)
         else:
             # Fallback: try Firestore mc_aggregates collection
-            memory = FirestoreMemory()
             aggregates = memory.get_project_aggregates(project_id, limit=1)
             if aggregates:
                 mc_agg = aggregates[0]
@@ -829,7 +874,7 @@ def compute_risk_score(project_id):
     score_doc = {
         "project_id": project_id,
         "batch_id": batch_id,
-        "mc_mode": latest_batch.get("mode", ""),
+        "mc_mode": batch_mode or "",
         "iterations": mc_agg.get("iteration_count", 0),
         "composite_score": score_result["composite_score"],
         "confidence_interval": score_result["confidence_interval"],

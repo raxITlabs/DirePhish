@@ -201,12 +201,18 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
 
     const g = svg.append("g");
 
-    // Zoom
+    // Zoom — adaptive label visibility based on zoom level
     svg.call(
       d3
         .zoom<SVGSVGElement, unknown>()
         .scaleExtent([0.1, 4])
-        .on("zoom", (event) => g.attr("transform", event.transform))
+        .on("zoom", (event) => {
+          g.attr("transform", event.transform);
+          const k = event.transform.k;
+          g.select(".node-labels").attr("opacity", k > 1.5 ? 1 : 0);
+          g.select(".node-initials").attr("opacity", k > 0.8 ? 1 : 0);
+          g.select(".edge-labels").attr("opacity", k > 2 ? 1 : 0);
+        })
     );
 
     // Click on background to deselect
@@ -293,8 +299,13 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
       .data(links)
       .join("path")
       .attr("fill", "none")
-      .attr("stroke", getCSSVar('--border'))
-      .attr("stroke-width", 1.5)
+      .attr("stroke", (d) => {
+        if (/AFFECTS|POSES_RISK|DISRUPTS|IMPACTS/i.test(d.label))
+          return getCSSVar('--color-burnt-peach-400');
+        return getCSSVar('--border');
+      })
+      .attr("stroke-width", 0.8)
+      .attr("opacity", 0.15)
       .attr("cursor", "pointer")
       .on("click", (event, d) => {
         event.stopPropagation();
@@ -340,11 +351,11 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
       .attr("stroke-width", 2)
       .attr("cursor", "pointer")
       .on("mouseover", function () {
-        d3.select(this).attr("stroke", getCSSVar('--color-sandy-brown-500'));
+        d3.select(this).attr("stroke", getCSSVar('--color-royal-azure-400'));
       })
       .on("mouseout", function (_, d) {
         const isSelected = selectedNode && (d as SimNode).id === selectedNode.id;
-        d3.select(this).attr("stroke", isSelected ? getCSSVar('--color-sandy-brown-500') : "transparent");
+        d3.select(this).attr("stroke", isSelected ? getCSSVar('--color-royal-azure-400') : "transparent");
       })
       .on("dblclick", (event, d) => {
         event.stopPropagation();
@@ -359,7 +370,7 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
           d.name.toLowerCase().includes(q) ? 1 : 0.15
         )
         .attr("stroke", (d) =>
-          d.name.toLowerCase().includes(q) ? getCSSVar('--color-sandy-brown-500') : "transparent"
+          d.name.toLowerCase().includes(q) ? getCSSVar('--color-royal-azure-400') : "transparent"
         )
         .attr("stroke-width", (d) =>
           d.name.toLowerCase().includes(q) ? 3 : 2
@@ -465,20 +476,19 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
         return `M${sx},${sy - r} A${lr},${lr} 0 1,1 ${sx + 1},${sy - r}`;
       }
 
-      // Single edge: straight line
-      if (pairTotal === 1) {
-        return `M${sx},${sy} L${tx},${ty}`;
-      }
-
-      // Multiple edges: Bezier curves
+      // All edges use Bezier curves for visual consistency
       const dx = tx - sx;
       const dy = ty - sy;
       const dr = Math.sqrt(dx * dx + dy * dy) || 1;
       const perpX = -dy / dr;
       const perpY = dx / dr;
-      const offset = (pairIndex - (pairTotal - 1) / 2) * 40;
       const mx = (sx + tx) / 2;
       const my = (sy + ty) / 2;
+
+      // Single edge: subtle curve; parallel edges: offset curve
+      const offset = pairTotal === 1
+        ? dr * 0.08
+        : (pairIndex - (pairTotal - 1) / 2) * 40;
 
       return `M${sx},${sy} Q${mx + offset * perpX},${my + offset * perpY} ${tx},${ty}`;
     }
@@ -506,9 +516,10 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
       const mx = (sx + tx) / 2;
       const my = (sy + ty) / 2;
 
-      if (pairTotal === 1) return [mx, my];
-
-      const offset = (pairIndex - (pairTotal - 1) / 2) * 40;
+      // Match computePath: single edges also have a subtle curve
+      const offset = pairTotal === 1
+        ? dr * 0.08
+        : (pairIndex - (pairTotal - 1) / 2) * 40;
       // Quadratic bezier midpoint is at t=0.5: lerp between control and endpoints
       return [
         mx + (offset * perpX) / 2,
@@ -560,13 +571,18 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
     };
   }, [filteredData, dimensions, selectedNode, searchQuery]);
 
-  // Update edge label visibility separately to avoid full re-render
+  // When "Show Labels" is toggled ON, force labels visible (overrides zoom-adaptive)
   useEffect(() => {
     if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
-    const visibility = showLabels ? "visible" : "hidden";
-    svg.selectAll(".edge-labels").attr("visibility", visibility);
-    svg.selectAll(".node-labels").attr("visibility", visibility);
+    if (showLabels) {
+      svg.selectAll(".edge-labels").attr("visibility", "visible").attr("opacity", 1);
+      svg.selectAll(".node-labels").attr("visibility", "visible").attr("opacity", 1);
+    } else {
+      svg.selectAll(".edge-labels").attr("visibility", "visible");
+      svg.selectAll(".node-labels").attr("visibility", "visible");
+      // Zoom handler will manage opacity; just ensure they're not forced hidden
+    }
   }, [showLabels]);
 
   // Update selected edge highlight
@@ -582,7 +598,7 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
           d._originalEdge.target === selectedEdge.target &&
           d._originalEdge.label === selectedEdge.label
         ) {
-          return getCSSVar('--color-sandy-brown-500');
+          return getCSSVar('--color-royal-azure-400');
         }
         if (
           selectedNode &&
@@ -591,7 +607,27 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
         ) {
           return getCSSVar('--color-pitch-black-400');
         }
+        if (/AFFECTS|POSES_RISK|DISRUPTS|IMPACTS/i.test(d.label))
+          return getCSSVar('--color-burnt-peach-400');
         return getCSSVar('--border');
+      })
+      .attr("opacity", (d) => {
+        if (
+          selectedEdge &&
+          d._originalEdge.source === selectedEdge.source &&
+          d._originalEdge.target === selectedEdge.target &&
+          d._originalEdge.label === selectedEdge.label
+        ) {
+          return 0.8;
+        }
+        if (
+          selectedNode &&
+          ((d.source as SimNode).id === selectedNode.id ||
+            (d.target as SimNode).id === selectedNode.id)
+        ) {
+          return 0.6;
+        }
+        return 0.15;
       })
       .attr("stroke-width", (d) => {
         if (
@@ -600,9 +636,16 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
           d._originalEdge.target === selectedEdge.target &&
           d._originalEdge.label === selectedEdge.label
         ) {
-          return 3;
+          return 2.5;
         }
-        return 1.5;
+        if (
+          selectedNode &&
+          ((d.source as SimNode).id === selectedNode.id ||
+            (d.target as SimNode).id === selectedNode.id)
+        ) {
+          return 1.5;
+        }
+        return 0.8;
       });
   }, [selectedEdge, selectedNode]);
 

@@ -304,7 +304,7 @@ export default function PipelinePage({
   }, [hookData, projectId]);
 
   return (
-    <div className="flex" style={{ width: "100%", height: "calc(100svh - 3rem)" }}>
+    <div className="flex overflow-hidden" style={{ width: "100%", height: "calc(100svh - 3rem)" }}>
       {/* Left: stage navigator — always visible */}
       <PipelineStagesPanel
         steps={steps}
@@ -331,7 +331,7 @@ export default function PipelinePage({
                 simActions={mcCfSimId ? mcCfActions : simActions}
               />
             </ResizablePanel>
-            <ResizableHandle withHandle />
+            <ResizableHandle className="w-0 bg-transparent after:w-3 hover:after:bg-border/30 after:transition-colors after:duration-200 after:rounded-full" />
             <ResizablePanel defaultSize={40} minSize={25}>
               <PipelineDetailPanel
                 stageId={selectedStageId}
