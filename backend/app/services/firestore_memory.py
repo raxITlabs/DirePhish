@@ -1303,8 +1303,8 @@ class FirestoreMemory:
         Returns the auto-generated document ID.
         """
         doc_ref = self.db.collection("risk_scores").document()
-        score_doc["created_at"] = firestore.SERVER_TIMESTAMP
-        doc_ref.set(score_doc)
+        fs_doc = {**score_doc, "created_at": firestore.SERVER_TIMESTAMP}
+        doc_ref.set(fs_doc)
         logger.info(
             "Stored risk score %.1f for project %s",
             score_doc.get("composite_score", 0),
