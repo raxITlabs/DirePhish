@@ -14,7 +14,7 @@ export default function HomeClient() {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [context, setContext] = useState("");
-  const [testMode, setTestMode] = useState(false);
+  const [mode, setMode] = useState<"test" | "quick" | "standard" | "deep">("test");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +30,7 @@ export default function HomeClient() {
         body: JSON.stringify({
           companyUrl: url.trim(),
           userContext: context.trim() || undefined,
-          mode: testMode ? "test" : "standard",
+          mode,
         }),
       });
       const json = await res.json();
@@ -44,7 +44,7 @@ export default function HomeClient() {
       setError("Failed to start pipeline");
       setLoading(false);
     }
-  }, [url, context, testMode, router]);
+  }, [url, context, mode, router]);
 
   return (
     <div
@@ -102,29 +102,29 @@ export default function HomeClient() {
 
           {/* Bottom bar */}
           <div className="flex items-center justify-between px-3 py-2 border-t border-border/20">
-            <button
-              type="button"
-              onClick={() => setTestMode(!testMode)}
-              disabled={loading}
-              className="flex items-center gap-2 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <span
-                className={`relative inline-flex h-4 w-7 shrink-0 rounded-full border border-border/40 transition-colors ${testMode ? "bg-tuscan-sun-400" : "bg-muted"}`}
-              >
-                <span
-                  className={`block h-3 w-3 rounded-full bg-white shadow-sm transition-transform mt-px ${testMode ? "translate-x-3.5 ml-px" : "translate-x-0.5"}`}
-                />
-              </span>
-              <span className={testMode ? "text-tuscan-sun-600" : ""}>
-                Test mode
-              </span>
-            </button>
+            <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-0.5">
+              {(["test", "quick", "standard", "deep"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  disabled={loading}
+                  className={`px-2.5 py-1 rounded-md text-xs font-mono transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                    mode === m
+                      ? "bg-card text-foreground shadow-sm font-medium"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {m === "test" ? "Test" : m === "quick" ? "Quick" : m === "standard" ? "Standard" : "Deep"}
+                </button>
+              ))}
+            </div>
             <button
               onClick={handleSubmit}
               disabled={!url.trim() || loading}
               className="bg-primary text-primary-foreground px-4 py-1.5 rounded-lg font-mono text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {loading ? "Starting..." : testMode ? "Test run" : "Analyze"}
+              {loading ? "Starting..." : "Analyze"}
             </button>
           </div>
         </div>

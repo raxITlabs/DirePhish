@@ -366,7 +366,7 @@ def generate_configs(project_id):
     if not project:
         return jsonify({"error": "Project not found"}), 404
     from ..services.config_expander import run_config_expansion
-    run_config_expansion(project_id, data["scenario_ids"], test_mode=data.get("test_mode", False))
+    run_config_expansion(project_id, data["scenario_ids"], test_mode=data.get("test_mode", False), mode=data.get("mode"))
     return jsonify({"data": {"status": "generating"}}), 202
 
 
@@ -496,6 +496,7 @@ def monte_carlo_launch():
             cost_limit_usd=cost_limit_usd,
             variation_params=variation_params,
             custom_iterations=custom_iterations,
+            skip_gating=data.get("skip_gating", False),
         )
     except ValueError as e:
         return jsonify({"error": str(e)}), 400

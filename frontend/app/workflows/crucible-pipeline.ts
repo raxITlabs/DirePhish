@@ -248,15 +248,29 @@ async function pollMonteCarlo(batchId: string): Promise<void> {
 // THE PIPELINE WORKFLOW
 // ============================================================
 
+// Pipeline mode configuration — controls simulation depth across the entire pipeline.
+// test: fast dev (~16 min, 3 MC iterations)
+// quick: demo (~25 min, 10 MC iterations)
+// standard: client engagement (~45 min, 50 MC iterations)
+// deep: full assessment (~90+ min, 100 MC iterations)
+const PIPELINE_MODES = {
+  test:     { scenarios: 1, mcMode: "test",     mcCostLimit: 3,   maxForks: 1 },
+  quick:    { scenarios: 1, mcMode: "quick",    mcCostLimit: 25,  maxForks: 2 },
+  standard: { scenarios: 2, mcMode: "standard", mcCostLimit: 75,  maxForks: 3 },
+  deep:     { scenarios: 3, mcMode: "deep",     mcCostLimit: 200, maxForks: 3 },
+} as const;
+
+type PipelineMode = keyof typeof PIPELINE_MODES;
+
 export async function cruciblePipeline(input: {
   companyUrl: string;
   userContext?: string;
-  mode?: "standard" | "test";
+  mode?: string;
 }) {
   "use workflow";
 
-  const pipelineMode = input.mode || "standard";
-  const isTestMode = pipelineMode === "test";
+  const pipelineMode = (input.mode && input.mode in PIPELINE_MODES ? input.mode : "test") as PipelineMode;
+  const cfg = PIPELINE_MODES[pipelineMode];
 
   let projectId = "";
   let simIds: string[] = [];
@@ -270,7 +284,7 @@ export async function cruciblePipeline(input: {
     // ─── STEP 1: Create project & start research ───
     stageStart = Date.now();
     await emitProgress("research", "running",
-      isTestMode ? "Starting company research (TEST MODE)..." : "Starting company research...");
+      `Starting company research (${pipelineMode} mode)...`);
 
     const createResult = await flaskApi<{ projectId: string }>(
       "/api/crucible/projects",
@@ -361,7 +375,7 @@ export async function cruciblePipeline(input: {
       selectedIds = confirmation.scenarioOverrides;
     } else {
       const sorted = [...scenarios].sort((a, b) => b.probability - a.probability);
-      selectedIds = sorted.slice(0, isTestMode ? 1 : 2).map(s => s.id);
+      selectedIds = sorted.slice(0, cfg.scenarios).map(s => s.id);
     }
 
     scenarioTitles = scenarios
@@ -387,7 +401,7 @@ export async function cruciblePipeline(input: {
 
     await flaskApi<{ status: string }>(
       `/api/crucible/projects/${projectId}/generate-configs`,
-      { method: "POST", body: JSON.stringify({ scenario_ids: selectedIds, test_mode: isTestMode }) },
+      { method: "POST", body: JSON.stringify({ scenario_ids: selectedIds, mode: pipelineMode }) },
     );
 
     await pollStatus(projectId, ["configs_ready"]);
@@ -422,9 +436,8 @@ export async function cruciblePipeline(input: {
       `All ${simIds.length} simulations complete`, undefined, stageDurations.simulations);
 
     // ─── STEP 7: Monte Carlo analysis ───
-    const mcMode = isTestMode ? "test" : "quick";
-    const mcIterations = isTestMode ? 1 : 10;
-    const mcCostLimit = isTestMode ? 2.0 : 25.0;
+    const mcMode = cfg.mcMode;
+    const mcCostLimit = cfg.mcCostLimit;
 
     stageStart = Date.now();
     await emitProgress("monte_carlo", "running",
@@ -445,6 +458,7 @@ export async function cruciblePipeline(input: {
           config: simConfig,
           mode: mcMode,
           cost_limit_usd: mcCostLimit,
+          skip_gating: true,
         })},
       );
       mcBatchId = mcLaunch.batchId;
@@ -453,7 +467,7 @@ export async function cruciblePipeline(input: {
         `Stress testing — re-running with variations...`,
         JSON.stringify({
           batchId: mcBatchId,
-          iterations: mcIterations,
+          iterations: mcMode,
           completed: 0,
           currentSimId: `${mcBatchId}_iter_0000`,
           scenarioTitle: scenarioTitles[0] || "scenario"
@@ -469,7 +483,7 @@ export async function cruciblePipeline(input: {
       stageDurations.monte_carlo = Date.now() - stageStart;
       await emitProgress("monte_carlo", "completed",
         "Stress testing complete",
-        JSON.stringify({ batchId: mcBatchId, iterations: mcIterations }),
+        JSON.stringify({ batchId: mcBatchId, iterations: mcMode }),
         stageDurations.monte_carlo);
       console.log(`[PIPELINE] MC completed emitted, moving to counterfactual`);
     } catch (mcError) {
@@ -497,7 +511,7 @@ export async function cruciblePipeline(input: {
         { method: "POST" },
       );
 
-      const maxForks = isTestMode ? 1 : 2;
+      const maxForks = cfg.maxForks;
       const topDecisions = (decisions.decision_points || [])
         .filter(d => d.criticality === "high")
         .slice(0, maxForks);

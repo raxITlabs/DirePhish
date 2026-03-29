@@ -41,7 +41,7 @@ class MonteCarloMode(str, Enum):
 
 
 MODE_CONFIGS = {
-    MonteCarloMode.TEST:     {"iterations": 1,   "max_workers": 1},
+    MonteCarloMode.TEST:     {"iterations": 3,   "max_workers": 2},
     MonteCarloMode.QUICK:    {"iterations": 10,  "max_workers": 2},
     MonteCarloMode.STANDARD: {"iterations": 50,  "max_workers": 3},
     MonteCarloMode.DEEP:     {"iterations": 100, "max_workers": 3},
@@ -105,13 +105,15 @@ class MonteCarloEngine:
         cost_limit_usd: float = 5.0,
         variation_params: dict | None = None,
         custom_iterations: int | None = None,
+        skip_gating: bool = False,
     ) -> str:
         """Launch a Monte Carlo batch. Returns batch_id."""
         if isinstance(mode, str):
             mode = MonteCarloMode(mode)
 
         # Mode gating: standard/deep require a completed test batch
-        if mode in (MonteCarloMode.STANDARD, MonteCarloMode.DEEP):
+        # Pipeline runs bypass this since they always run the full sequence
+        if not skip_gating and mode in (MonteCarloMode.STANDARD, MonteCarloMode.DEEP):
             test_results_path = (
                 UPLOADS_DIR / "crucible_projects" / project_id
                 / "monte_carlo" / "test_results.json"

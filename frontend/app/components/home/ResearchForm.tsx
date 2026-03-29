@@ -13,7 +13,7 @@ export default function ResearchForm() {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [context, setContext] = useState("");
-  const [testMode, setTestMode] = useState(false);
+  const [mode, setMode] = useState<"test" | "quick" | "standard" | "deep">("test");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +30,7 @@ export default function ResearchForm() {
         body: JSON.stringify({
           companyUrl: url.trim(),
           userContext: context.trim() || undefined,
-          mode: testMode ? "test" : "standard",
+          mode,
         }),
       });
       const json = await res.json();
@@ -45,7 +45,7 @@ export default function ResearchForm() {
       setLoading(false);
       return;
     }
-  }, [url, context, testMode, router]);
+  }, [url, context, mode, router]);
 
   return (
     <Card>
@@ -77,23 +77,31 @@ export default function ResearchForm() {
           />
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={testMode}
-            onClick={() => setTestMode(!testMode)}
-            disabled={loading}
-            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${testMode ? "bg-tuscan-sun-500" : "bg-pitch-black-200"}`}
-          >
-            <span className={`pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform ${testMode ? "translate-x-4" : "translate-x-0"}`} />
-          </button>
-          <Label className="text-sm cursor-pointer" onClick={() => !loading && setTestMode(!testMode)}>
-            Test Mode
-            <span className="text-muted-foreground ml-1.5 font-normal">
-              (1 scenario, 3 MC iterations, 1 fork)
-            </span>
-          </Label>
+        <div className="space-y-2">
+          <Label>Pipeline Mode</Label>
+          <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-0.5 w-fit">
+            {(["test", "quick", "standard", "deep"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                disabled={loading}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+                  mode === m
+                    ? "bg-card text-foreground shadow-sm font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {m === "test" ? "Test" : m === "quick" ? "Quick" : m === "standard" ? "Standard" : "Deep"}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs font-mono text-muted-foreground">
+            {mode === "test" && "~15 min. 3 MC iterations, 1 scenario, 1 fork."}
+            {mode === "quick" && "~25 min. 10 MC iterations, 1 scenario, 2 forks."}
+            {mode === "standard" && "~45 min. 50 MC iterations, 2 scenarios, 3 forks."}
+            {mode === "deep" && "~90+ min. 100 MC iterations, 3 scenarios, 3 forks."}
+          </p>
         </div>
 
         {error && (
@@ -107,7 +115,7 @@ export default function ResearchForm() {
           disabled={!url.trim() || loading}
           className="w-full"
         >
-          {loading ? "Starting Pipeline..." : testMode ? "Start Test Run" : "Start Pipeline"}
+          {loading ? "Starting Pipeline..." : "Start Pipeline"}
         </Button>
       </CardContent>
     </Card>
