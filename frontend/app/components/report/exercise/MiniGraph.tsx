@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getProjectGraph } from "@/app/actions/project";
 
 interface GraphNode {
   id: string;
@@ -45,11 +46,11 @@ export default function MiniGraph({ projectId }: MiniGraphProps) {
   useEffect(() => {
     async function fetchGraph() {
       try {
-        const res = await fetch(`/api/crucible/projects/${projectId}/graph`);
-        const json = await res.json();
-        const data = json.data || json;
-        setNodes((data.nodes || []).slice(0, 30));
-        setEdges((data.edges || []).slice(0, 50));
+        const result = await getProjectGraph(projectId);
+        if ("data" in result) {
+          setNodes((result.data.nodes || []).slice(0, 30));
+          setEdges((result.data.edges || []).slice(0, 50));
+        }
       } catch {
         // Non-critical
       } finally {
