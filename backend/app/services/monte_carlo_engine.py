@@ -563,6 +563,24 @@ async def _run_iteration(
                     "raw_result": str(result),
                 })
 
+            # Enrich summary.json with variation data + cost (sim runner doesn't have this)
+            import re as _re
+            _seed_match = _re.search(r"seed=(\d+)", variation_desc)
+            _seed_val = int(_seed_match.group(1)) if _seed_match else iteration_index
+            summary_path = iter_dir / "summary.json"
+            if summary_path.exists():
+                try:
+                    with open(summary_path) as f:
+                        summary = json.load(f)
+                    summary["variation_description"] = variation_desc
+                    summary["seed"] = _seed_val
+                    summary["cost_usd"] = result.get("cost_usd", 0) if isinstance(result, dict) else 0
+                    summary["iteration_index"] = iteration_index
+                    with open(summary_path, "w") as f:
+                        json.dump(summary, f, indent=2, ensure_ascii=False, default=str)
+                except Exception as e:
+                    logger.warning("Failed to enrich summary.json for %s: %s", iteration_id, e)
+
             batch.iterations_completed += 1
             if iteration_id in _simulations:
                 _simulations[iteration_id]["status"] = "completed"

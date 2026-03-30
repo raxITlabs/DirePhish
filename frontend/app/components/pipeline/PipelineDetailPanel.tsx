@@ -213,6 +213,81 @@ const SEVERITY_COLORS: Record<string, string> = {
   medium: "bg-royal-azure-50 text-royal-azure-700",
 };
 
+function MCIterationList({ batchId, live }: { batchId: string; live?: boolean }) {
+  const [iterations, setIterations] = useState<Array<{
+    iteration_id: string; variation_description: string;
+    total_rounds: number; total_actions: number; cost_usd: number; seed?: number;
+  }>>([]);
+
+  useEffect(() => {
+    const fetchIterations = () => {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001"}/api/crucible/monte-carlo/${batchId}/iterations`)
+        .then(r => r.json())
+        .then(d => { if (d.data) setIterations(d.data); })
+        .catch(() => {});
+    };
+    fetchIterations();
+    if (live) {
+      const interval = setInterval(fetchIterations, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [batchId, live]);
+
+  if (!iterations.length) return null;
+
+  function describeVariation(desc: string): string[] {
+    const parts: string[] = [];
+    const tempMatch = desc.match(/temp=([\d.]+)/);
+    if (tempMatch) {
+      const temp = parseFloat(tempMatch[1]);
+      if (temp > 0.75) parts.push("Higher pressure");
+      else if (temp < 0.6) parts.push("More cautious");
+      else parts.push(`Temp ${temp.toFixed(2)}`);
+    }
+    if (desc.includes("timing_shift")) parts.push("Shifted timing");
+    if (desc.includes("order=")) parts.push("Reordered response");
+    if (desc.includes("persona_mods")) parts.push("Varied priorities");
+    return parts.length > 0 ? parts : ["Baseline variation"];
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <span className="text-2xs font-mono text-muted-foreground/60 uppercase tracking-wider">
+        Completed Variations ({iterations.length})
+      </span>
+      {iterations.map((iter, idx) => {
+        const tags = describeVariation(iter.variation_description || "");
+        return (
+          <div
+            key={iter.iteration_id}
+            className="bg-muted/30 rounded-md px-3 py-2 space-y-1"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-mono text-foreground/80">
+                <span className="text-verdigris-600">✓</span>
+                <span>Variation {idx + 1}</span>
+                {iter.seed != null && <span className="text-muted-foreground/50">seed:{iter.seed}</span>}
+              </div>
+              <div className="flex items-center gap-3 text-2xs font-mono text-muted-foreground">
+                <span>{iter.total_rounds}R</span>
+                <span>{iter.total_actions} actions</span>
+                {iter.cost_usd > 0 && <span>${iter.cost_usd.toFixed(2)}</span>}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {tags.map((tag) => (
+                <span key={tag} className="text-2xs font-mono px-1.5 py-0.5 rounded bg-tuscan-sun-50 text-tuscan-sun-600">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ExerciseReportSummary({ projectId, message }: { projectId: string; message?: string }) {
   const [report, setReport] = useState<ExerciseReport | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -801,7 +876,7 @@ function StageDetail({
 
   // Monte Carlo Analysis
   if (stageId === "monte_carlo") {
-    let parsed: { iterations?: number; completed?: number; totalCost?: number; scenarioTitle?: string; variation_description?: string } | null = null;
+    let parsed: { iterations?: number; completed?: number; totalCost?: number; scenarioTitle?: string; variation_description?: string; batchId?: string } | null = null;
     if (state?.detail) {
       try { parsed = JSON.parse(state.detail); } catch { /* detail is plain text */ }
     }
@@ -866,7 +941,7 @@ function StageDetail({
           <div className="flex items-center gap-3">
             <div className="w-5 h-5 border-2 border-tuscan-sun-500 border-t-transparent rounded-full animate-spin shrink-0" />
             <span className="text-sm font-mono text-foreground/80">
-              Iteration {completed}/{total}
+              Variation {completed}/{total}
             </span>
           </div>
           <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -875,6 +950,7 @@ function StageDetail({
               style={{ width: `${pct}%` }}
             />
           </div>
+          {parsed?.batchId && <MCIterationList batchId={parsed.batchId} live />}
           {!parsed && state.detail && (
             <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>
           )}
@@ -904,6 +980,7 @@ function StageDetail({
               <span className="text-xs font-mono font-semibold text-foreground/80">${parsed.totalCost.toFixed(2)}</span>
             </div>
           )}
+          {parsed?.batchId && <MCIterationList batchId={parsed.batchId} />}
           {(mcSimStatus || mcCfSimStatus) && (mcSimActions || mcCfSimActions) && ((mcSimActions || mcCfSimActions)?.length ?? 0) > 0 && (
             <PipelineSimulationPanel
               simStatus={(mcSimStatus || mcCfSimStatus)!}
