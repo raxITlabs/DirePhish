@@ -110,7 +110,7 @@ export default function PipelineDetailPanel({
   // Dossier review → delegate to full dossier editor
   if (stageId === "dossier_review" && dossier) {
     return (
-      <div className="flex flex-col h-full bg-card">
+      <div className="flex flex-col h-[calc(100%-16px)] mt-2 mr-2 bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 border-b border-border/10 shrink-0">
           <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">Dossier Review</span>
           <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground transition-colors text-sm" aria-label="Close detail panel">✕</button>
@@ -125,7 +125,7 @@ export default function PipelineDetailPanel({
   // Simulation → delegate to simulation panel
   if (stageId === "simulations" && simStatus) {
     return (
-      <div className="flex flex-col h-full bg-card">
+      <div className="flex flex-col h-[calc(100%-16px)] mt-2 mr-2 bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 border-b border-border/10 shrink-0">
           <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">Simulation</span>
           <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground transition-colors text-sm" aria-label="Close detail panel">✕</button>
@@ -147,7 +147,7 @@ export default function PipelineDetailPanel({
 
   // All other stages → generic detail view
   return (
-    <div className="flex flex-col h-full bg-card animate-slide-in-right">
+    <div className="flex flex-col h-[calc(100%-16px)] mt-2 mr-2 bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden animate-slide-in-right">
       {/* Header */}
       <div className="px-5 py-4 border-b border-border/10 shrink-0">
         <div className="flex items-center justify-between">
