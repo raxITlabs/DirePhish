@@ -17,6 +17,7 @@ from ..utils.llm_client import LLMClient
 from ..utils.cost_tracker import CostTracker
 from ..utils.logger import get_logger
 from google.cloud import firestore
+from google.cloud.firestore_v1 import FieldFilter
 from . import project_manager
 
 logger = get_logger("exercise_report")
@@ -281,10 +282,14 @@ def _get_graph_data(project_id: str) -> dict:
     """Query Firestore for graph nodes and edges."""
     db = firestore.Client()
     nodes = []
-    for doc in db.collection("graph_nodes").where("sim_id", "==", project_id).stream():
+    for doc in db.collection("graph_nodes").where(
+        filter=FieldFilter("sim_id", "==", project_id)
+    ).stream():
         nodes.append({"id": doc.id, **doc.to_dict()})
     edges = []
-    for doc in db.collection("graph_edges").where("sim_id", "==", project_id).stream():
+    for doc in db.collection("graph_edges").where(
+        filter=FieldFilter("sim_id", "==", project_id)
+    ).stream():
         edges.append({"id": doc.id, **doc.to_dict()})
     return {"nodes": nodes, "edges": edges}
 

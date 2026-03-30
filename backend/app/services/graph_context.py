@@ -7,6 +7,8 @@ Graph data is keyed by project_id stored in the `sim_id` field.
 Pure data formatting — no LLM calls.
 """
 
+from google.cloud.firestore_v1 import FieldFilter
+
 from ..utils.logger import get_logger
 
 logger = get_logger("graph_context")
@@ -41,8 +43,12 @@ class GraphContext:
             return
         try:
             db = _get_db()
-            n_docs = db.collection("graph_nodes").where("sim_id", "==", self.project_id).get()
-            e_docs = db.collection("graph_edges").where("sim_id", "==", self.project_id).get()
+            n_docs = db.collection("graph_nodes").where(
+                filter=FieldFilter("sim_id", "==", self.project_id)
+            ).get()
+            e_docs = db.collection("graph_edges").where(
+                filter=FieldFilter("sim_id", "==", self.project_id)
+            ).get()
             self._nodes = [doc.to_dict() for doc in n_docs]
             self._edges = [doc.to_dict() for doc in e_docs]
             logger.info(f"Loaded graph for {self.project_id}: {len(self._nodes)} nodes, {len(self._edges)} edges")

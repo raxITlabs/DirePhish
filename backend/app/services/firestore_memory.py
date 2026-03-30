@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from google.cloud import firestore
+from google.cloud.firestore_v1 import FieldFilter
 from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
 from google.cloud.firestore_v1.vector import Vector
 
@@ -488,9 +489,13 @@ class FirestoreMemory:
 
         # Delete existing graph data unless incremental mode
         if not incremental:
-            for doc in self.db.collection("graph_nodes").where("sim_id", "==", sim_id).stream():
+            for doc in self.db.collection("graph_nodes").where(
+                filter=FieldFilter("sim_id", "==", sim_id)
+            ).stream():
                 doc.reference.delete()
-            for doc in self.db.collection("graph_edges").where("sim_id", "==", sim_id).stream():
+            for doc in self.db.collection("graph_edges").where(
+                filter=FieldFilter("sim_id", "==", sim_id)
+            ).stream():
                 doc.reference.delete()
             logger.info(f"Cleared existing graph for {sim_id}")
 
@@ -585,7 +590,7 @@ class FirestoreMemory:
             graph_nodes = self.db.collection("graph_nodes")
             existing_names = set()
             if incremental:
-                for doc in graph_nodes.where("sim_id", "==", sim_id).stream():
+                for doc in graph_nodes.where(filter=FieldFilter("sim_id", "==", sim_id)).stream():
                     existing_names.add(doc.to_dict().get("name"))
 
             batch = self.db.batch()
@@ -612,7 +617,7 @@ class FirestoreMemory:
             graph_edges = self.db.collection("graph_edges")
             existing_edges = set()
             if incremental:
-                for doc in graph_edges.where("sim_id", "==", sim_id).stream():
+                for doc in graph_edges.where(filter=FieldFilter("sim_id", "==", sim_id)).stream():
                     d = doc.to_dict()
                     existing_edges.add((d.get("source"), d.get("target"), d.get("label")))
 
@@ -668,9 +673,9 @@ class FirestoreMemory:
         """
         query_vec = self.embedder.embed_query(query)
 
-        base = self._episodes.where("sim_id", "==", sim_id)
+        base = self._episodes.where(filter=FieldFilter("sim_id", "==", sim_id))
         if category:
-            base = base.where("category", "==", category)
+            base = base.where(filter=FieldFilter("category", "==", category))
 
         docs = base.find_nearest(
             vector_field="embedding",
@@ -752,7 +757,7 @@ class FirestoreMemory:
 
         def _sync_search(vec: list[float]) -> list[dict]:
             try:
-                base = episodes_ref.where("sim_id", "==", sim_id)
+                base = episodes_ref.where(filter=FieldFilter("sim_id", "==", sim_id))
                 docs = base.find_nearest(
                     vector_field="embedding",
                     query_vector=Vector(vec),
@@ -1148,7 +1153,7 @@ class FirestoreMemory:
         logger.info(f"get_graph_statistics sim={sim_id}")
 
         # Query all episodes for this sim (metadata only — no vector search needed)
-        docs = self._episodes.where("sim_id", "==", sim_id).select(
+        docs = self._episodes.where(filter=FieldFilter("sim_id", "==", sim_id)).select(
             ["category", "agent_name", "action_name"]
         ).get()
 
@@ -1216,9 +1221,12 @@ class FirestoreMemory:
         """
         logger.info(f"get_entities_by_type sim={sim_id} type={entity_type}")
 
-        docs = self._episodes.where("sim_id", "==", sim_id).where(
-            "category", "==", entity_type
-        ).select(["agent_name", "agent_role", "action_summary"]).get()
+        docs = (
+            self._episodes.where(filter=FieldFilter("sim_id", "==", sim_id))
+            .where(filter=FieldFilter("category", "==", entity_type))
+            .select(["agent_name", "agent_role", "action_summary"])
+            .get()
+        )
 
         seen: set[str] = set()
         entities: List[Dict[str, Any]] = []
@@ -1266,7 +1274,7 @@ class FirestoreMemory:
         """Retrieve stored aggregate outcomes for a project."""
         docs = (
             self.db.collection("mc_aggregates")
-            .where("project_id", "==", project_id)
+            .where(filter=FieldFilter("project_id", "==", project_id))
             .order_by("created_at", direction=firestore.Query.DESCENDING)
             .limit(limit)
             .get()
@@ -1319,7 +1327,7 @@ class FirestoreMemory:
         """
         docs = (
             self.db.collection("risk_scores")
-            .where("project_id", "==", project_id)
+            .where(filter=FieldFilter("project_id", "==", project_id))
             .order_by("created_at", direction=firestore.Query.DESCENDING)
             .limit(1)
             .get()
@@ -1345,7 +1353,7 @@ class FirestoreMemory:
         """Retrieve historical risk scores for a project, most recent first."""
         docs = (
             self.db.collection("risk_scores")
-            .where("project_id", "==", project_id)
+            .where(filter=FieldFilter("project_id", "==", project_id))
             .order_by("created_at", direction=firestore.Query.DESCENDING)
             .limit(limit)
             .get()
