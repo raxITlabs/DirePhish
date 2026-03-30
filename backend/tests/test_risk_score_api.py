@@ -88,7 +88,7 @@ class TestComputeRiskScoreEndpoint:
 
         mock_memory_cls = MagicMock()
         mock_memory_instance = MagicMock()
-        mock_memory_instance.get_mc_aggregation.return_value = SAMPLE_MC_AGG
+        mock_memory_instance.get_project_aggregates.return_value = [SAMPLE_MC_AGG]
         mock_memory_instance.store_risk_score.return_value = "score_doc_123"
         mock_memory_cls.return_value = mock_memory_instance
 
