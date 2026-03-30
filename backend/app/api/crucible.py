@@ -8,6 +8,7 @@ import uuid
 from pathlib import Path
 
 from flask import Blueprint, jsonify, request
+from google.cloud.firestore_v1 import FieldFilter
 
 from ..services.crucible_manager import (
     list_presets,
@@ -256,8 +257,12 @@ def project_graph(project_id):
 
         def _read_graph(mem, pid):
             """Read nodes + edges from Firestore, resolve edge name→id."""
-            n_docs = mem.db.collection("graph_nodes").where("sim_id", "==", pid).get()
-            e_docs = mem.db.collection("graph_edges").where("sim_id", "==", pid).get()
+            n_docs = mem.db.collection("graph_nodes").where(
+                filter=FieldFilter("sim_id", "==", pid)
+            ).get()
+            e_docs = mem.db.collection("graph_edges").where(
+                filter=FieldFilter("sim_id", "==", pid)
+            ).get()
 
             nodes = [{
                 "id": doc.id,
@@ -585,12 +590,16 @@ def get_mc_iterations(batch_id):
                         continue
                     with open(summary_path) as f:
                         summary = json.load(f)
+                    ad = summary.get("adaptive_depth") or {}
                     iterations.append({
                         "iteration_id": iter_dir.name,
                         "variation_description": summary.get("variation_description", ""),
                         "total_rounds": summary.get("total_rounds", 0),
                         "total_actions": summary.get("total_actions", 0),
                         "cost_usd": summary.get("cost_usd", 0),
+                        "seed": summary.get("seed"),
+                        "outcome": ad.get("stop_reason"),
+                        "stopped_at_round": ad.get("stopped_at_round", summary.get("total_rounds", 0)),
                     })
                 break
 

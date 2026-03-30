@@ -216,7 +216,8 @@ const SEVERITY_COLORS: Record<string, string> = {
 function MCIterationList({ batchId, live }: { batchId: string; live?: boolean }) {
   const [iterations, setIterations] = useState<Array<{
     iteration_id: string; variation_description: string;
-    total_rounds: number; total_actions: number; cost_usd: number; seed?: number;
+    total_rounds: number; total_actions: number; cost_usd: number;
+    seed?: number; outcome?: string; stopped_at_round?: number;
   }>>([]);
 
   useEffect(() => {
@@ -235,19 +236,57 @@ function MCIterationList({ batchId, live }: { batchId: string; live?: boolean })
 
   if (!iterations.length) return null;
 
-  function describeVariation(desc: string): string[] {
-    const parts: string[] = [];
+  function parseVariation(desc: string): Array<{ label: string; detail: string; color: string }> {
+    const items: Array<{ label: string; detail: string; color: string }> = [];
+
     const tempMatch = desc.match(/temp=([\d.]+)/);
     if (tempMatch) {
       const temp = parseFloat(tempMatch[1]);
-      if (temp > 0.75) parts.push("Higher pressure");
-      else if (temp < 0.6) parts.push("More cautious");
-      else parts.push(`Temp ${temp.toFixed(2)}`);
+      const color = temp > 0.8 ? "bg-red-50 text-red-600" : temp > 0.65 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600";
+      const label = temp > 0.8 ? "High pressure" : temp > 0.65 ? "Moderate pressure" : "Cautious";
+      items.push({ label, detail: `temp ${temp.toFixed(2)}`, color });
     }
-    if (desc.includes("timing_shift")) parts.push("Shifted timing");
-    if (desc.includes("order=")) parts.push("Reordered response");
-    if (desc.includes("persona_mods")) parts.push("Varied priorities");
-    return parts.length > 0 ? parts : ["Baseline variation"];
+
+    const personaMatch = desc.match(/persona_mods=\[([^\]]+)\]/);
+    if (personaMatch) {
+      const agents = personaMatch[1].split(", ").map(a => a.split(" ").pop() || a);
+      items.push({
+        label: "Modified priorities",
+        detail: agents.length > 2 ? `${agents.slice(0, 2).join(", ")} +${agents.length - 2}` : agents.join(", "),
+        color: "bg-violet-50 text-violet-600",
+      });
+    }
+
+    const timingMatch = desc.match(/timing_shifts=\[([^\]]+)\]/);
+    if (timingMatch) {
+      const shiftMatch = timingMatch[1].match(/'event_round':\s*(\d+).*?'shifted_to':\s*(\d+)/);
+      if (shiftMatch) {
+        items.push({ label: "Timing shift", detail: `inject moved R${shiftMatch[1]} to R${shiftMatch[2]}`, color: "bg-sky-50 text-sky-600" });
+      } else {
+        items.push({ label: "Timing shift", detail: "events rescheduled", color: "bg-sky-50 text-sky-600" });
+      }
+    }
+
+    const orderMatch = desc.match(/order=\[([^\]]+)\]/);
+    if (orderMatch) {
+      const first = orderMatch[1].split(", ")[0]?.split(" ").pop() || "";
+      const hasAttackerFirst = orderMatch[1].toLowerCase().includes("threat") || orderMatch[1].toLowerCase().includes("attack") || orderMatch[1].toLowerCase().includes("operator");
+      items.push({
+        label: hasAttackerFirst ? "Attacker responds first" : "Response reordered",
+        detail: `leads: ${first}`,
+        color: hasAttackerFirst ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-600",
+      });
+    }
+
+    return items.length > 0 ? items : [{ label: "Baseline", detail: "no modifications", color: "bg-muted text-muted-foreground" }];
+  }
+
+  function outcomeLabel(outcome?: string): { text: string; color: string } | null {
+    if (!outcome) return null;
+    if (outcome.includes("contained") || outcome.includes("resolved")) return { text: "Contained", color: "text-emerald-600" };
+    if (outcome.includes("critical") || outcome.includes("failure")) return { text: "Escalated", color: "text-red-600" };
+    if (outcome.includes("max_round") || outcome.includes("limit")) return { text: "Max rounds", color: "text-amber-600" };
+    return { text: outcome.split("_").join(" "), color: "text-muted-foreground" };
   }
 
   return (
@@ -256,28 +295,27 @@ function MCIterationList({ batchId, live }: { batchId: string; live?: boolean })
         Completed Variations ({iterations.length})
       </span>
       {iterations.map((iter, idx) => {
-        const tags = describeVariation(iter.variation_description || "");
+        const changes = parseVariation(iter.variation_description || "");
+        const outcome = outcomeLabel(iter.outcome);
         return (
-          <div
-            key={iter.iteration_id}
-            className="bg-muted/30 rounded-md px-3 py-2 space-y-1"
-          >
+          <div key={iter.iteration_id} className="bg-muted/30 rounded-md px-3 py-2 space-y-1.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-mono text-foreground/80">
                 <span className="text-verdigris-600">✓</span>
                 <span>Variation {idx + 1}</span>
-                {iter.seed != null && <span className="text-muted-foreground/50">seed:{iter.seed}</span>}
               </div>
-              <div className="flex items-center gap-3 text-2xs font-mono text-muted-foreground">
-                <span>{iter.total_rounds}R</span>
+              <div className="flex items-center gap-2 text-2xs font-mono text-muted-foreground">
+                {outcome && <span className={`font-medium ${outcome.color}`}>{outcome.text}</span>}
+                <span>{iter.stopped_at_round || iter.total_rounds}R</span>
                 <span>{iter.total_actions} actions</span>
                 {iter.cost_usd > 0 && <span>${iter.cost_usd.toFixed(2)}</span>}
               </div>
             </div>
             <div className="flex flex-wrap gap-1">
-              {tags.map((tag) => (
-                <span key={tag} className="text-2xs font-mono px-1.5 py-0.5 rounded bg-tuscan-sun-50 text-tuscan-sun-600">
-                  {tag}
+              {changes.map((c, i) => (
+                <span key={i} className={`text-2xs font-mono px-1.5 py-0.5 rounded ${c.color}`} title={c.detail}>
+                  {c.label}
+                  <span className="opacity-60 ml-1">{c.detail}</span>
                 </span>
               ))}
             </div>
@@ -916,19 +954,28 @@ function StageDetail({
         }
 
         return (
-          <PipelineSimulationPanel
-            simStatus={mcSt}
-            simActions={mcAc}
-            graphData={graphData}
-            activeSimIndex={0}
-            totalSims={1}
-            scenarioTitle={title}
-            contextHeader={{
-              title: `Stress Test: ${parsed?.scenarioTitle || "scenario"}`,
-              subtitle: `Variation ${(parsed?.completed || 0) + 1}/${parsed?.iterations || 1}`,
-              changes: mcChanges.length > 0 ? mcChanges : ["Testing with controlled variations"],
-            }}
-          />
+          <div className="flex flex-col h-full">
+            {parsed?.batchId && (parsed?.completed || 0) > 0 && (
+              <div className="px-3 py-2 border-b border-border/10 max-h-[40%] overflow-y-auto shrink-0">
+                <MCIterationList batchId={parsed.batchId} live />
+              </div>
+            )}
+            <div className="flex-1 min-h-0">
+              <PipelineSimulationPanel
+                simStatus={mcSt}
+                simActions={mcAc}
+                graphData={graphData}
+                activeSimIndex={0}
+                totalSims={1}
+                scenarioTitle={title}
+                contextHeader={{
+                  title: `Stress Test: ${parsed?.scenarioTitle || "scenario"}`,
+                  subtitle: `Variation ${(parsed?.completed || 0) + 1}/${parsed?.iterations || 1}`,
+                  changes: mcChanges.length > 0 ? mcChanges : ["Testing with controlled variations"],
+                }}
+              />
+            </div>
+          </div>
         );
       }
 
