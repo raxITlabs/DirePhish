@@ -107,10 +107,12 @@ def _expansion_pipeline(project_id: str, scenario_ids: list[str], mode: str = "s
                     threat_actors = [a for a in agents if a.get("role") == "threat_actor" or a.get("agent_type") == "threat_actor"]
                     defenders = [a for a in agents if a not in threat_actors]
                     config["agent_profiles"] = defenders[:caps["agents"] - len(threat_actors)] + threat_actors
-                # Cap worlds
+                # Cap worlds (keep c2 worlds for threat actors)
                 worlds = config.get("worlds", [])
                 if len(worlds) > caps["worlds"]:
-                    config["worlds"] = worlds[:caps["worlds"]]
+                    c2_worlds = [w for w in worlds if w.get("name", "").startswith("c2")]
+                    non_c2 = [w for w in worlds if w not in c2_worlds]
+                    config["worlds"] = non_c2[:caps["worlds"] - len(c2_worlds)] + c2_worlds
                 # Cap scheduled events
                 events = config.get("scheduled_events", [])
                 if len(events) > caps["events"]:
