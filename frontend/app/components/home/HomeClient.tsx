@@ -103,19 +103,25 @@ export default function HomeClient() {
           {/* Bottom bar */}
           <div className="flex items-center justify-between px-3 py-2 border-t border-border/20">
             <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-0.5">
-              {(["test", "quick", "standard", "deep"] as const).map((m) => (
+              {([
+                { key: "test", label: "Test", sub: "~15 min" },
+                { key: "quick", label: "Quick", sub: "~25 min" },
+                { key: "standard", label: "Standard", sub: "~45 min" },
+                { key: "deep", label: "Deep", sub: "~90 min" },
+              ] as const).map((m) => (
                 <button
-                  key={m}
+                  key={m.key}
                   type="button"
-                  onClick={() => setMode(m)}
+                  onClick={() => setMode(m.key)}
                   disabled={loading}
-                  className={`px-2.5 py-1 rounded-md text-xs font-mono transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-                    mode === m
+                  className={`px-2.5 py-1 rounded-md text-xs font-mono transition-all disabled:opacity-40 disabled:cursor-not-allowed flex flex-col items-center leading-tight ${
+                    mode === m.key
                       ? "bg-card text-foreground shadow-sm font-medium"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {m === "test" ? "Test" : m === "quick" ? "Quick" : m === "standard" ? "Standard" : "Deep"}
+                  <span>{m.label}</span>
+                  <span className="text-[9px] opacity-60">{m.sub}</span>
                 </button>
               ))}
             </div>

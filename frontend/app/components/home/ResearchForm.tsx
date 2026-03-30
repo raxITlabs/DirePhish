@@ -78,29 +78,35 @@ export default function ResearchForm() {
         </div>
 
         <div className="space-y-2">
-          <Label>Pipeline Mode</Label>
+          <Label>Simulation Depth</Label>
           <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-0.5 w-fit">
-            {(["test", "quick", "standard", "deep"] as const).map((m) => (
+            {([
+              { key: "test", label: "Test", sub: "~15 min" },
+              { key: "quick", label: "Quick", sub: "~25 min" },
+              { key: "standard", label: "Standard", sub: "~45 min" },
+              { key: "deep", label: "Deep", sub: "~90 min" },
+            ] as const).map((m) => (
               <button
-                key={m}
+                key={m.key}
                 type="button"
-                onClick={() => setMode(m)}
+                onClick={() => setMode(m.key)}
                 disabled={loading}
-                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
-                  mode === m
+                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all disabled:cursor-not-allowed disabled:opacity-50 flex flex-col items-center leading-tight ${
+                  mode === m.key
                     ? "bg-card text-foreground shadow-sm font-medium"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {m === "test" ? "Test" : m === "quick" ? "Quick" : m === "standard" ? "Standard" : "Deep"}
+                <span>{m.label}</span>
+                <span className="text-[9px] opacity-60">{m.sub}</span>
               </button>
             ))}
           </div>
           <p className="text-xs font-mono text-muted-foreground">
-            {mode === "test" && "~15 min. 3 MC iterations, 1 scenario, 1 fork."}
-            {mode === "quick" && "~25 min. 10 MC iterations, 1 scenario, 2 forks."}
-            {mode === "standard" && "~45 min. 50 MC iterations, 2 scenarios, 3 forks."}
-            {mode === "deep" && "~90+ min. 100 MC iterations, 3 scenarios, 3 forks."}
+            {mode === "test" && "3 stress test variations, 1 scenario, 1 what-if branch."}
+            {mode === "quick" && "10 variations, 1 scenario, 2 what-if branches. Good for demos."}
+            {mode === "standard" && "50 variations, 2 scenarios, 3 what-if branches. Client-ready."}
+            {mode === "deep" && "100 variations, 3 scenarios, 3 what-if branches. Full assessment."}
           </p>
         </div>
 
