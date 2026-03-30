@@ -463,11 +463,14 @@ export async function cruciblePipeline(input: {
       );
       mcBatchId = mcLaunch.batchId;
 
+      // Get actual iteration count from MC status (engine controls this via MODE_CONFIGS)
+      const mcInitial = await checkMCStatus(mcBatchId);
+
       await emitProgress("monte_carlo", "running",
         `Stress testing — re-running with variations...`,
         JSON.stringify({
           batchId: mcBatchId,
-          iterations: mcMode,
+          iterations: mcInitial.totalIterations,
           completed: 0,
           currentSimId: `${mcBatchId}_iter_0000`,
           scenarioTitle: scenarioTitles[0] || "scenario"
@@ -483,7 +486,7 @@ export async function cruciblePipeline(input: {
       stageDurations.monte_carlo = Date.now() - stageStart;
       await emitProgress("monte_carlo", "completed",
         "Stress testing complete",
-        JSON.stringify({ batchId: mcBatchId, iterations: mcMode }),
+        JSON.stringify({ batchId: mcBatchId, iterations: mcInitial.totalIterations }),
         stageDurations.monte_carlo);
       console.log(`[PIPELINE] MC completed emitted, moving to counterfactual`);
     } catch (mcError) {
