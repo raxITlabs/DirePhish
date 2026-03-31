@@ -190,7 +190,7 @@ export default function BoardView({ report }: BoardViewProps) {
               {actions.map((a, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-pitch-black-50 border border-pitch-black-100"
+                  className="flex items-start gap-3 p-3 rounded-xl bg-pitch-black-50 ring-1 ring-foreground/10"
                 >
                   <span
                     className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${

@@ -61,7 +61,7 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
                 {worlds.map((w, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-pitch-black-50 border border-pitch-black-100"
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-pitch-black-50 ring-1 ring-foreground/10"
                   >
                     <div>
                       <p className="text-sm font-medium text-pitch-black-800">
@@ -113,7 +113,7 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
               {iocs.map((ioc, i) => (
                 <div
                   key={i}
-                  className="p-3 rounded-lg bg-pitch-black-50 border border-pitch-black-100"
+                  className="p-3 rounded-xl bg-pitch-black-50 ring-1 ring-foreground/10"
                 >
                   <Badge variant="outline" className="text-[10px] mb-1.5 bg-burnt-peach-50 text-burnt-peach-700 border-burnt-peach-200">
                     {ioc.type}
@@ -187,7 +187,7 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
               {actions.map((a, i) => (
                 <label
                   key={i}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-pitch-black-50 border border-pitch-black-100 cursor-pointer hover:bg-pitch-black-100/50 transition-colors"
+                  className="flex items-start gap-3 p-3 rounded-xl bg-pitch-black-50 ring-1 ring-foreground/10 cursor-pointer hover:bg-pitch-black-100/50 transition-colors"
                 >
                   <input
                     type="checkbox"

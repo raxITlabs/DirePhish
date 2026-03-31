@@ -19,9 +19,9 @@ function strokeColor(score: number): string {
 }
 
 function tierBgColor(tier: string): string {
-  if (tier === "excellent" || tier === "good") return "bg-verdigris-900/20 text-verdigris-400";
-  if (tier === "moderate") return "bg-tuscan-sun-900/20 text-tuscan-sun-400";
-  return "bg-burnt-peach-900/20 text-burnt-peach-400";
+  if (tier === "excellent" || tier === "good") return "bg-verdigris-50 text-verdigris-700 ring-1 ring-verdigris-200";
+  if (tier === "moderate") return "bg-tuscan-sun-50 text-tuscan-sun-700 ring-1 ring-tuscan-sun-200";
+  return "bg-burnt-peach-50 text-burnt-peach-700 ring-1 ring-burnt-peach-200";
 }
 
 export default function RiskScoreRing({ score, ci, interpretation }: Props) {
@@ -30,7 +30,7 @@ export default function RiskScoreRing({ score, ci, interpretation }: Props) {
   const offset = circumference - (score / 100) * circumference;
 
   return (
-    <div className="bg-pitch-black-100 rounded-xl p-6 text-center border border-pitch-black-200">
+    <div className="bg-card rounded-xl p-6 text-center ring-1 ring-foreground/10">
       <div className="relative w-[160px] h-[160px] mx-auto mb-4">
         <svg viewBox="0 0 140 140" className="w-full h-full">
           <circle cx="70" cy="70" r={radius} fill="none" stroke="currentColor" strokeWidth="10" className="text-pitch-black-200" />

@@ -190,7 +190,7 @@ export default function CISOView({ report }: CISOViewProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* Original */}
-              <div className="p-3 rounded-lg bg-royal-azure-50 border border-royal-azure-200">
+              <div className="p-3 rounded-xl bg-royal-azure-50 ring-1 ring-royal-azure-200">
                 <p className="text-xs font-medium text-royal-azure-700 mb-1">Original</p>
                 <p className="text-sm font-mono text-royal-azure-900">
                   {cfComparison.original.containment_round !== null
@@ -206,7 +206,7 @@ export default function CISOView({ report }: CISOViewProps) {
               {cfComparison.branches.map((branch, i) => (
                 <div
                   key={i}
-                  className="p-3 rounded-lg bg-tuscan-sun-50 border border-tuscan-sun-200"
+                  className="p-3 rounded-xl bg-tuscan-sun-50 ring-1 ring-tuscan-sun-200"
                 >
                   <p className="text-xs font-medium text-tuscan-sun-700 mb-1">
                     Branch {i + 1}
@@ -243,7 +243,7 @@ export default function CISOView({ report }: CISOViewProps) {
               {actions.map((a, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-pitch-black-50 border border-pitch-black-100"
+                  className="flex items-start gap-3 p-3 rounded-xl bg-pitch-black-50 ring-1 ring-foreground/10"
                 >
                   <span
                     className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
