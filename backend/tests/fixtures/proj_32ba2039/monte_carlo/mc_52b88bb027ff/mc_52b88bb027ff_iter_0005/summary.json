@@ -1,0 +1,1321 @@
+{
+  "simulation_id": "proj_32ba2039_scenario_0_sim",
+  "total_rounds": 8,
+  "hours_per_round": 3.5,
+  "agents": [
+    "Greg Brockman",
+    "Fidji Simo",
+    "Marcus Thorne",
+    "Dane Stuckey",
+    "Sam Altman",
+    "Jakub Pachocki",
+    "Sarah Friar",
+    "Elena Rodriguez",
+    "Che Chang",
+    "The Silent IP Drain Operator"
+  ],
+  "worlds": [
+    "incident-war-room",
+    "executive-strategy",
+    "technical-triage",
+    "c2-channel"
+  ],
+  "total_actions": 214,
+  "actions_summary": [
+    {
+      "round": 1,
+      "agent": "inject",
+      "world": "",
+      "action": "inject"
+    },
+    {
+      "round": 1,
+      "agent": "inject",
+      "world": "",
+      "action": "inject"
+    },
+    {
+      "round": 1,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 1,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 1,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 1,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 1,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 1,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 1,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 1,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 1,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 1,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 1,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 1,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 1,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "inject",
+      "world": "",
+      "action": "inject"
+    },
+    {
+      "round": 2,
+      "agent": "inject",
+      "world": "",
+      "action": "inject"
+    },
+    {
+      "round": 2,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 2,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "inject",
+      "world": "",
+      "action": "inject"
+    },
+    {
+      "round": 3,
+      "agent": "inject",
+      "world": "",
+      "action": "inject"
+    },
+    {
+      "round": 3,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 3,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    },
+    {
+      "round": 4,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 4,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    },
+    {
+      "round": 5,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 5,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    },
+    {
+      "round": 6,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 6,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    },
+    {
+      "round": 7,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 7,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    },
+    {
+      "round": 8,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 8,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    },
+    {
+      "round": 9,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 9,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    },
+    {
+      "round": 10,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 10,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    },
+    {
+      "round": 11,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 11,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    },
+    {
+      "round": 12,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 12,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    },
+    {
+      "round": 13,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 13,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    },
+    {
+      "round": 14,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 14,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    },
+    {
+      "round": 15,
+      "agent": "The Silent IP Drain Operator",
+      "world": "c2-channel",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "Marcus Thorne",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "Greg Brockman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "Fidji Simo",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "Dane Stuckey",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "Dane Stuckey",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "Marcus Thorne",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "Sam Altman",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "Jakub Pachocki",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "Elena Rodriguez",
+      "world": "incident-war-room",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "Elena Rodriguez",
+      "world": "technical-triage",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "Sarah Friar",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "Che Chang",
+      "world": "executive-strategy",
+      "action": "send_message"
+    },
+    {
+      "round": 15,
+      "agent": "arbiter",
+      "world": "",
+      "action": "arbiter"
+    }
+  ],
+  "completed_at": "2026-03-30T22:42:00.955759+00:00",
+  "adaptive_depth": {
+    "enabled": true,
+    "stopped_at_round": 15,
+    "max_rounds": 15,
+    "stop_reason": "catastrophic"
+  },
+  "variation_description": "iteration=5 seed=47 | temp=0.66 | persona_mods=[Sam Altman, Dane Stuckey, Greg Brockman, Che Chang, Fidji Simo, Jakub Pachocki, Sarah Friar, Marcus Thorne, Elena Rodriguez, The Silent IP Drain Operator] | order=[Greg Brockman, Fidji Simo, Marcus Thorne, Dane Stuckey, Sam Altman, Jakub Pachocki, Sarah Friar, Elena Rodriguez, Che Chang, The Silent IP Drain Operator]",
+  "seed": 47,
+  "cost_usd": 1.266813,
+  "iteration_index": 5
+}

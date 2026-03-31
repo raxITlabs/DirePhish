@@ -1,0 +1,587 @@
+{
+  "accessMappings": [
+    {
+      "mfaRequired": true,
+      "privilegeLevel": "admin",
+      "role": "CISO",
+      "systems": [
+        "Splunk",
+        "Okta"
+      ]
+    },
+    {
+      "mfaRequired": true,
+      "privilegeLevel": "operator",
+      "role": "Security Engineer",
+      "systems": [
+        "Splunk",
+        "Cloudflare"
+      ]
+    },
+    {
+      "mfaRequired": true,
+      "privilegeLevel": "admin",
+      "role": "Infrastructure Lead",
+      "systems": [
+        "Azure Cloud",
+        "Terraform"
+      ]
+    },
+    {
+      "mfaRequired": true,
+      "privilegeLevel": "read-only",
+      "role": "Compliance Analyst",
+      "systems": [
+        "Splunk"
+      ]
+    },
+    {
+      "mfaRequired": true,
+      "privilegeLevel": "read-write",
+      "role": "CEO",
+      "systems": [
+        "Google Workspace",
+        "Slack"
+      ]
+    },
+    {
+      "mfaRequired": true,
+      "privilegeLevel": "read-write",
+      "role": "Chief Scientist",
+      "systems": [
+        "Azure Cloud",
+        "GitHub"
+      ]
+    }
+  ],
+  "company": {
+    "description": "AI research and deployment organization focused on safe and beneficial AGI.",
+    "employeeCount": 3000,
+    "foundedYear": 2015,
+    "geography": "Global (HQ: San Francisco, USA)",
+    "industry": "Artificial Intelligence",
+    "name": "OpenAI",
+    "products": [
+      "ChatGPT",
+      "Sora",
+      "API Platform",
+      "Codex"
+    ],
+    "publicCompany": false,
+    "revenue": "$2B+",
+    "size": "large",
+    "website": "https://openai.com/"
+  },
+  "compliance": [
+    "SOC 2 Type 2",
+    "ISO 27001",
+    "ISO 42001",
+    "GDPR",
+    "HIPAA"
+  ],
+  "dataFlows": [
+    {
+      "dataTypes": [
+        "PII",
+        "credentials"
+      ],
+      "encrypted": true,
+      "frequency": "real-time",
+      "protocol": "API/REST",
+      "source": "User",
+      "target": "Azure Cloud"
+    },
+    {
+      "dataTypes": [
+        "PII",
+        "operational"
+      ],
+      "encrypted": true,
+      "frequency": "real-time",
+      "protocol": "internal",
+      "source": "Azure Cloud",
+      "target": "PostgreSQL"
+    },
+    {
+      "dataTypes": [
+        "logs"
+      ],
+      "encrypted": true,
+      "frequency": "batch",
+      "protocol": "internal",
+      "source": "GitHub",
+      "target": "Azure Cloud"
+    },
+    {
+      "dataTypes": [
+        "logs"
+      ],
+      "encrypted": true,
+      "frequency": "real-time",
+      "protocol": "streaming",
+      "source": "Azure Cloud",
+      "target": "Splunk"
+    },
+    {
+      "dataTypes": [
+        "credentials"
+      ],
+      "encrypted": true,
+      "frequency": "real-time",
+      "protocol": "API/REST",
+      "source": "Okta",
+      "target": "Azure Cloud"
+    },
+    {
+      "dataTypes": [
+        "operational"
+      ],
+      "encrypted": true,
+      "frequency": "real-time",
+      "protocol": "internal",
+      "source": "PostgreSQL",
+      "target": "Azure Cloud"
+    }
+  ],
+  "networkTopology": [
+    {
+      "connectedZones": [
+        "Cloud VPC"
+      ],
+      "exposedToInternet": true,
+      "systems": [
+        "Cloudflare"
+      ],
+      "zone": "Edge/DMZ"
+    },
+    {
+      "connectedZones": [
+        "Edge/DMZ",
+        "Corporate"
+      ],
+      "exposedToInternet": false,
+      "systems": [
+        "Azure Cloud",
+        "AWS Bedrock",
+        "PostgreSQL",
+        "Redis"
+      ],
+      "zone": "Cloud VPC"
+    },
+    {
+      "connectedZones": [
+        "Cloud VPC"
+      ],
+      "exposedToInternet": false,
+      "systems": [
+        "Okta",
+        "Slack",
+        "Google Workspace",
+        "GitHub"
+      ],
+      "zone": "Corporate"
+    }
+  ],
+  "org": {
+    "departments": [
+      "Research",
+      "Engineering",
+      "Product",
+      "Legal",
+      "Compliance",
+      "Operations",
+      "Finance",
+      "Sales"
+    ],
+    "roles": [
+      {
+        "department": "Executive",
+        "name": "Sam Altman",
+        "reportsTo": "Board of Directors",
+        "responsibilities": "Overall strategy and vision",
+        "title": "CEO"
+      },
+      {
+        "department": "Executive",
+        "name": "Greg Brockman",
+        "reportsTo": "CEO",
+        "responsibilities": "Research and engineering leadership",
+        "title": "President"
+      },
+      {
+        "department": "Finance",
+        "name": "Sarah Friar",
+        "reportsTo": "CEO",
+        "responsibilities": "Finance, treasury, and investor relations",
+        "title": "CFO"
+      },
+      {
+        "department": "Security",
+        "name": "Dane Stuckey",
+        "reportsTo": "CEO",
+        "responsibilities": "Cybersecurity program and risk management",
+        "title": "CISO"
+      },
+      {
+        "department": "Legal",
+        "name": "Che Chang",
+        "reportsTo": "CEO",
+        "responsibilities": "Legal, IP, and regulatory affairs",
+        "title": "General Counsel"
+      },
+      {
+        "department": "Compliance",
+        "name": "Scott Schools",
+        "reportsTo": "General Counsel",
+        "responsibilities": "Regulatory adherence and ethical standards",
+        "title": "Chief Compliance Officer"
+      },
+      {
+        "department": "Strategy",
+        "name": "Jason Kwon",
+        "reportsTo": "CEO",
+        "responsibilities": "Corporate development and partnerships",
+        "title": "Chief Strategy Officer"
+      },
+      {
+        "department": "Product",
+        "name": "Fidji Simo",
+        "reportsTo": "CEO",
+        "responsibilities": "ChatGPT product and go-to-market",
+        "title": "CEO of Applications"
+      },
+      {
+        "department": "Research",
+        "name": "Jakub Pachocki",
+        "reportsTo": "President",
+        "responsibilities": "Foundational AI model development",
+        "title": "Chief Scientist"
+      },
+      {
+        "department": "Security",
+        "name": "TBD",
+        "reportsTo": "CISO",
+        "responsibilities": "Vulnerability management and incident response",
+        "title": "Security Engineer"
+      },
+      {
+        "department": "Compliance",
+        "name": "TBD",
+        "reportsTo": "Chief Compliance Officer",
+        "responsibilities": "Audit preparation and policy enforcement",
+        "title": "Compliance Analyst"
+      },
+      {
+        "department": "Engineering",
+        "name": "TBD",
+        "reportsTo": "President",
+        "responsibilities": "Cloud infrastructure and compute scaling",
+        "title": "Infrastructure Lead"
+      }
+    ]
+  },
+  "recentEvents": [
+    {
+      "category": "product_launch",
+      "date": "2026-03-10",
+      "description": "Launched new math/science learning features in ChatGPT",
+      "source": "news"
+    },
+    {
+      "category": "product_launch",
+      "date": "2026-03-06",
+      "description": "Released Codex Security research preview",
+      "source": "news"
+    },
+    {
+      "category": "other",
+      "date": "2026-02-28",
+      "description": "Announced agreement with Department of War",
+      "source": "news"
+    },
+    {
+      "category": "other",
+      "date": "2026-02-27",
+      "description": "Strategic partnership with Amazon announced",
+      "source": "news"
+    },
+    {
+      "category": "leadership_change",
+      "date": "2026-01-01",
+      "description": "VP and CISO Matt Knight stepped down",
+      "source": "news"
+    },
+    {
+      "category": "breach",
+      "date": "2025-11-01",
+      "description": "Third-party breach via Mixpanel analytics provider",
+      "source": "news"
+    },
+    {
+      "category": "regulatory",
+      "date": "2025-10-01",
+      "description": "Completed restructuring into OpenAI Foundation and Group PBC",
+      "source": "news"
+    },
+    {
+      "category": "leadership_change",
+      "date": "2024-10-01",
+      "description": "Dane Stuckey appointed as CISO",
+      "source": "news"
+    }
+  ],
+  "risks": [
+    {
+      "affectedSystems": [
+        "Azure Cloud"
+      ],
+      "description": "Adversarial inputs bypassing safety filters",
+      "impact": "high",
+      "likelihood": "high",
+      "mitigations": [
+        "Input sanitization",
+        "Adversarial training"
+      ],
+      "name": "Prompt Injection"
+    },
+    {
+      "affectedSystems": [
+        "Azure Cloud"
+      ],
+      "description": "Corrupted training data manipulation",
+      "impact": "critical",
+      "likelihood": "medium",
+      "mitigations": [
+        "Data provenance checks",
+        "Anomaly detection"
+      ],
+      "name": "Model Poisoning"
+    },
+    {
+      "affectedSystems": [
+        "Azure Cloud"
+      ],
+      "description": "Over-reliance on Microsoft Azure and TSMC chips",
+      "impact": "critical",
+      "likelihood": "medium",
+      "mitigations": [
+        "Multi-cloud strategy",
+        "Geographic diversification"
+      ],
+      "name": "Supply Chain Dependency"
+    },
+    {
+      "affectedSystems": [
+        "AWS Bedrock"
+      ],
+      "description": "Compromised agents performing unauthorized actions",
+      "impact": "high",
+      "likelihood": "high",
+      "mitigations": [
+        "Least privilege access",
+        "Agent behavior monitoring"
+      ],
+      "name": "AI Agent Exploitation"
+    },
+    {
+      "affectedSystems": [
+        "Azure Cloud",
+        "GitHub"
+      ],
+      "description": "Unauthorized access to model weights",
+      "impact": "critical",
+      "likelihood": "medium",
+      "mitigations": [
+        "Encryption at rest",
+        "Strict IAM controls"
+      ],
+      "name": "IP Theft"
+    },
+    {
+      "affectedSystems": [
+        "PostgreSQL"
+      ],
+      "description": "Exposure of PII or enterprise data",
+      "impact": "high",
+      "likelihood": "medium",
+      "mitigations": [
+        "Data masking",
+        "Encryption in transit"
+      ],
+      "name": "Data Privacy Breach"
+    },
+    {
+      "affectedSystems": [
+        "Okta"
+      ],
+      "description": "Malware stealing user credentials",
+      "impact": "medium",
+      "likelihood": "high",
+      "mitigations": [
+        "Phishing-resistant MFA",
+        "Endpoint security"
+      ],
+      "name": "Credential Theft"
+    },
+    {
+      "affectedSystems": [
+        "Azure Cloud"
+      ],
+      "description": "Failure to meet evolving AI regulations",
+      "impact": "high",
+      "likelihood": "low",
+      "mitigations": [
+        "Continuous compliance monitoring",
+        "Legal review"
+      ],
+      "name": "Regulatory Non-compliance"
+    }
+  ],
+  "securityPosture": {
+    "bugBountyProgram": true,
+    "certifications": [
+      "SOC 2 Type 2",
+      "ISO 27001",
+      "ISO 27017",
+      "ISO 27018",
+      "ISO 27701",
+      "ISO 42001"
+    ],
+    "incidentResponsePlan": true,
+    "securityTeamSize": 50,
+    "securityTools": [
+      "Splunk",
+      "Cloudflare",
+      "Okta"
+    ]
+  },
+  "systems": [
+    {
+      "category": "cloud",
+      "criticality": "critical",
+      "description": "Primary infrastructure for model training and hosting",
+      "name": "Azure Cloud",
+      "vendor": "Microsoft"
+    },
+    {
+      "category": "cloud",
+      "criticality": "high",
+      "description": "Secondary compute and agent runtime environment",
+      "name": "AWS Bedrock",
+      "vendor": "Amazon"
+    },
+    {
+      "category": "database",
+      "criticality": "high",
+      "description": "Primary relational database for user and business data",
+      "name": "PostgreSQL",
+      "vendor": "Open Source"
+    },
+    {
+      "category": "security",
+      "criticality": "high",
+      "description": "SIEM for monitoring and threat detection",
+      "name": "Splunk",
+      "vendor": "Splunk"
+    },
+    {
+      "category": "identity",
+      "criticality": "critical",
+      "description": "Identity and access management",
+      "name": "Okta",
+      "vendor": "Okta"
+    },
+    {
+      "category": "communication",
+      "criticality": "medium",
+      "description": "Internal team communication",
+      "name": "Slack",
+      "vendor": "Salesforce"
+    },
+    {
+      "category": "cicd",
+      "criticality": "critical",
+      "description": "Source code repository and CI/CD pipeline",
+      "name": "GitHub",
+      "vendor": "Microsoft"
+    },
+    {
+      "category": "security",
+      "criticality": "high",
+      "description": "WAF and edge protection",
+      "name": "Cloudflare",
+      "vendor": "Cloudflare"
+    },
+    {
+      "category": "security",
+      "criticality": "medium",
+      "description": "Bug bounty platform",
+      "name": "Bugcrowd",
+      "vendor": "Bugcrowd"
+    },
+    {
+      "category": "database",
+      "criticality": "high",
+      "description": "Caching layer for ChatGPT",
+      "name": "Redis",
+      "vendor": "Redis Ltd"
+    },
+    {
+      "category": "communication",
+      "criticality": "medium",
+      "description": "Email and productivity suite",
+      "name": "Google Workspace",
+      "vendor": "Google"
+    },
+    {
+      "category": "infrastructure",
+      "criticality": "high",
+      "description": "Infrastructure as code",
+      "name": "Terraform",
+      "vendor": "HashiCorp"
+    }
+  ],
+  "vendorEntities": [
+    {
+      "category": "cloud",
+      "contractType": "subscription",
+      "criticality": "critical",
+      "name": "Microsoft",
+      "singlePointOfFailure": true,
+      "systemsProvided": [
+        "Azure Cloud",
+        "GitHub"
+      ]
+    },
+    {
+      "category": "cloud",
+      "contractType": "subscription",
+      "criticality": "high",
+      "name": "Amazon",
+      "singlePointOfFailure": false,
+      "systemsProvided": [
+        "AWS Bedrock"
+      ]
+    },
+    {
+      "category": "identity",
+      "contractType": "subscription",
+      "criticality": "critical",
+      "name": "Okta",
+      "singlePointOfFailure": false,
+      "systemsProvided": [
+        "Okta"
+      ]
+    },
+    {
+      "category": "security",
+      "contractType": "subscription",
+      "criticality": "high",
+      "name": "Cloudflare",
+      "singlePointOfFailure": false,
+      "systemsProvided": [
+        "Cloudflare"
+      ]
+    }
+  ]
+}
