@@ -68,7 +68,11 @@ export default function PlaybookFirstLayout({
           {/* Center: Attack Graph */}
           <ResizablePanel defaultSize={55} minSize={30}>
             <div className="h-full overflow-y-auto p-4">
-              <MiniGraph projectId={projectId} highlightAttackPath />
+              <MiniGraph
+                projectId={projectId}
+                killChain={killChain}
+                activeStep={activeStep}
+              />
             </div>
           </ResizablePanel>
 

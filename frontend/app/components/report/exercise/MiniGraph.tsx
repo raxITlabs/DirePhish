@@ -9,26 +9,20 @@ interface GraphNode {
   type: string;
 }
 
-interface GraphEdge {
-  source: string;
+interface KillChainStep {
+  step: number;
+  tactic: string;
+  technique: string;
   target: string;
-  label: string;
+  description: string;
 }
 
 interface MiniGraphProps {
   projectId: string;
   highlightAttackPath?: boolean;
+  killChain?: KillChainStep[];
+  activeStep?: number;
 }
-
-const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  person: { bg: "fill-royal-azure-200", text: "fill-royal-azure-800" },
-  agent: { bg: "fill-royal-azure-200", text: "fill-royal-azure-800" },
-  organization: { bg: "fill-sandy-brown-200", text: "fill-sandy-brown-800" },
-  org: { bg: "fill-sandy-brown-200", text: "fill-sandy-brown-800" },
-  system: { bg: "fill-verdigris-200", text: "fill-verdigris-800" },
-  threat: { bg: "fill-burnt-peach-200", text: "fill-burnt-peach-800" },
-  compliance: { bg: "fill-tuscan-sun-200", text: "fill-tuscan-sun-800" },
-};
 
 function getInitials(name: string): string {
   return name
@@ -38,9 +32,12 @@ function getInitials(name: string): string {
     .join("");
 }
 
-export default function MiniGraph({ projectId }: MiniGraphProps) {
-  const [nodes, setNodes] = useState<GraphNode[]>([]);
-  const [edges, setEdges] = useState<GraphEdge[]>([]);
+export default function MiniGraph({
+  projectId,
+  killChain,
+  activeStep = 0,
+}: MiniGraphProps) {
+  const [allNodes, setAllNodes] = useState<GraphNode[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,8 +45,7 @@ export default function MiniGraph({ projectId }: MiniGraphProps) {
       try {
         const result = await getProjectGraph(projectId);
         if ("data" in result) {
-          setNodes((result.data.nodes || []).slice(0, 30));
-          setEdges((result.data.edges || []).slice(0, 50));
+          setAllNodes((result.data.nodes || []).slice(0, 40));
         }
       } catch {
         // Non-critical
@@ -68,77 +64,280 @@ export default function MiniGraph({ projectId }: MiniGraphProps) {
     );
   }
 
-  if (nodes.length === 0) {
+  // If no kill chain, show empty state
+  if (!killChain || killChain.length === 0) {
     return (
       <div className="h-full min-h-[300px] rounded-lg bg-pitch-black-50 flex items-center justify-center">
-        <span className="text-xs text-pitch-black-400">No graph data available</span>
+        <span className="text-xs text-pitch-black-400">
+          No attack path data available
+        </span>
       </div>
     );
   }
 
-  // Simple force-directed layout (deterministic positioning)
-  const width = 480;
-  const height = 300;
-  const nodePositions = computeLayout(nodes, edges, width, height);
-  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+  // Build the attack timeline
+  const stepCount = killChain.length;
+  const padding = { left: 60, right: 60, top: 60, bottom: 80 };
+  const width = Math.max(700, stepCount * 130);
+  const height = 380;
+  const timelineY = height * 0.48;
+  const stepSpacing = (width - padding.left - padding.right) / Math.max(stepCount - 1, 1);
+
+  // Identify targeted nodes (from kill chain targets)
+  const targetedNames = new Set(killChain.map((s) => s.target.toLowerCase()));
+
+  // Find non-targeted nodes from graph data
+  const nonTargeted = allNodes.filter(
+    (n) =>
+      !targetedNames.has(n.name.toLowerCase()) &&
+      n.type !== "threat" &&
+      n.type !== "compliance",
+  );
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium text-pitch-black-600">Attack Surface</p>
-      <div className="rounded-lg border border-pitch-black-100 bg-pitch-black-50/50 overflow-hidden">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full min-h-[300px]">
-          {/* Dot grid background */}
-          <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-            <circle cx="10" cy="10" r="0.5" className="fill-pitch-black-200" />
-          </pattern>
-          <rect width={width} height={height} fill="url(#dots)" />
+    <div className="h-full flex flex-col">
+      <p className="text-sm font-medium text-pitch-black-600 mb-2 shrink-0">
+        Attack Timeline
+      </p>
+      <div className="flex-1 rounded-lg border border-pitch-black-100 bg-pitch-black-50/50 overflow-hidden">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="w-full h-full"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <defs>
+            <marker
+              id="attack-arrow"
+              markerWidth="8"
+              markerHeight="6"
+              refX="8"
+              refY="3"
+              orient="auto"
+            >
+              <polygon points="0,0 8,3 0,6" className="fill-burnt-peach-400" />
+            </marker>
+            {/* Pulse animation for active step */}
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
 
-          {/* Edges */}
-          {edges.map((e, i) => {
-            const src = nodePositions.get(e.source);
-            const tgt = nodePositions.get(e.target);
-            if (!src || !tgt) return null;
-            const srcNode = nodeMap.get(e.source);
-            const isThreat = srcNode?.type === "threat";
+          {/* Dot grid background */}
+          <pattern
+            id="timeline-dots"
+            x="0"
+            y="0"
+            width="24"
+            height="24"
+            patternUnits="userSpaceOnUse"
+          >
+            <circle cx="12" cy="12" r="0.6" className="fill-pitch-black-200" />
+          </pattern>
+          <rect width={width} height={height} fill="url(#timeline-dots)" />
+
+          {/* Timeline axis */}
+          <line
+            x1={padding.left - 20}
+            y1={timelineY}
+            x2={width - padding.right + 20}
+            y2={timelineY}
+            className="stroke-pitch-black-200"
+            strokeWidth="2"
+          />
+
+          {/* Kill chain steps */}
+          {killChain.map((step, i) => {
+            const x = padding.left + i * stepSpacing;
+            const isActive = i === activeStep;
+            const opacity = isActive ? 1 : 0.5;
+            const nodeY = timelineY - 70 - (isActive ? 10 : 0);
+            const nodeR = isActive ? 22 : 16;
+
             return (
-              <line
-                key={i}
-                x1={src.x} y1={src.y}
-                x2={tgt.x} y2={tgt.y}
-                strokeWidth={isThreat ? 1.5 : 0.8}
-                className={isThreat ? "stroke-burnt-peach-400" : "stroke-pitch-black-200"}
-                strokeDasharray={isThreat ? "4 2" : undefined}
-                opacity={0.6}
-              />
+              <g
+                key={step.step}
+                style={{
+                  opacity,
+                  transition: "opacity 0.3s ease",
+                }}
+              >
+                {/* Vertical connector from node to timeline */}
+                <line
+                  x1={x}
+                  y1={nodeY + nodeR}
+                  x2={x}
+                  y2={timelineY - 6}
+                  className="stroke-burnt-peach-300"
+                  strokeWidth={isActive ? 2 : 1}
+                  strokeDasharray={isActive ? undefined : "3,3"}
+                />
+
+                {/* Step marker on timeline */}
+                <circle
+                  cx={x}
+                  cy={timelineY}
+                  r={isActive ? 7 : 5}
+                  className={
+                    isActive ? "fill-burnt-peach-500" : "fill-burnt-peach-300"
+                  }
+                  filter={isActive ? "url(#glow)" : undefined}
+                />
+
+                {/* Target system node above timeline */}
+                {isActive && (
+                  <circle
+                    cx={x}
+                    cy={nodeY}
+                    r={nodeR + 6}
+                    className="fill-burnt-peach-100"
+                    opacity={0.3}
+                  />
+                )}
+                <circle
+                  cx={x}
+                  cy={nodeY}
+                  r={nodeR}
+                  className={
+                    isActive
+                      ? "fill-royal-azure-100 stroke-burnt-peach-500"
+                      : "fill-royal-azure-100 stroke-royal-azure-300"
+                  }
+                  strokeWidth={isActive ? 2.5 : 1.5}
+                />
+                <text
+                  x={x}
+                  y={nodeY + 1}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  className={`font-bold ${
+                    isActive
+                      ? "fill-burnt-peach-700 text-[10px]"
+                      : "fill-royal-azure-700 text-[8px]"
+                  }`}
+                  style={{ fontFamily: "var(--font-geist-mono), monospace" }}
+                >
+                  {getInitials(step.target)}
+                </text>
+                {/* Target name */}
+                <text
+                  x={x}
+                  y={nodeY - nodeR - 8}
+                  textAnchor="middle"
+                  className={`text-[7px] ${
+                    isActive
+                      ? "fill-pitch-black-700 font-semibold"
+                      : "fill-pitch-black-400"
+                  }`}
+                  style={{ fontFamily: "var(--font-geist-mono), monospace" }}
+                >
+                  {step.target.length > 14
+                    ? step.target.slice(0, 14) + "..."
+                    : step.target}
+                </text>
+
+                {/* Step number label below timeline */}
+                <text
+                  x={x}
+                  y={timelineY + 20}
+                  textAnchor="middle"
+                  className={`font-bold ${
+                    isActive
+                      ? "fill-burnt-peach-600 text-[10px]"
+                      : "fill-pitch-black-400 text-[9px]"
+                  }`}
+                  style={{ fontFamily: "var(--font-geist-mono), monospace" }}
+                >
+                  Step {i + 1}
+                </text>
+
+                {/* Tactic label */}
+                <text
+                  x={x}
+                  y={timelineY + 34}
+                  textAnchor="middle"
+                  className={`text-[7px] ${
+                    isActive
+                      ? "fill-pitch-black-600"
+                      : "fill-pitch-black-300"
+                  }`}
+                  style={{ fontFamily: "var(--font-geist-mono), monospace" }}
+                >
+                  {step.tactic}
+                </text>
+
+                {/* Technique ID */}
+                <text
+                  x={x}
+                  y={timelineY + 46}
+                  textAnchor="middle"
+                  className={`text-[6px] ${
+                    isActive
+                      ? "fill-pitch-black-400"
+                      : "fill-pitch-black-200"
+                  }`}
+                  style={{ fontFamily: "var(--font-geist-mono), monospace" }}
+                >
+                  {step.technique}
+                </text>
+
+                {/* Attack flow arrow to next step */}
+                {i < stepCount - 1 && (
+                  <line
+                    x1={x + 12}
+                    y1={timelineY}
+                    x2={padding.left + (i + 1) * stepSpacing - 12}
+                    y2={timelineY}
+                    className="stroke-burnt-peach-400"
+                    strokeWidth={isActive ? 2.5 : 1.5}
+                    markerEnd="url(#attack-arrow)"
+                  />
+                )}
+              </g>
             );
           })}
 
-          {/* Nodes */}
-          {nodes.map((n) => {
-            const pos = nodePositions.get(n.id);
-            if (!pos) return null;
-            const colors = TYPE_COLORS[n.type] || { bg: "fill-pitch-black-200", text: "fill-pitch-black-700" };
-            const isThreat = n.type === "threat";
+          {/* Non-targeted nodes below timeline (faded context) */}
+          {nonTargeted.slice(0, 12).map((node, i) => {
+            const col = i % Math.min(6, Math.ceil(nonTargeted.length / 2));
+            const row = Math.floor(i / Math.min(6, Math.ceil(nonTargeted.length / 2)));
+            const x =
+              padding.left +
+              col * ((width - padding.left - padding.right) / Math.min(6, nonTargeted.length));
+            const y = timelineY + 70 + row * 40;
+
             return (
-              <g key={n.id}>
-                {isThreat && (
-                  <circle cx={pos.x} cy={pos.y} r="16" className="fill-burnt-peach-100" opacity={0.4} />
-                )}
-                <circle cx={pos.x} cy={pos.y} r="12" className={colors.bg} />
+              <g key={node.id} opacity={0.35}>
+                <circle
+                  cx={x}
+                  cy={y}
+                  r="10"
+                  className="fill-pitch-black-100 stroke-pitch-black-200"
+                  strokeWidth="0.5"
+                />
                 <text
-                  x={pos.x} y={pos.y + 1}
+                  x={x}
+                  y={y + 1}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className={`${colors.text} text-[7px] font-bold`}
+                  className="fill-pitch-black-400 text-[6px]"
+                  style={{ fontFamily: "var(--font-geist-mono), monospace" }}
                 >
-                  {getInitials(n.name)}
+                  {getInitials(node.name)}
                 </text>
                 <text
-                  x={pos.x} y={pos.y + 22}
+                  x={x}
+                  y={y + 18}
                   textAnchor="middle"
-                  className="fill-pitch-black-500 text-[6px]"
+                  className="fill-pitch-black-300 text-[5px]"
+                  style={{ fontFamily: "var(--font-geist-mono), monospace" }}
                 >
-                  {n.name.length > 12 ? n.name.slice(0, 12) + "..." : n.name}
+                  {node.name.length > 10
+                    ? node.name.slice(0, 10) + "..."
+                    : node.name}
                 </text>
               </g>
             );
@@ -147,46 +346,4 @@ export default function MiniGraph({ projectId }: MiniGraphProps) {
       </div>
     </div>
   );
-}
-
-function computeLayout(
-  nodes: GraphNode[],
-  edges: GraphEdge[],
-  width: number,
-  height: number,
-): Map<string, { x: number; y: number }> {
-  const positions = new Map<string, { x: number; y: number }>();
-  const padding = 40;
-
-  // Group by type for clustered layout
-  const groups: Record<string, GraphNode[]> = {};
-  for (const n of nodes) {
-    const type = n.type || "unknown";
-    if (!groups[type]) groups[type] = [];
-    groups[type].push(n);
-  }
-
-  const groupKeys = Object.keys(groups);
-  const cols = Math.ceil(Math.sqrt(groupKeys.length));
-  const rows = Math.ceil(groupKeys.length / cols);
-
-  groupKeys.forEach((type, gi) => {
-    const col = gi % cols;
-    const row = Math.floor(gi / cols);
-    const cx = padding + ((width - 2 * padding) / (cols)) * (col + 0.5);
-    const cy = padding + ((height - 2 * padding) / (rows)) * (row + 0.5);
-
-    const group = groups[type];
-    const spread = Math.min(60, (width - 2 * padding) / (cols * 2));
-    group.forEach((n, ni) => {
-      const angle = (2 * Math.PI * ni) / Math.max(group.length, 1);
-      const r = group.length === 1 ? 0 : spread * 0.6;
-      positions.set(n.id, {
-        x: Math.max(padding, Math.min(width - padding, cx + r * Math.cos(angle))),
-        y: Math.max(padding, Math.min(height - padding, cy + r * Math.sin(angle))),
-      });
-    });
-  });
-
-  return positions;
 }
