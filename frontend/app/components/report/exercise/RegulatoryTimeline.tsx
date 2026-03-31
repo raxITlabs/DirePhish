@@ -5,26 +5,24 @@ interface Props {
 }
 
 export default function RegulatoryTimeline({ items }: Props) {
-  if (items.length === 0) return null;
+  if (!items || items.length === 0) return null;
 
   return (
-    <div className="relative pl-4">
-      {/* Vertical line */}
-      <div className="absolute left-0 top-0 bottom-0 w-px bg-pitch-black-200" />
-
-      <div className="space-y-4">
-        {items.map((item, i) => (
-          <div key={i} className="relative">
-            {/* Dot on the line */}
-            <div className="absolute -left-4 top-1 h-2 w-2 rounded-full bg-tuscan-sun-500 ring-2 ring-pitch-black-100" />
-
-            <p className="text-sm font-semibold text-tuscan-sun-600">
-              {item.time}
-            </p>
-            <p className="text-sm text-pitch-black-600">{item.action}</p>
-          </div>
-        ))}
-      </div>
+    <div className="space-y-0">
+      {items.map((item, i) => (
+        <div
+          key={i}
+          className="flex items-start gap-3 py-2.5 border-l-2 border-pitch-black-100 pl-4 relative"
+        >
+          <span className="absolute -left-[5px] top-3.5 w-2.5 h-2.5 rounded-full bg-tuscan-sun-500" />
+          <span className="text-xs font-semibold text-tuscan-sun-600 shrink-0 w-12">
+            {item.time}
+          </span>
+          <span className="text-xs text-pitch-black-600 leading-relaxed">
+            {item.action}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

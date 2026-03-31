@@ -7,64 +7,59 @@ interface Props {
 }
 
 export default function WhatIfTimeline({ scenarios }: Props) {
-  if (scenarios.length === 0) return null;
+  if (!scenarios || scenarios.length === 0) return null;
 
   return (
     <div className="space-y-3">
       {scenarios.map((s, i) => {
         const isNegative = s.direction === "negative";
-        const tintBorder = isNegative
-          ? "border-burnt-peach-300/40"
-          : "border-verdigris-300/40";
-        const tintBg = isNegative
-          ? "bg-burnt-peach-900/5"
-          : "bg-verdigris-900/5";
-        const dirColor = isNegative
-          ? "text-burnt-peach-400"
-          : "text-verdigris-400";
-
         return (
           <div
             key={i}
-            className={`rounded-xl border border-dashed p-4 ${tintBorder} ${tintBg}`}
+            className={`rounded-xl p-4 border border-dashed ${
+              isNegative
+                ? "border-burnt-peach-200 bg-burnt-peach-50/50"
+                : "border-verdigris-200 bg-verdigris-50/50"
+            }`}
           >
-            {/* Direction + title */}
-            <div className="flex items-start gap-2 mb-3">
-              <span className={`text-sm font-semibold ${dirColor}`}>
-                {isNegative ? "\u2193" : "\u2191"}
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`text-sm ${isNegative ? "text-burnt-peach-600" : "text-verdigris-600"}`}>
+                {isNegative ? "↓" : "↑"}
               </span>
-              <p className="text-sm font-medium text-pitch-black-700">
+              <p className="text-xs text-pitch-black-600 leading-snug">
                 {s.scenario}
               </p>
             </div>
 
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-3 mb-2">
-              <div className="text-center">
-                <p className="text-xs text-pitch-black-400">Containment</p>
-                <p className={`text-sm font-semibold ${dirColor}`}>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <p className={`text-lg font-bold ${isNegative ? "text-burnt-peach-600" : "text-verdigris-600"}`}>
                   {s.containment_delta}
                 </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-pitch-black-400">Rounds</p>
-                <p className={`text-sm font-semibold ${dirColor}`}>
-                  {s.rounds_delta > 0 ? `+${s.rounds_delta}` : s.rounds_delta}
+                <p className="text-[10px] text-pitch-black-400 uppercase tracking-wider">
+                  Containment
                 </p>
               </div>
-              <div className="text-center">
-                <p className="text-xs text-pitch-black-400">Exposure</p>
-                <p className={`text-sm font-semibold ${dirColor}`}>
+              <div>
+                <p className={`text-lg font-bold ${isNegative ? "text-burnt-peach-600" : "text-verdigris-600"}`}>
+                  {s.rounds_delta > 0 ? "+" : ""}{s.rounds_delta}
+                </p>
+                <p className="text-[10px] text-pitch-black-400 uppercase tracking-wider">
+                  Rounds
+                </p>
+              </div>
+              <div>
+                <p className={`text-lg font-bold ${isNegative ? "text-burnt-peach-600" : "text-verdigris-600"}`}>
                   {s.exposure_delta}
+                </p>
+                <p className="text-[10px] text-pitch-black-400 uppercase tracking-wider">
+                  Exposure
                 </p>
               </div>
             </div>
 
-            {/* Source label */}
-            <p className="text-xs text-pitch-black-400">
-              {s.source === "counterfactual"
-                ? "Counterfactual"
-                : "Modeled estimate"}
+            <p className="text-[10px] text-pitch-black-400 mt-2">
+              {s.source === "counterfactual" ? "Counterfactual data" : "Modeled estimate"}
             </p>
           </div>
         );

@@ -30,7 +30,7 @@ export default function StepDetail({ step }: StepDetailProps) {
         <div className="inline-flex items-center gap-2 bg-royal-azure-50 px-3 py-1 rounded text-xs text-royal-azure-700 font-medium mb-2">
           MITRE ATT&CK · {step.technique_id} · {step.tactic}
         </div>
-        <h2 className="text-xl font-semibold text-pitch-black-900">
+        <h2 className="text-base font-semibold text-pitch-black-800 leading-snug">
           {step.description}
         </h2>
       </div>
@@ -68,7 +68,7 @@ export default function StepDetail({ step }: StepDetailProps) {
       {/* Response Actions */}
       {step.response_actions.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-pitch-black-800 mb-3 pb-2 border-b border-pitch-black-100">
+          <h3 className="text-sm font-medium text-pitch-black-600 mb-3 pb-2 border-b border-pitch-black-100">
             Response Actions — Ranked by Simulation Evidence
           </h3>
           <div className="space-y-3">
@@ -86,46 +86,51 @@ export default function StepDetail({ step }: StepDetailProps) {
           {/* Team Performance */}
           {Object.keys(step.team_performance).length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-pitch-black-800 mb-3 pb-2 border-b border-pitch-black-100">
+              <h3 className="text-sm font-medium text-pitch-black-600 mb-3 pb-2 border-b border-pitch-black-100">
                 Team Performance at This Step
               </h3>
               <div className="space-y-2">
                 {Object.entries(step.team_performance).map(
-                  ([team, score]) => (
-                    <div
-                      key={team}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-sm text-pitch-black-600">
-                        {team}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <div className="w-28 h-1.5 bg-pitch-black-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              score >= 70
-                                ? "bg-verdigris-500"
-                                : score >= 50
-                                  ? "bg-tuscan-sun-500"
-                                  : "bg-burnt-peach-500"
-                            }`}
-                            style={{ width: `${Math.min(score, 100)}%` }}
-                          />
-                        </div>
-                        <span
-                          className={`text-xs font-semibold w-6 text-right ${
-                            score >= 70
-                              ? "text-verdigris-600"
-                              : score >= 50
-                                ? "text-tuscan-sun-600"
-                                : "text-burnt-peach-600"
-                          }`}
-                        >
-                          {score}
+                  ([team, score]) => {
+                    // Scores can be 0-1 floats or 0-100 integers
+                    const pct = score <= 1 ? score * 100 : score;
+                    const displayScore = score <= 1 ? (score * 100).toFixed(0) : Math.round(score);
+                    return (
+                      <div
+                        key={team}
+                        className="flex items-center justify-between gap-3"
+                      >
+                        <span className="text-xs text-pitch-black-600 truncate min-w-0 flex-1">
+                          {team}
                         </span>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="w-24 h-1.5 bg-pitch-black-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ${
+                                pct >= 70
+                                  ? "bg-verdigris-500"
+                                  : pct >= 40
+                                    ? "bg-tuscan-sun-500"
+                                    : "bg-burnt-peach-500"
+                              }`}
+                              style={{ width: `${Math.min(pct, 100)}%` }}
+                            />
+                          </div>
+                          <span
+                            className={`text-xs font-mono font-semibold w-8 text-right ${
+                              pct >= 70
+                                ? "text-verdigris-600"
+                                : pct >= 40
+                                  ? "text-tuscan-sun-600"
+                                  : "text-burnt-peach-600"
+                            }`}
+                          >
+                            {displayScore}%
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ),
+                    );
+                  },
                 )}
               </div>
             </div>
@@ -145,7 +150,7 @@ export default function StepDetail({ step }: StepDetailProps) {
           {/* What-If Timelines */}
           {step.what_if.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-pitch-black-800 mb-3 pb-2 border-b border-pitch-black-100">
+              <h3 className="text-sm font-medium text-pitch-black-600 mb-3 pb-2 border-b border-pitch-black-100">
                 What-If: Alternate Timelines
               </h3>
               <WhatIfTimeline scenarios={step.what_if} />
@@ -155,7 +160,7 @@ export default function StepDetail({ step }: StepDetailProps) {
           {/* Regulatory Timeline */}
           {step.regulatory_timeline.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-pitch-black-800 mb-3 pb-2 border-b border-pitch-black-100">
+              <h3 className="text-sm font-medium text-pitch-black-600 mb-3 pb-2 border-b border-pitch-black-100">
                 Regulatory Timeline
               </h3>
               <RegulatoryTimeline items={step.regulatory_timeline} />
