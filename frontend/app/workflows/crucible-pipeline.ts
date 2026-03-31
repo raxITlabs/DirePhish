@@ -7,7 +7,7 @@
  * Uses Vercel WDK for durable execution. Each step calls Flask API endpoints.
  * Progress streamed via getWritable() inside step functions (WDK requirement).
  */
-import { getWritable, createHook } from "workflow";
+import { getWritable, createHook, sleep } from "workflow";
 
 const API_BASE = process.env.FLASK_API_URL || "http://localhost:5001";
 
@@ -83,107 +83,163 @@ async function flaskApi<T>(path: string, options?: RequestInit): Promise<T> {
   return json.data as T;
 }
 
-// --- Step: poll Flask until condition met ---
+// --- Durable polling ---
+//
+// Each polling function is split into:
+//   1. A "use step" function that does ONE status check (has Node.js/fetch access)
+//   2. A loop at the workflow level using sleep() from "workflow" (durable, survives restarts)
+//
+// Why: setTimeout inside "use step" is ephemeral. If the dev server restarts (Turbopack HMR),
+// the setTimeout callback dies but the WDK step stays "running" on disk → permanent deadlock.
+// With durable sleep, the WDK persists each sleep and check as separate event log entries,
+// so after a restart, the workflow replays completed entries and resumes at the right point.
+
+async function checkProjectStatus(projectId: string): Promise<Record<string, unknown>> {
+  "use step";
+  const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/status`);
+  if (!res.ok) console.warn(`[PIPELINE] checkProjectStatus HTTP ${res.status} for ${projectId}`);
+  const json = await res.json();
+  return json.data as Record<string, unknown>;
+}
 
 async function pollStatus(
   projectId: string,
   targetStatuses: string[],
   failStatuses: string[] = ["failed"],
 ): Promise<Record<string, unknown>> {
-  "use step";
   for (let i = 0; i < 120; i++) {
-    const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/status`);
-    const json = await res.json();
-    const status = json.data?.status as string;
-    if (targetStatuses.includes(status)) return json.data;
+    const data = await checkProjectStatus(projectId);
+    const status = data?.status as string;
+    if (targetStatuses.includes(status)) return data;
     if (failStatuses.includes(status)) {
-      throw new Error(`Pipeline failed: ${json.data?.error_message || status}`);
+      throw new Error(`Pipeline failed: ${(data?.error_message as string) || status}`);
     }
-    await new Promise(r => setTimeout(r, 5000));
+    await sleep("5s");
   }
   throw new Error("Pipeline timed out waiting for status: " + targetStatuses.join(", "));
 }
 
-// --- Step: poll simulation status ---
+async function checkSimStatus(simId: string): Promise<string> {
+  "use step";
+  const res = await fetch(`${API_BASE}/api/crucible/simulations/${simId}/status`);
+  if (!res.ok) console.warn(`[PIPELINE] checkSimStatus HTTP ${res.status} for ${simId}`);
+  const json = await res.json();
+  return (json.data?.status as string) || "unknown";
+}
 
 async function pollSimulation(simId: string): Promise<void> {
-  "use step";
   for (let i = 0; i < 180; i++) {
-    const res = await fetch(`${API_BASE}/api/crucible/simulations/${simId}/status`);
-    const json = await res.json();
-    const status = json.data?.status as string;
-    if (status === "completed") return;
+    const status = await checkSimStatus(simId);
+    if (status === "completed") {
+      console.log(`[PIPELINE] pollSimulation: ${simId} completed (poll ${i})`);
+      return;
+    }
     if (status === "failed") throw new Error(`Simulation ${simId} failed`);
-    await new Promise(r => setTimeout(r, 5000));
+    if (status === "unknown") {
+      console.warn(`[PIPELINE] pollSimulation: ${simId} status unknown (poll ${i})`);
+    }
+    await sleep("5s");
   }
   throw new Error(`Simulation ${simId} timed out`);
 }
 
-// --- Step: poll report ---
+async function checkReportStatus(simId: string): Promise<string> {
+  "use step";
+  const res = await fetch(`${API_BASE}/api/crucible/simulations/${simId}/report`);
+  if (!res.ok) console.warn(`[PIPELINE] checkReportStatus HTTP ${res.status} for ${simId}`);
+  const json = await res.json();
+  return (json.data?.status as string) || "pending";
+}
 
 async function pollReport(simId: string): Promise<void> {
-  "use step";
   for (let i = 0; i < 60; i++) {
-    const res = await fetch(`${API_BASE}/api/crucible/simulations/${simId}/report`);
-    const json = await res.json();
-    if (json.data?.status === "complete") return;
-    await new Promise(r => setTimeout(r, 5000));
+    const status = await checkReportStatus(simId);
+    if (status === "complete") return;
+    await sleep("5s");
   }
   throw new Error(`Report for ${simId} timed out`);
 }
 
-// --- Step: poll comparative report ---
+async function checkComparativeReportStatus(projectId: string): Promise<string> {
+  "use step";
+  const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/comparative-report`);
+  const json = await res.json();
+  return (json.data?.status as string) || "pending";
+}
 
 async function pollComparativeReport(projectId: string): Promise<void> {
-  "use step";
   for (let i = 0; i < 60; i++) {
-    const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/comparative-report`);
-    const json = await res.json();
-    if (json.data?.status === "complete") return;
-    await new Promise(r => setTimeout(r, 5000));
+    const status = await checkComparativeReportStatus(projectId);
+    if (status === "complete") return;
+    await sleep("5s");
   }
   throw new Error("Comparative report timed out");
 }
 
-// --- Step: poll exercise report ---
+async function checkExerciseReportStatus(projectId: string): Promise<{ status: string; error?: string }> {
+  "use step";
+  const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/exercise-report`);
+  if (!res.ok) console.warn(`[PIPELINE] checkExerciseReportStatus HTTP ${res.status} for ${projectId}`);
+  const json = await res.json();
+  return { status: (json.data?.status as string) || "pending", error: json.data?.error };
+}
 
 async function pollExerciseReport(projectId: string): Promise<void> {
-  "use step";
   for (let i = 0; i < 120; i++) {
-    const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/exercise-report`);
-    const json = await res.json();
-    if (json.data?.status === "complete") return;
-    if (json.data?.status === "failed") throw new Error(`Exercise report failed: ${json.data?.error || "unknown"}`);
-    await new Promise(r => setTimeout(r, 5000));
+    const result = await checkExerciseReportStatus(projectId);
+    if (result.status === "complete") {
+      console.log(`[PIPELINE] Exercise report complete (poll ${i})`);
+      return;
+    }
+    if (result.status === "failed") throw new Error(`Exercise report failed: ${result.error || "unknown"}`);
+    await sleep("5s");
   }
   throw new Error("Exercise report timed out");
 }
 
-// --- Step: poll Monte Carlo batch status ---
+interface MCStatusResult {
+  status: string;
+  error?: string;
+  completedIterations: number;
+  totalIterations: number;
+}
+
+async function checkMCStatus(batchId: string): Promise<MCStatusResult> {
+  "use step";
+  const res = await fetch(`${API_BASE}/api/crucible/monte-carlo/${batchId}/status`);
+  if (!res.ok) console.warn(`[PIPELINE] checkMCStatus HTTP ${res.status} for ${batchId}`);
+  const json = await res.json();
+  return {
+    status: (json.data?.status as string) || "unknown",
+    error: json.data?.error,
+    completedIterations: (json.data?.completed_iterations as number) || 0,
+    totalIterations: (json.data?.total_iterations as number) || 10,
+  };
+}
 
 async function pollMonteCarlo(batchId: string): Promise<void> {
-  "use step";
   let lastReportedIteration = 0;
   for (let i = 0; i < 360; i++) {
-    const res = await fetch(`${API_BASE}/api/crucible/monte-carlo/${batchId}/status`);
-    const json = await res.json();
-    const status = json.data?.status as string;
-    if (status === "completed") return;
-    if (["failed", "cost_exceeded", "stopped"].includes(status)) {
-      throw new Error(`Monte Carlo batch ${batchId} ${status}: ${json.data?.error || ""}`);
+    const mc = await checkMCStatus(batchId);
+    if (mc.status === "completed") {
+      console.log(`[PIPELINE] pollMonteCarlo: batch ${batchId} completed (poll ${i})`);
+      return;
     }
-    // Emit intermediate progress if iteration count advanced
-    const completedIterations = (json.data?.completed_iterations as number) || 0;
-    const totalIterations = (json.data?.total_iterations as number) || 10;
-    if (completedIterations > lastReportedIteration) {
-      lastReportedIteration = completedIterations;
-      const runningIterIndex = completedIterations; // if 0 completed, iter_0000 is running; if 1 completed, iter_0001 is running
+    if (["failed", "cost_exceeded", "stopped"].includes(mc.status)) {
+      throw new Error(`Monte Carlo batch ${batchId} ${mc.status}: ${mc.error || ""}`);
+    }
+    if (mc.status === "unknown") {
+      console.warn(`[PIPELINE] pollMonteCarlo: batch ${batchId} status unknown (poll ${i})`);
+    }
+    if (mc.completedIterations > lastReportedIteration) {
+      lastReportedIteration = mc.completedIterations;
+      const runningIterIndex = mc.completedIterations;
       const currentSimId = `${batchId}_iter_${String(runningIterIndex).padStart(4, '0')}`;
       await emitProgress("monte_carlo", "running",
-        `Stress testing — ${completedIterations}/${totalIterations} variation${totalIterations !== 1 ? 's' : ''} complete...`,
-        JSON.stringify({ batchId, iterations: totalIterations, completed: completedIterations, currentSimId }));
+        `Stress testing — ${mc.completedIterations}/${mc.totalIterations} variation${mc.totalIterations !== 1 ? 's' : ''} complete...`,
+        JSON.stringify({ batchId, iterations: mc.totalIterations, completed: mc.completedIterations, currentSimId }));
     }
-    await new Promise(r => setTimeout(r, 5000));
+    await sleep("5s");
   }
   throw new Error(`Monte Carlo batch ${batchId} timed out`);
 }
@@ -192,15 +248,29 @@ async function pollMonteCarlo(batchId: string): Promise<void> {
 // THE PIPELINE WORKFLOW
 // ============================================================
 
+// Pipeline mode configuration — controls simulation depth across the entire pipeline.
+// test: fast dev (~16 min, 3 MC iterations)
+// quick: demo (~25 min, 10 MC iterations)
+// standard: client engagement (~45 min, 50 MC iterations)
+// deep: full assessment (~90+ min, 100 MC iterations)
+const PIPELINE_MODES = {
+  test:     { scenarios: 1, mcMode: "test",     mcCostLimit: 3,   maxForks: 1 },
+  quick:    { scenarios: 1, mcMode: "quick",    mcCostLimit: 25,  maxForks: 2 },
+  standard: { scenarios: 2, mcMode: "standard", mcCostLimit: 75,  maxForks: 3 },
+  deep:     { scenarios: 3, mcMode: "deep",     mcCostLimit: 200, maxForks: 3 },
+} as const;
+
+type PipelineMode = keyof typeof PIPELINE_MODES;
+
 export async function cruciblePipeline(input: {
   companyUrl: string;
   userContext?: string;
-  mode?: "standard" | "test";
+  mode?: string;
 }) {
   "use workflow";
 
-  const pipelineMode = input.mode || "standard";
-  const isTestMode = pipelineMode === "test";
+  const pipelineMode = (input.mode && input.mode in PIPELINE_MODES ? input.mode : "test") as PipelineMode;
+  const cfg = PIPELINE_MODES[pipelineMode];
 
   let projectId = "";
   let simIds: string[] = [];
@@ -214,7 +284,7 @@ export async function cruciblePipeline(input: {
     // ─── STEP 1: Create project & start research ───
     stageStart = Date.now();
     await emitProgress("research", "running",
-      isTestMode ? "Starting company research (TEST MODE)..." : "Starting company research...");
+      `Starting company research (${pipelineMode} mode)...`);
 
     const createResult = await flaskApi<{ projectId: string }>(
       "/api/crucible/projects",
@@ -305,7 +375,7 @@ export async function cruciblePipeline(input: {
       selectedIds = confirmation.scenarioOverrides;
     } else {
       const sorted = [...scenarios].sort((a, b) => b.probability - a.probability);
-      selectedIds = sorted.slice(0, isTestMode ? 1 : 2).map(s => s.id);
+      selectedIds = sorted.slice(0, cfg.scenarios).map(s => s.id);
     }
 
     scenarioTitles = scenarios
@@ -331,7 +401,7 @@ export async function cruciblePipeline(input: {
 
     await flaskApi<{ status: string }>(
       `/api/crucible/projects/${projectId}/generate-configs`,
-      { method: "POST", body: JSON.stringify({ scenario_ids: selectedIds, test_mode: isTestMode }) },
+      { method: "POST", body: JSON.stringify({ scenario_ids: selectedIds, mode: pipelineMode }) },
     );
 
     await pollStatus(projectId, ["configs_ready"]);
@@ -366,9 +436,8 @@ export async function cruciblePipeline(input: {
       `All ${simIds.length} simulations complete`, undefined, stageDurations.simulations);
 
     // ─── STEP 7: Monte Carlo analysis ───
-    const mcMode = isTestMode ? "test" : "quick";
-    const mcIterations = isTestMode ? 1 : 10;
-    const mcCostLimit = isTestMode ? 2.0 : 25.0;
+    const mcMode = cfg.mcMode;
+    const mcCostLimit = cfg.mcCostLimit;
 
     stageStart = Date.now();
     await emitProgress("monte_carlo", "running",
@@ -389,39 +458,48 @@ export async function cruciblePipeline(input: {
           config: simConfig,
           mode: mcMode,
           cost_limit_usd: mcCostLimit,
+          skip_gating: true,
         })},
       );
       mcBatchId = mcLaunch.batchId;
+
+      // Get actual iteration count from MC status (engine controls this via MODE_CONFIGS)
+      const mcInitial = await checkMCStatus(mcBatchId);
 
       await emitProgress("monte_carlo", "running",
         `Stress testing — re-running with variations...`,
         JSON.stringify({
           batchId: mcBatchId,
-          iterations: mcIterations,
+          iterations: mcInitial.totalIterations,
           completed: 0,
           currentSimId: `${mcBatchId}_iter_0000`,
           scenarioTitle: scenarioTitles[0] || "scenario"
         }));
       await pollMonteCarlo(mcBatchId);
+      console.log(`[PIPELINE] pollMonteCarlo returned for ${mcBatchId}, fetching results...`);
 
       mcResults = await flaskApi<Record<string, unknown>>(
         `/api/crucible/monte-carlo/${mcBatchId}/results`,
       );
+      console.log(`[PIPELINE] MC results fetched, emitting completed...`);
 
       stageDurations.monte_carlo = Date.now() - stageStart;
       await emitProgress("monte_carlo", "completed",
         "Stress testing complete",
-        JSON.stringify({ batchId: mcBatchId, iterations: mcIterations }),
+        JSON.stringify({ batchId: mcBatchId, iterations: mcInitial.totalIterations }),
         stageDurations.monte_carlo);
+      console.log(`[PIPELINE] MC completed emitted, moving to counterfactual`);
     } catch (mcError) {
       stageDurations.monte_carlo = Date.now() - stageStart;
       const msg = mcError instanceof Error ? mcError.message : String(mcError);
+      console.error(`[PIPELINE] MC failed:`, msg);
       await emitProgress("monte_carlo", "failed",
         `Stress testing failed: ${msg}`, undefined, stageDurations.monte_carlo);
       // Non-fatal — continue pipeline
     }
 
     // ─── STEP 8: Counterfactual analysis ───
+    console.log(`[PIPELINE] Starting counterfactual step`);
     stageStart = Date.now();
     await emitProgress("counterfactual", "running", "Identifying key decision points...");
 
@@ -436,7 +514,7 @@ export async function cruciblePipeline(input: {
         { method: "POST" },
       );
 
-      const maxForks = isTestMode ? 1 : 2;
+      const maxForks = cfg.maxForks;
       const topDecisions = (decisions.decision_points || [])
         .filter(d => d.criticality === "high")
         .slice(0, maxForks);
@@ -464,13 +542,16 @@ export async function cruciblePipeline(input: {
               `Testing alternate timeline from round ${decision.round}...`,
               JSON.stringify({ forkSimId: fork.sim_id, forkAgent: decision.agent, forkRound: decision.round }));
             branchIds.push(fork.sim_id);
+            console.log(`[PIPELINE] Counterfactual: polling branch sim ${fork.sim_id}...`);
             await pollSimulation(fork.sim_id);
+            console.log(`[PIPELINE] Counterfactual: branch sim ${fork.sim_id} done`);
           }
-        } catch {
-          // Individual fork failure is non-fatal
+        } catch (forkErr) {
+          console.warn(`[PIPELINE] Counterfactual fork error:`, forkErr instanceof Error ? forkErr.message : String(forkErr));
         }
       }
 
+      console.log(`[PIPELINE] Counterfactual: all forks done, emitting completed...`);
       stageDurations.counterfactual = Date.now() - stageStart;
       await emitProgress("counterfactual", "completed",
         `Tested ${topDecisions.length} alternate decisions, ${branchIds.length} branches complete`,
@@ -479,19 +560,27 @@ export async function cruciblePipeline(input: {
     } catch (cfError) {
       stageDurations.counterfactual = Date.now() - stageStart;
       const msg = cfError instanceof Error ? cfError.message : String(cfError);
+      console.error(`[PIPELINE] Counterfactual failed:`, msg);
       await emitProgress("counterfactual", "failed",
         `What-if analysis failed: ${msg}`, undefined, stageDurations.counterfactual);
       // Non-fatal — continue to report
     }
 
     // ─── STEP 9: Exercise Report (unified) ───
+    console.log(`[PIPELINE] Starting exercise report step`);
     stageStart = Date.now();
     await emitProgress("exercise_report", "running", "Generating exercise report...");
 
     try {
       await flaskApi<{ status: string }>(
         `/api/crucible/projects/${projectId}/exercise-report`,
-        { method: "POST" },
+        {
+          method: "POST",
+          body: JSON.stringify({
+            batch_id: mcBatchId || undefined,
+            branch_ids: branchIds.length > 0 ? branchIds : undefined,
+          }),
+        },
       );
       await pollExerciseReport(projectId);
       stageDurations.exercise_report = Date.now() - stageStart;
@@ -506,10 +595,12 @@ export async function cruciblePipeline(input: {
 
     // ─── DONE ───
     const totalDurationMs = Date.now() - workflowStart;
+    console.log(`[PIPELINE] All steps done, total ${totalDurationMs}ms`);
     await emitProgress("complete", "completed", "Pipeline complete!", undefined, totalDurationMs);
 
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[PIPELINE] Top-level error:`, errMsg);
     await emitProgress("error", "failed", errMsg);
   }
 

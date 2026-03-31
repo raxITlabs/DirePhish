@@ -149,14 +149,22 @@ export default function PipelineSimulationPanel({
   contextHeader,
 }: PipelineSimulationPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [activeWorld, setActiveWorld] = useState<WorldTab>("all");
   const [expandedActions, setExpandedActions] = useState<Set<number>>(new Set());
 
   const isLive = simStatus.status === "running" || simStatus.status === "starting";
 
-  // Auto-scroll to bottom when new actions arrive
+  // Auto-scroll to bottom when new actions arrive — but only if user
+  // is already near the bottom (within 150px). This prevents yanking
+  // the user away from earlier messages they're reading.
   useEffect(() => {
-    if (activeWorld !== "timeline") {
+    if (activeWorld === "timeline") return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom < 150) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [simActions.length, activeWorld]);
@@ -335,7 +343,7 @@ export default function PipelineSimulationPanel({
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-5 py-3 space-y-1">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-5 py-3 space-y-1">
         {filteredActions.length === 0 && (
           <p className="text-muted-foreground text-sm text-center py-8 font-mono">
             Waiting for actions...

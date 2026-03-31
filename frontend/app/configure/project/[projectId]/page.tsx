@@ -204,7 +204,7 @@ export default function ConfigureProjectPage({
                 <span className="text-sm font-medium">{project.progressMessage}</span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
-                <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${project.progress}%` }} />
+                <div className="bg-primary h-2 rounded-full transition-transform origin-left" style={{ transform: `scaleX(${(project.progress || 0) / 100})` }} />
               </div>
             </div>
           </section>
@@ -235,7 +235,7 @@ export default function ConfigureProjectPage({
                 <span className="text-sm font-medium">{project.progressMessage}</span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
-                <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${project.progress}%` }} />
+                <div className="bg-primary h-2 rounded-full transition-transform origin-left" style={{ transform: `scaleX(${(project.progress || 0) / 100})` }} />
               </div>
             </div>
           </section>

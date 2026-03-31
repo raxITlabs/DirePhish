@@ -8,6 +8,7 @@ import uuid
 from pathlib import Path
 
 from flask import Blueprint, jsonify, request
+from google.cloud.firestore_v1 import FieldFilter
 
 from ..services.crucible_manager import (
     list_presets,
@@ -256,8 +257,12 @@ def project_graph(project_id):
 
         def _read_graph(mem, pid):
             """Read nodes + edges from Firestore, resolve edge name→id."""
-            n_docs = mem.db.collection("graph_nodes").where("sim_id", "==", pid).get()
-            e_docs = mem.db.collection("graph_edges").where("sim_id", "==", pid).get()
+            n_docs = mem.db.collection("graph_nodes").where(
+                filter=FieldFilter("sim_id", "==", pid)
+            ).get()
+            e_docs = mem.db.collection("graph_edges").where(
+                filter=FieldFilter("sim_id", "==", pid)
+            ).get()
 
             nodes = [{
                 "id": doc.id,
@@ -366,7 +371,7 @@ def generate_configs(project_id):
     if not project:
         return jsonify({"error": "Project not found"}), 404
     from ..services.config_expander import run_config_expansion
-    run_config_expansion(project_id, data["scenario_ids"], test_mode=data.get("test_mode", False))
+    run_config_expansion(project_id, data["scenario_ids"], test_mode=data.get("test_mode", False), mode=data.get("mode"))
     return jsonify({"data": {"status": "generating"}}), 202
 
 
@@ -411,7 +416,10 @@ def get_comparative_report(project_id):
 @crucible_bp.route("/projects/<project_id>/exercise-report", methods=["POST"])
 def trigger_exercise_report(project_id):
     from ..services.exercise_report_agent import run_exercise_report
-    run_exercise_report(project_id)
+    data = request.get_json(silent=True) or {}
+    batch_id = data.get("batch_id")
+    branch_ids = data.get("branch_ids", [])
+    run_exercise_report(project_id, batch_id=batch_id, branch_ids=branch_ids)
     return jsonify({"data": {"status": "generating"}}), 202
 
 
@@ -493,6 +501,7 @@ def monte_carlo_launch():
             cost_limit_usd=cost_limit_usd,
             variation_params=variation_params,
             custom_iterations=custom_iterations,
+            skip_gating=data.get("skip_gating", False),
         )
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
@@ -508,6 +517,7 @@ def monte_carlo_status(batch_id):
     """Get batch progress."""
     status = MonteCarloEngine.get_batch_status(batch_id)
     if not status:
+        _mc_logger.warning("Batch %s not found in memory — possible Flask reload cleared state", batch_id)
         return jsonify({"error": f"Batch '{batch_id}' not found"}), 404
     return jsonify({"data": status})
 
@@ -515,8 +525,10 @@ def monte_carlo_status(batch_id):
 @crucible_bp.route("/monte-carlo/<batch_id>/results", methods=["GET"])
 def monte_carlo_results(batch_id):
     """Get aggregate results."""
+    _mc_logger.info("MC results requested for batch %s", batch_id)
     results = MonteCarloEngine.get_batch_results(batch_id)
     if results is None:
+        _mc_logger.warning("MC results: batch %s not found in memory", batch_id)
         return jsonify({"error": f"Batch '{batch_id}' not found"}), 404
 
     # Also try to load aggregation from disk
@@ -554,6 +566,44 @@ def monte_carlo_stop(batch_id):
     if result == "not_found":
         return jsonify({"error": f"Batch '{batch_id}' not found"}), 404
     return jsonify({"data": {"status": result}})
+
+
+@crucible_bp.route("/monte-carlo/<batch_id>/iterations", methods=["GET"])
+def get_mc_iterations(batch_id):
+    """Return summary of each completed MC iteration from disk."""
+    from pathlib import Path
+    from ..config import Config
+
+    # Search all project dirs for this batch
+    projects_dir = Path(Config.UPLOAD_FOLDER) / "crucible_projects"
+    iterations = []
+
+    if projects_dir.exists():
+        for proj_dir in projects_dir.iterdir():
+            mc_dir = proj_dir / "monte_carlo" / batch_id
+            if mc_dir.exists():
+                for iter_dir in sorted(mc_dir.iterdir()):
+                    if not iter_dir.is_dir() or "_iter_" not in iter_dir.name:
+                        continue
+                    summary_path = iter_dir / "summary.json"
+                    if not summary_path.exists():
+                        continue
+                    with open(summary_path) as f:
+                        summary = json.load(f)
+                    ad = summary.get("adaptive_depth") or {}
+                    iterations.append({
+                        "iteration_id": iter_dir.name,
+                        "variation_description": summary.get("variation_description", ""),
+                        "total_rounds": summary.get("total_rounds", 0),
+                        "total_actions": summary.get("total_actions", 0),
+                        "cost_usd": summary.get("cost_usd", 0),
+                        "seed": summary.get("seed"),
+                        "outcome": ad.get("stop_reason"),
+                        "stopped_at_round": ad.get("stopped_at_round", summary.get("total_rounds", 0)),
+                    })
+                break
+
+    return jsonify({"data": iterations})
 
 
 # ─── Counterfactual Branching Endpoints ───
@@ -718,3 +768,231 @@ def launch_stress_test(project_id):
         "sim_ids": sim_ids,
         "labels": labels,
     }}), 201
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Risk Score endpoints
+# ──────────────────────────────────────────────────────────────────────────────
+
+@crucible_bp.route("/projects/<project_id>/risk-score/compute", methods=["POST"])
+def compute_risk_score(project_id):
+    """Compute risk score from MC aggregation data.
+
+    Accepts optional calibration inputs in request body.
+    Returns 404 if no MC batch, 409 if MC in progress, 422 if TEST mode.
+    """
+    from ..services.monte_carlo_engine import MonteCarloEngine
+    from ..services.risk_score_engine import compute_composite_score, interpret_score
+    from ..services.fair_loss_mapper import compute_fair_loss
+    from ..services.risk_explainer import compute_drivers
+    from ..services.firestore_memory import FirestoreMemory
+
+    # Find MC batch — try in-memory first, then discover from disk
+    mc = MonteCarloEngine()
+    memory = FirestoreMemory()
+    batches = mc.list_batches(project_id=project_id)
+
+    batch_id = None
+    batch_mode = None
+    mc_dir_base = Path(__file__).parent.parent.parent / "uploads" / "crucible_projects" / project_id / "monte_carlo"
+
+    if batches:
+        latest_batch = batches[0]
+        if latest_batch.get("status") in ("pending", "running"):
+            return jsonify({"error": "Monte Carlo aggregation is still in progress"}), 409
+        batch_id = latest_batch.get("batch_id", "")
+        batch_mode = latest_batch.get("mode", "")
+    elif mc_dir_base.exists():
+        # Server restarted — discover batches from disk
+        batch_dirs = sorted(mc_dir_base.iterdir(), key=lambda d: d.stat().st_mtime, reverse=True)
+        for d in batch_dirs:
+            if d.is_dir() and (d / "aggregation.json").exists():
+                batch_id = d.name
+                break
+
+    if not batch_id:
+        return jsonify({"error": "No Monte Carlo batch found for this project"}), 404
+
+    # Load MC aggregation from disk
+    try:
+        agg_path = mc_dir_base / batch_id / "aggregation.json"
+        if agg_path.exists():
+            with open(agg_path) as f:
+                mc_agg = json.load(f)
+        else:
+            # Fallback: try Firestore mc_aggregates collection
+            aggregates = memory.get_project_aggregates(project_id, limit=1)
+            if aggregates:
+                mc_agg = aggregates[0]
+            else:
+                return jsonify({"error": "MC aggregation data not found. Run a Monte Carlo batch first."}), 404
+    except Exception as e:
+        return jsonify({"error": f"Failed to load MC aggregation: {e}"}), 500
+
+    # Load exercise report resilience data
+    report_path = SIMULATIONS_DIR / f"exercise_{project_id}" / "report.json"
+    resilience = None
+    if report_path.exists():
+        try:
+            with open(report_path) as f:
+                report = json.load(f)
+            resilience = report.get("resilience")
+        except Exception:
+            pass
+
+    # Load per-iteration data from aggregation cache
+    per_iteration_data = mc_agg.get("per_iteration_results")
+
+    # Get calibration from request body or use defaults
+    body = request.get_json(silent=True) or {}
+    calibration = body.get("calibration")
+
+    # Compute score
+    try:
+        score_result = compute_composite_score(
+            aggregation=mc_agg,
+            resilience=resilience,
+            per_iteration_data=per_iteration_data,
+            batch_id=batch_id,
+        )
+
+        fair_result = compute_fair_loss(
+            aggregation=mc_agg,
+            calibration=calibration,
+            per_iteration_data=per_iteration_data,
+        )
+
+        # Compute drivers
+        drivers = []
+        if per_iteration_data:
+            per_iter_scores = []
+            for it in per_iteration_data:
+                from ..services.risk_score_engine import _compute_per_iteration_score
+                s = _compute_per_iteration_score(it, mc_agg)
+                per_iter_scores.append(s)
+
+            divergence_points = mc_agg.get("decision_divergence_points", [])
+            drivers = compute_drivers(
+                per_iteration_scores=per_iter_scores,
+                per_iteration_data=per_iteration_data,
+                divergence_points=divergence_points,
+            )
+    except Exception as e:
+        return jsonify({"error": f"Risk score computation failed: {e}"}), 500
+
+    # Build score document
+    score_doc = {
+        "project_id": project_id,
+        "batch_id": batch_id,
+        "mc_mode": batch_mode or "",
+        "iterations": mc_agg.get("iteration_count", 0),
+        "composite_score": score_result["composite_score"],
+        "confidence_interval": score_result["confidence_interval"],
+        "dimensions": score_result["dimensions"],
+        "confidence_flag": score_result["confidence_flag"],
+        "interpretation": score_result["interpretation"],
+        "fair_estimates": {
+            "ale": fair_result["ale"],
+            "p10_loss": fair_result["p10_loss"],
+            "p90_loss": fair_result["p90_loss"],
+            "calibration_inputs": fair_result["calibration_inputs"],
+        },
+        "drivers": drivers,
+    }
+
+    # Store to Firestore
+    try:
+        score_id = memory.store_risk_score(score_doc)
+        score_doc["score_id"] = score_id
+    except Exception as e:
+        return jsonify({"error": f"Failed to store risk score: {e}"}), 500
+
+    return jsonify({"data": score_doc}), 201
+
+
+@crucible_bp.route("/projects/<project_id>/risk-score", methods=["GET"])
+def get_risk_score(project_id):
+    """Return the latest risk score for a project."""
+    from ..services.firestore_memory import FirestoreMemory
+
+    try:
+        memory = FirestoreMemory()
+        score = memory.get_risk_score(project_id)
+    except Exception as e:
+        return jsonify({"error": f"Failed to retrieve risk score: {e}"}), 500
+
+    if score is None:
+        return jsonify({"error": "No risk score computed for this project"}), 404
+
+    return jsonify({"data": score}), 200
+
+
+@crucible_bp.route("/projects/<project_id>/risk-score/compare", methods=["GET"])
+def compare_risk_scores(project_id):
+    """Compare current risk score against a baseline.
+
+    Query param: baseline=<score_id>
+    """
+    from ..services.firestore_memory import FirestoreMemory
+
+    baseline_id = request.args.get("baseline")
+    if not baseline_id:
+        return jsonify({"error": "Missing 'baseline' query parameter"}), 400
+
+    try:
+        memory = FirestoreMemory()
+        current = memory.get_risk_score(project_id)
+        baseline = memory.get_risk_score_by_id(baseline_id)
+    except Exception as e:
+        return jsonify({"error": f"Failed to retrieve scores: {e}"}), 500
+
+    if current is None:
+        return jsonify({"error": "No current risk score for this project"}), 404
+    if baseline is None:
+        return jsonify({"error": "Baseline score not found"}), 404
+
+    # Compute deltas
+    delta = {
+        "composite_score": round(current["composite_score"] - baseline["composite_score"], 1),
+        "dimensions": {},
+        "ale_delta": round(
+            current.get("fair_estimates", {}).get("ale", 0)
+            - baseline.get("fair_estimates", {}).get("ale", 0),
+            2,
+        ),
+    }
+
+    for dim in current.get("dimensions", {}):
+        delta["dimensions"][dim] = round(
+            current["dimensions"].get(dim, 0) - baseline.get("dimensions", {}).get(dim, 0),
+            1,
+        )
+
+    # Driver changes
+    current_drivers = {d["description"]: d for d in current.get("drivers", [])}
+    baseline_drivers = {d["description"]: d for d in baseline.get("drivers", [])}
+
+    delta["drivers_added"] = [
+        d for desc, d in current_drivers.items() if desc not in baseline_drivers
+    ]
+    delta["drivers_removed"] = [
+        d for desc, d in baseline_drivers.items() if desc not in current_drivers
+    ]
+    delta["drivers_changed"] = []
+    for desc in set(current_drivers) & set(baseline_drivers):
+        impact_delta = round(
+            current_drivers[desc]["impact"] - baseline_drivers[desc]["impact"], 1
+        )
+        if abs(impact_delta) > 0.5:
+            delta["drivers_changed"].append({
+                "driver": current_drivers[desc],
+                "impact_delta": impact_delta,
+            })
+
+    return jsonify({
+        "data": {
+            "baseline": baseline,
+            "current": current,
+            "delta": delta,
+        }
+    }), 200

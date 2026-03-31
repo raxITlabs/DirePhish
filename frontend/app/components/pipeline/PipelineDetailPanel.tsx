@@ -110,7 +110,7 @@ export default function PipelineDetailPanel({
   // Dossier review → delegate to full dossier editor
   if (stageId === "dossier_review" && dossier) {
     return (
-      <div className="flex flex-col h-full bg-card">
+      <div className="flex flex-col h-[calc(100%-16px)] mt-2 mr-2 bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 border-b border-border/10 shrink-0">
           <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">Dossier Review</span>
           <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground transition-colors text-sm" aria-label="Close detail panel">✕</button>
@@ -125,7 +125,7 @@ export default function PipelineDetailPanel({
   // Simulation → delegate to simulation panel
   if (stageId === "simulations" && simStatus) {
     return (
-      <div className="flex flex-col h-full bg-card">
+      <div className="flex flex-col h-[calc(100%-16px)] mt-2 mr-2 bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 border-b border-border/10 shrink-0">
           <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">Simulation</span>
           <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground transition-colors text-sm" aria-label="Close detail panel">✕</button>
@@ -147,7 +147,7 @@ export default function PipelineDetailPanel({
 
   // All other stages → generic detail view
   return (
-    <div className="flex flex-col h-full bg-card animate-slide-in-right">
+    <div className="flex flex-col h-[calc(100%-16px)] mt-2 mr-2 bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden animate-slide-in-right">
       {/* Header */}
       <div className="px-5 py-4 border-b border-border/10 shrink-0">
         <div className="flex items-center justify-between">
@@ -212,6 +212,119 @@ const SEVERITY_COLORS: Record<string, string> = {
   high: "bg-tuscan-sun-100 text-tuscan-sun-800",
   medium: "bg-royal-azure-50 text-royal-azure-700",
 };
+
+function MCIterationList({ batchId, live }: { batchId: string; live?: boolean }) {
+  const [iterations, setIterations] = useState<Array<{
+    iteration_id: string; variation_description: string;
+    total_rounds: number; total_actions: number; cost_usd: number;
+    seed?: number; outcome?: string; stopped_at_round?: number;
+  }>>([]);
+
+  useEffect(() => {
+    const fetchIterations = () => {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001"}/api/crucible/monte-carlo/${batchId}/iterations`)
+        .then(r => r.json())
+        .then(d => { if (d.data) setIterations(d.data); })
+        .catch(() => {});
+    };
+    fetchIterations();
+    if (live) {
+      const interval = setInterval(fetchIterations, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [batchId, live]);
+
+  if (!iterations.length) return null;
+
+  function parseVariation(desc: string): Array<{ label: string; detail: string; color: string }> {
+    const items: Array<{ label: string; detail: string; color: string }> = [];
+
+    const tempMatch = desc.match(/temp=([\d.]+)/);
+    if (tempMatch) {
+      const temp = parseFloat(tempMatch[1]);
+      const color = temp > 0.8 ? "bg-red-50 text-red-600" : temp > 0.65 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600";
+      const label = temp > 0.8 ? "High pressure" : temp > 0.65 ? "Moderate pressure" : "Cautious";
+      items.push({ label, detail: `temp ${temp.toFixed(2)}`, color });
+    }
+
+    const personaMatch = desc.match(/persona_mods=\[([^\]]+)\]/);
+    if (personaMatch) {
+      const agents = personaMatch[1].split(", ").map(a => a.split(" ").pop() || a);
+      items.push({
+        label: "Modified priorities",
+        detail: agents.length > 2 ? `${agents.slice(0, 2).join(", ")} +${agents.length - 2}` : agents.join(", "),
+        color: "bg-violet-50 text-violet-600",
+      });
+    }
+
+    const timingMatch = desc.match(/timing_shifts=\[([^\]]+)\]/);
+    if (timingMatch) {
+      const shiftMatch = timingMatch[1].match(/'event_round':\s*(\d+).*?'shifted_to':\s*(\d+)/);
+      if (shiftMatch) {
+        items.push({ label: "Timing shift", detail: `inject moved R${shiftMatch[1]} to R${shiftMatch[2]}`, color: "bg-sky-50 text-sky-600" });
+      } else {
+        items.push({ label: "Timing shift", detail: "events rescheduled", color: "bg-sky-50 text-sky-600" });
+      }
+    }
+
+    const orderMatch = desc.match(/order=\[([^\]]+)\]/);
+    if (orderMatch) {
+      const first = orderMatch[1].split(", ")[0]?.split(" ").pop() || "";
+      const hasAttackerFirst = orderMatch[1].toLowerCase().includes("threat") || orderMatch[1].toLowerCase().includes("attack") || orderMatch[1].toLowerCase().includes("operator");
+      items.push({
+        label: hasAttackerFirst ? "Attacker responds first" : "Response reordered",
+        detail: `leads: ${first}`,
+        color: hasAttackerFirst ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-600",
+      });
+    }
+
+    return items.length > 0 ? items : [{ label: "Baseline", detail: "no modifications", color: "bg-muted text-muted-foreground" }];
+  }
+
+  function outcomeLabel(outcome?: string): { text: string; color: string } | null {
+    if (!outcome) return null;
+    if (outcome.includes("contained") || outcome.includes("resolved")) return { text: "Contained", color: "text-emerald-600" };
+    if (outcome.includes("critical") || outcome.includes("failure")) return { text: "Escalated", color: "text-red-600" };
+    if (outcome.includes("max_round") || outcome.includes("limit")) return { text: "Max rounds", color: "text-amber-600" };
+    return { text: outcome.split("_").join(" "), color: "text-muted-foreground" };
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <span className="text-2xs font-mono text-muted-foreground/60 uppercase tracking-wider">
+        Completed Variations ({iterations.length})
+      </span>
+      {iterations.map((iter, idx) => {
+        const changes = parseVariation(iter.variation_description || "");
+        const outcome = outcomeLabel(iter.outcome);
+        return (
+          <div key={iter.iteration_id} className="bg-muted/30 rounded-md px-3 py-2 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-mono text-foreground/80">
+                <span className="text-verdigris-600">✓</span>
+                <span>Variation {idx + 1}</span>
+              </div>
+              <div className="flex items-center gap-2 text-2xs font-mono text-muted-foreground">
+                {outcome && <span className={`font-medium ${outcome.color}`}>{outcome.text}</span>}
+                <span>{iter.stopped_at_round || iter.total_rounds}R</span>
+                <span>{iter.total_actions} actions</span>
+                {iter.cost_usd > 0 && <span>${iter.cost_usd.toFixed(2)}</span>}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {changes.map((c, i) => (
+                <span key={i} className={`text-2xs font-mono px-1.5 py-0.5 rounded ${c.color}`} title={c.detail}>
+                  {c.label}
+                  <span className="opacity-60 ml-1">{c.detail}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function ExerciseReportSummary({ projectId, message }: { projectId: string; message?: string }) {
   const [report, setReport] = useState<ExerciseReport | null>(null);
@@ -801,7 +914,7 @@ function StageDetail({
 
   // Monte Carlo Analysis
   if (stageId === "monte_carlo") {
-    let parsed: { iterations?: number; completed?: number; totalCost?: number; scenarioTitle?: string; variation_description?: string } | null = null;
+    let parsed: { iterations?: number; completed?: number; totalCost?: number; scenarioTitle?: string; variation_description?: string; batchId?: string } | null = null;
     if (state?.detail) {
       try { parsed = JSON.parse(state.detail); } catch { /* detail is plain text */ }
     }
@@ -841,19 +954,28 @@ function StageDetail({
         }
 
         return (
-          <PipelineSimulationPanel
-            simStatus={mcSt}
-            simActions={mcAc}
-            graphData={graphData}
-            activeSimIndex={0}
-            totalSims={1}
-            scenarioTitle={title}
-            contextHeader={{
-              title: `Stress Test: ${parsed?.scenarioTitle || "scenario"}`,
-              subtitle: `Variation ${(parsed?.completed || 0) + 1}/${parsed?.iterations || 1}`,
-              changes: mcChanges.length > 0 ? mcChanges : ["Testing with controlled variations"],
-            }}
-          />
+          <div className="flex flex-col h-full">
+            {parsed?.batchId && (parsed?.completed || 0) > 0 && (
+              <div className="px-3 py-2 border-b border-border/10 max-h-[40%] overflow-y-auto shrink-0">
+                <MCIterationList batchId={parsed.batchId} live />
+              </div>
+            )}
+            <div className="flex-1 min-h-0">
+              <PipelineSimulationPanel
+                simStatus={mcSt}
+                simActions={mcAc}
+                graphData={graphData}
+                activeSimIndex={0}
+                totalSims={1}
+                scenarioTitle={title}
+                contextHeader={{
+                  title: `Stress Test: ${parsed?.scenarioTitle || "scenario"}`,
+                  subtitle: `Variation ${(parsed?.completed || 0) + 1}/${parsed?.iterations || 1}`,
+                  changes: mcChanges.length > 0 ? mcChanges : ["Testing with controlled variations"],
+                }}
+              />
+            </div>
+          </div>
         );
       }
 
@@ -866,7 +988,7 @@ function StageDetail({
           <div className="flex items-center gap-3">
             <div className="w-5 h-5 border-2 border-tuscan-sun-500 border-t-transparent rounded-full animate-spin shrink-0" />
             <span className="text-sm font-mono text-foreground/80">
-              Iteration {completed}/{total}
+              Variation {completed}/{total}
             </span>
           </div>
           <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -875,6 +997,7 @@ function StageDetail({
               style={{ width: `${pct}%` }}
             />
           </div>
+          {parsed?.batchId && <MCIterationList batchId={parsed.batchId} live />}
           {!parsed && state.detail && (
             <p className="text-xs font-mono text-muted-foreground">{state.detail}</p>
           )}
@@ -904,6 +1027,7 @@ function StageDetail({
               <span className="text-xs font-mono font-semibold text-foreground/80">${parsed.totalCost.toFixed(2)}</span>
             </div>
           )}
+          {parsed?.batchId && <MCIterationList batchId={parsed.batchId} />}
           {(mcSimStatus || mcCfSimStatus) && (mcSimActions || mcCfSimActions) && ((mcSimActions || mcCfSimActions)?.length ?? 0) > 0 && (
             <PipelineSimulationPanel
               simStatus={(mcSimStatus || mcCfSimStatus)!}

@@ -420,3 +420,39 @@
     animation: none;
   }
 }
+
+/* ── Print styles for PDF export ── */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+
+  /* Hide sidebar and navigation in print */
+  aside,
+  .print\:hidden,
+  nav {
+    display: none !important;
+  }
+
+  /* Expand main content to full width */
+  main {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Page breaks per kill chain step */
+  .step-detail-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Light theme overrides */
+  * {
+    color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

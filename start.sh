@@ -2,10 +2,11 @@
 # Start DirePhish
 #
 # Usage:
-#   ./start.sh           — bare metal (local dev with portless)
-#   ./start.sh docker     — Docker dev (hot reload)
-#   ./start.sh prod       — Docker prod (Gunicorn + next start)
-#   ./start.sh stop       — stop Docker containers + remove portless aliases
+#   ./start.sh                    — bare metal (local dev with portless)
+#   ./start-frontend-prod.sh      — bare metal with pnpm build + next start (no dev server)
+#   ./start.sh docker             — Docker dev (hot reload)
+#   ./start.sh prod               — Docker prod (Gunicorn + next start)
+#   ./start.sh stop               — stop Docker containers + remove portless aliases
 #
 # Prerequisites: npm install -g portless
 # One-time setup: portless proxy start --https

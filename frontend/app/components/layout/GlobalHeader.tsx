@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Badge } from "@/app/components/ui/badge";
 
 export default function GlobalHeader() {
   return (
@@ -9,11 +8,11 @@ export default function GlobalHeader() {
           <span className="font-mono text-base font-bold text-primary tracking-tighter">
             DirePhish
           </span>
-          <Badge variant="outline" className="text-[10px] font-mono uppercase tracking-wider">
+          <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground border border-border rounded px-1 py-px leading-none">
             Alpha
-          </Badge>
+          </span>
         </div>
-        <span className="font-mono text-[10px] tracking-widest text-muted-foreground/50 block">
+        <span className="font-mono text-[8px] tracking-widest text-muted-foreground/50 block">
           by raxIT Labs
         </span>
       </Link>

@@ -1,0 +1,393 @@
+{
+  "threats": [
+    {
+      "name": "Model Weights and Intellectual Property Theft",
+      "relevance": "high",
+      "reasoning": "As an AI research organization, the core value proposition lies in proprietary model weights. Given the high-profile nature of the company and recent strategic partnerships with the Department of War, state-sponsored actors are highly motivated to exfiltrate training data and model architecture.",
+      "threat_actors": [
+        "APT29",
+        "Lazarus Group",
+        "APT41"
+      ],
+      "mitre_techniques": [
+        "T1567",
+        "T1005",
+        "T1078"
+      ]
+    },
+    {
+      "name": "Supply Chain Attack via Cloud/CI/CD Infrastructure",
+      "relevance": "high",
+      "reasoning": "The company relies heavily on Azure and GitHub for critical operations. A compromise of these third-party providers or the CI/CD pipeline could allow attackers to inject malicious code into production AI models or exfiltrate sensitive training datasets.",
+      "threat_actors": [
+        "APT29",
+        "UNC2452"
+      ],
+      "mitre_techniques": [
+        "T1195.002",
+        "T1199",
+        "T1565.001"
+      ]
+    },
+    {
+      "name": "Adversarial Prompt Injection and AI Agent Exploitation",
+      "relevance": "high",
+      "reasoning": "The company's primary products (ChatGPT, Codex) are exposed to public-facing prompt injection. As they integrate AI agents capable of performing actions, an exploit could lead to unauthorized data access or system manipulation, directly impacting the company's core product security.",
+      "threat_actors": [
+        "Anonymous",
+        "Various Cybercriminal Syndicates"
+      ],
+      "mitre_techniques": [
+        "T1665",
+        "T1190"
+      ]
+    },
+    {
+      "name": "Targeted Social Engineering and Credential Theft",
+      "relevance": "medium",
+      "reasoning": "Given the recent CISO leadership transition and the high-profile nature of the executive team, employees are prime targets for spear-phishing. Compromising an Okta account could grant an attacker broad access to the company's cloud-heavy environment.",
+      "threat_actors": [
+        "Scattered Spider",
+        "Lapsus$"
+      ],
+      "mitre_techniques": [
+        "T1566.001",
+        "T1556",
+        "T1078.004"
+      ]
+    },
+    {
+      "name": "Data Privacy Breach via Third-Party Analytics",
+      "relevance": "medium",
+      "reasoning": "The company has a documented history of third-party breaches (Mixpanel, 2025-11-01). Continued reliance on external analytics and SaaS tools creates a persistent risk of PII exposure, which is particularly damaging given their strict GDPR and HIPAA compliance requirements.",
+      "threat_actors": [
+        "FIN7",
+        "Data Extortion Groups"
+      ],
+      "mitre_techniques": [
+        "T1537",
+        "T1114"
+      ]
+    },
+    {
+      "name": "Model Poisoning and Training Data Manipulation",
+      "relevance": "medium",
+      "reasoning": "The company's focus on AGI requires massive datasets. If an attacker gains access to the data ingestion pipeline, they could introduce subtle biases or backdoors into the model, which are extremely difficult to detect and remediate, potentially undermining the company's safety mission.",
+      "threat_actors": [
+        "State-sponsored actors",
+        "Hacktivists"
+      ],
+      "mitre_techniques": [
+        "T1496",
+        "T1565.002"
+      ]
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "gap": "Lack of automated runtime monitoring for AI agent tool-use and API calls",
+      "linked_threats": [
+        "Adversarial Prompt Injection and AI Agent Exploitation"
+      ],
+      "affected_systems": [
+        "ChatGPT",
+        "API Platform"
+      ],
+      "severity": "critical"
+    },
+    {
+      "gap": "Insufficient isolation between CI/CD pipelines and production model training environments",
+      "linked_threats": [
+        "Supply Chain Attack via Cloud/CI/CD Infrastructure",
+        "Model Weights and Intellectual Property Theft"
+      ],
+      "affected_systems": [
+        "GitHub",
+        "Azure Cloud"
+      ],
+      "severity": "critical"
+    },
+    {
+      "gap": "Absence of granular egress filtering on training data ingestion pipelines",
+      "linked_threats": [
+        "Model Poisoning and Training Data Manipulation",
+        "Data Privacy Breach via Third-Party Analytics"
+      ],
+      "affected_systems": [
+        "PostgreSQL",
+        "Redis",
+        "AWS Bedrock"
+      ],
+      "severity": "high"
+    },
+    {
+      "gap": "Inadequate multi-factor authentication enforcement for non-SSO integrated legacy internal tools",
+      "linked_threats": [
+        "Targeted Social Engineering and Credential Theft"
+      ],
+      "affected_systems": [
+        "Okta",
+        "Slack",
+        "Google Workspace"
+      ],
+      "severity": "high"
+    },
+    {
+      "gap": "Lack of automated drift detection for infrastructure-as-code configurations",
+      "linked_threats": [
+        "Supply Chain Attack via Cloud/CI/CD Infrastructure"
+      ],
+      "affected_systems": [
+        "Terraform",
+        "Azure Cloud",
+        "AWS Bedrock"
+      ],
+      "severity": "medium"
+    },
+    {
+      "gap": "Insufficient audit logging and anomaly detection for model weight access",
+      "linked_threats": [
+        "Model Weights and Intellectual Property Theft"
+      ],
+      "affected_systems": [
+        "Splunk",
+        "Azure Cloud"
+      ],
+      "severity": "critical"
+    },
+    {
+      "gap": "Over-reliance on third-party SaaS for telemetry without data residency validation",
+      "linked_threats": [
+        "Data Privacy Breach via Third-Party Analytics"
+      ],
+      "affected_systems": [
+        "Google Workspace",
+        "Slack"
+      ],
+      "severity": "medium"
+    }
+  ],
+  "attack_paths": [
+    {
+      "id": "path_0",
+      "title": "Model Weights Theft via CI/CD Pipeline Compromise",
+      "threat_name": "Model Weights and Intellectual Property Theft",
+      "kill_chain": [
+        {
+          "step": 1,
+          "tactic": "initial_access",
+          "technique": "T1566.001",
+          "target": "GitHub",
+          "description": "Spear-phishing an Infrastructure Engineer to gain access to a GitHub repository with CI/CD secrets."
+        },
+        {
+          "step": 2,
+          "tactic": "execution",
+          "technique": "T1195.002",
+          "target": "Terraform",
+          "description": "Injecting malicious Terraform provider configurations to modify Azure infrastructure deployment scripts."
+        },
+        {
+          "step": 3,
+          "tactic": "persistence",
+          "technique": "T1136.002",
+          "target": "Azure Cloud",
+          "description": "Creating a hidden Azure Service Principal with contributor access to the model training environment."
+        },
+        {
+          "step": 4,
+          "tactic": "lateral_movement",
+          "technique": "T1078.004",
+          "target": "Redis",
+          "description": "Accessing the Redis cache layer used for training data staging via compromised Azure credentials."
+        },
+        {
+          "step": 5,
+          "tactic": "collection",
+          "technique": "T1005",
+          "target": "Azure Cloud",
+          "description": "Exfiltrating proprietary model weights from the Azure Blob Storage training bucket."
+        },
+        {
+          "step": 6,
+          "tactic": "exfiltration",
+          "technique": "T1567",
+          "target": "ExternalC2",
+          "description": "Exfiltrating model weights via an encrypted tunnel to an attacker-controlled cloud storage bucket."
+        }
+      ],
+      "expected_outcome": "Loss of competitive advantage, potential violation of ISO 27001/42001, and catastrophic IP theft impacting long-term valuation."
+    },
+    {
+      "id": "path_1",
+      "title": "AI Agent Exploitation for Data Exfiltration",
+      "threat_name": "Adversarial Prompt Injection and AI Agent Exploitation",
+      "kill_chain": [
+        {
+          "step": 1,
+          "tactic": "initial_access",
+          "technique": "T1665",
+          "target": "ChatGPT",
+          "description": "Crafting a sophisticated prompt injection attack to bypass safety filters on a public-facing ChatGPT agent."
+        },
+        {
+          "step": 2,
+          "tactic": "execution",
+          "technique": "T1203",
+          "target": "API Platform",
+          "description": "Forcing the AI agent to execute unauthorized tool-use commands against internal API endpoints."
+        },
+        {
+          "step": 3,
+          "tactic": "persistence",
+          "technique": "T1078",
+          "target": "Okta",
+          "description": "Leveraging the agent's access to impersonate a service account and generate long-lived OAuth tokens."
+        },
+        {
+          "step": 4,
+          "tactic": "lateral_movement",
+          "technique": "T1021.001",
+          "target": "PostgreSQL",
+          "description": "Querying internal PostgreSQL databases containing user metadata via the compromised API platform."
+        },
+        {
+          "step": 5,
+          "tactic": "collection",
+          "technique": "T1005",
+          "target": "PostgreSQL",
+          "description": "Aggregating PII and enterprise user data into a temporary staging table."
+        },
+        {
+          "step": 6,
+          "tactic": "exfiltration",
+          "technique": "T1041",
+          "target": "ExternalC2",
+          "description": "Exfiltrating user data through the API response stream to an external endpoint."
+        }
+      ],
+      "expected_outcome": "Major GDPR/HIPAA data breach, loss of user trust, and potential regulatory fines exceeding millions of dollars."
+    },
+    {
+      "id": "path_2",
+      "title": "Credential Theft via Social Engineering of Security Staff",
+      "threat_name": "Targeted Social Engineering and Credential Theft",
+      "kill_chain": [
+        {
+          "step": 1,
+          "tactic": "initial_access",
+          "technique": "T1566.001",
+          "target": "Slack",
+          "description": "Targeted spear-phishing of a Security Engineer via Slack to harvest Okta session cookies."
+        },
+        {
+          "step": 2,
+          "tactic": "execution",
+          "technique": "T1059.001",
+          "target": "Google Workspace",
+          "description": "Accessing the engineer's Google Workspace to search for internal documentation on Splunk configurations."
+        },
+        {
+          "step": 3,
+          "tactic": "persistence",
+          "technique": "T1556",
+          "target": "Okta",
+          "description": "Registering a new MFA device to the compromised Okta account to maintain persistent access."
+        },
+        {
+          "step": 4,
+          "tactic": "lateral_movement",
+          "technique": "T1078.004",
+          "target": "Splunk",
+          "description": "Accessing Splunk to identify and disable security alerts related to unauthorized model access."
+        },
+        {
+          "step": 5,
+          "tactic": "collection",
+          "technique": "T1005",
+          "target": "Azure Cloud",
+          "description": "Accessing production logs to identify vulnerabilities in the model deployment pipeline."
+        },
+        {
+          "step": 6,
+          "tactic": "exfiltration",
+          "technique": "T1041",
+          "target": "ExternalC2",
+          "description": "Exfiltrating security configuration data to mask future malicious activities."
+        }
+      ],
+      "expected_outcome": "Complete compromise of the security monitoring stack, allowing for undetected long-term exfiltration of sensitive research data."
+    }
+  ],
+  "uncertainty_axes": {
+    "axis1": {
+      "name": "Security Maturity & Visibility",
+      "low": "Fragmented security controls following leadership turnover",
+      "high": "Unified, automated security posture across cloud and AI layers"
+    },
+    "axis2": {
+      "name": "Threat Actor Sophistication",
+      "low": "Opportunistic cyber-criminal groups",
+      "high": "State-sponsored APTs targeting strategic IP"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "scenario_0",
+      "title": "The Silent IP Drain",
+      "probability": 0.45,
+      "severity": "critical",
+      "summary": "Leveraging the recent leadership transition and the complexity of the new OpenAI Foundation/Group PBC structure, an APT actor infiltrates the CI/CD pipeline. By compromising Azure infrastructure via a spear-phished engineer, they establish long-term persistence in the model training environment. The exfiltration of model weights occurs slowly over months, masked by the high volume of traffic generated by the new Amazon partnership and Department of War data processing.",
+      "affected_teams": [
+        "Infrastructure Engineering",
+        "Security Operations",
+        "Legal/Compliance"
+      ],
+      "attack_path_id": "path_0",
+      "quadrant": "high_sophistication_low_visibility",
+      "evidence": [
+        "Recent leadership change (CISO transition) creates potential gaps in security oversight.",
+        "Strategic partnership with Department of War increases the value of model weights to state-sponsored actors.",
+        "Complexity of the new corporate structure (Foundation vs. PBC) may create blind spots in asset ownership and monitoring."
+      ]
+    },
+    {
+      "id": "scenario_1",
+      "title": "Agent-Driven Data Leakage",
+      "probability": 0.35,
+      "severity": "high",
+      "summary": "Following the rapid release of new ChatGPT math/science features and the Codex Security preview, an attacker uses prompt injection to turn an AI agent into a data-exfiltration tool. The agent bypasses internal API filters to query user metadata from PostgreSQL, leveraging the platform's own service accounts. This scenario exploits the high-velocity deployment cycle of recent product launches to bypass traditional security validation.",
+      "affected_teams": [
+        "AI Safety",
+        "Product Engineering",
+        "Data Privacy"
+      ],
+      "attack_path_id": "path_1",
+      "quadrant": "low_sophistication_low_visibility",
+      "evidence": [
+        "High frequency of recent product launches (March 2026) suggests a fast-paced development cycle that may outpace security testing.",
+        "Historical precedent of third-party breaches (Mixpanel) indicates a vulnerability to supply-chain and platform-level data exposure.",
+        "Increased surface area from new feature releases provides more vectors for prompt injection."
+      ]
+    },
+    {
+      "id": "scenario_2",
+      "title": "Security Stack Neutralization",
+      "probability": 0.2,
+      "severity": "catastrophic",
+      "summary": "An attacker targets the security team directly via Slack, gaining administrative access to the Okta and Splunk environments. By disabling alerts and modifying logging configurations, the adversary creates a 'dark zone' within the network. This allows them to conduct reconnaissance on the model deployment pipeline without triggering any alarms, effectively blinding the SOC during the critical period of a major product rollout.",
+      "affected_teams": [
+        "SOC",
+        "Identity and Access Management",
+        "Executive Leadership"
+      ],
+      "attack_path_id": "path_2",
+      "quadrant": "high_sophistication_high_visibility",
+      "evidence": [
+        "The recent departure of the CISO and subsequent leadership changes create a window of instability in security team processes.",
+        "The reliance on centralized logging (Splunk) makes it a high-value target for sophisticated actors looking to maintain long-term persistence.",
+        "The high-profile nature of recent partnerships makes the security team a primary target for social engineering."
+      ]
+    }
+  ]
+}

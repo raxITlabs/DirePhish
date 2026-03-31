@@ -13,7 +13,7 @@ export default function ResearchForm() {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [context, setContext] = useState("");
-  const [testMode, setTestMode] = useState(false);
+  const [mode, setMode] = useState<"test" | "quick" | "standard" | "deep">("test");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +30,7 @@ export default function ResearchForm() {
         body: JSON.stringify({
           companyUrl: url.trim(),
           userContext: context.trim() || undefined,
-          mode: testMode ? "test" : "standard",
+          mode,
         }),
       });
       const json = await res.json();
@@ -45,7 +45,7 @@ export default function ResearchForm() {
       setLoading(false);
       return;
     }
-  }, [url, context, testMode, router]);
+  }, [url, context, mode, router]);
 
   return (
     <Card>
@@ -77,23 +77,37 @@ export default function ResearchForm() {
           />
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={testMode}
-            onClick={() => setTestMode(!testMode)}
-            disabled={loading}
-            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${testMode ? "bg-tuscan-sun-500" : "bg-pitch-black-200"}`}
-          >
-            <span className={`pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform ${testMode ? "translate-x-4" : "translate-x-0"}`} />
-          </button>
-          <Label className="text-sm cursor-pointer" onClick={() => !loading && setTestMode(!testMode)}>
-            Test Mode
-            <span className="text-muted-foreground ml-1.5 font-normal">
-              (1 scenario, 3 MC iterations, 1 fork)
-            </span>
-          </Label>
+        <div className="space-y-2">
+          <Label>Simulation Depth</Label>
+          <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-0.5 w-fit">
+            {([
+              { key: "test", label: "Test", sub: "~15 min" },
+              { key: "quick", label: "Quick", sub: "~25 min" },
+              { key: "standard", label: "Standard", sub: "~45 min" },
+              { key: "deep", label: "Deep", sub: "~90 min" },
+            ] as const).map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setMode(m.key)}
+                disabled={loading}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all disabled:cursor-not-allowed disabled:opacity-50 flex flex-col items-center leading-tight ${
+                  mode === m.key
+                    ? "bg-card text-foreground shadow-sm font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span>{m.label}</span>
+                <span className="text-[9px] opacity-60">{m.sub}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs font-mono text-muted-foreground">
+            {mode === "test" && "3 stress test variations, 1 scenario, 1 what-if branch."}
+            {mode === "quick" && "10 variations, 1 scenario, 2 what-if branches. Good for demos."}
+            {mode === "standard" && "50 variations, 2 scenarios, 3 what-if branches. Client-ready."}
+            {mode === "deep" && "100 variations, 3 scenarios, 3 what-if branches. Full assessment."}
+          </p>
         </div>
 
         {error && (
@@ -107,7 +121,7 @@ export default function ResearchForm() {
           disabled={!url.trim() || loading}
           className="w-full"
         >
-          {loading ? "Starting Pipeline..." : testMode ? "Start Test Run" : "Start Pipeline"}
+          {loading ? "Starting Pipeline..." : "Start Pipeline"}
         </Button>
       </CardContent>
     </Card>

@@ -185,6 +185,60 @@ export async function getReportDownloadUrl(reportId: string): Promise<string> {
   return `${base}/api/report/${reportId}/download`;
 }
 
+// --- Attack-path playbook types ---
+
+export interface EvidenceChipData {
+  label: string;
+  type: "success" | "warning" | "danger" | "info";
+  is_inferred: boolean;
+}
+
+export interface ResponseAction {
+  title: string;
+  description: string;
+  commands: string[];
+  priority: "critical" | "high" | "medium";
+  owner: string;
+  sla: string;
+  evidence_chips: EvidenceChipData[];
+  regulatory_refs: string[];
+}
+
+export interface WhatIfScenario {
+  scenario: string;
+  containment_delta: string;
+  rounds_delta: number;
+  exposure_delta: string;
+  direction: "positive" | "negative";
+  source: "counterfactual" | "estimated";
+}
+
+export interface AttackPathStep {
+  attack_path_index: number;
+  step_index: number;
+  tactic: string;
+  technique_id: string;
+  description: string;
+  error?: string;
+  evidence: {
+    containment_rate: string;
+    avg_detection_round: number;
+    systems_affected: number;
+    divergence_pct: number;
+    is_inferred: boolean;
+  };
+  response_actions: ResponseAction[];
+  team_performance: Record<string, number>;
+  what_if: WhatIfScenario[];
+  regulatory_timeline: Array<{ time: string; action: string }>;
+  risk_at_step: {
+    score: number;
+    description: string;
+    fair_increment: string;
+    is_inferred: boolean;
+  };
+}
+
 // --- Exercise report (unified) ---
 
 export interface ExerciseReport {
@@ -314,6 +368,130 @@ export interface ExerciseReport {
     model?: string;
   };
 
+  // Monte Carlo aggregation stats
+  monteCarloStats?: {
+    iteration_count: number;
+    outcome_distribution: {
+      contained_early: number;
+      contained_late: number;
+      not_contained: number;
+      escalated: number;
+    };
+    containment_round_stats?: {
+      mean: number;
+      median: number;
+      std: number;
+      min: number;
+      max: number;
+      histogram: Record<string, number>;
+    };
+    decision_divergence_points: Array<{
+      round: number;
+      agent: string;
+      divergence_score: number;
+      action_distribution: Record<string, number>;
+    }>;
+    agent_consistency: Record<string, number>;
+  };
+
+  // Resilience scoring
+  resilience?: {
+    overall: number;
+    dimensions: {
+      detection_speed: number;
+      containment_speed: number;
+      communication_quality: number;
+      compliance_adherence: number;
+    };
+    robustness_index: number;
+    weakest_link: string;
+    failure_modes: string[];
+  };
+
+  // Stress test results
+  stressTestResults?: Array<{
+    label: string;
+    containment_round: number | null;
+    detection_round: number | null;
+    total_rounds: number;
+    compliance_score: number;
+    communication_score: number;
+  }>;
+
+  // Risk score (computed independently via POST /risk-score/compute)
+  riskScore?: {
+    score_id: string;
+    composite_score: number;
+    confidence_interval: { lower: number; upper: number };
+    confidence_flag: "high" | "low";
+    interpretation: { tier: string; label: string; description: string };
+    dimensions: {
+      detection_speed: number;
+      containment_effectiveness: number;
+      communication_quality: number;
+      decision_consistency: number;
+      compliance_adherence: number;
+      escalation_resistance: number;
+    };
+    fair_estimates: {
+      ale: number;
+      p10_loss: number;
+      p90_loss: number;
+      calibration_inputs: Record<string, number>;
+    };
+    drivers: Array<{
+      description: string;
+      evidence: string;
+      impact: number;
+      correlation: string;
+    }>;
+  };
+
+  // Counterfactual comparison
+  counterfactualComparison?: {
+    original: { sim_id: string; containment_round: number | null; total_actions: number };
+    branches: Array<{ sim_id: string; containment_round: number | null; total_actions: number }>;
+    divergence_summary: string;
+  };
+
+  // NIST SP 800-61r2 playbook
+  playbook?: {
+    overview: { incidentType: string; scope: string; regulatoryContext: string };
+    evidenceAcquisition: {
+      logSources: string[];
+      awsSpecific: string[];
+      chainOfCustody: string[];
+      dataClassification: string;
+    };
+    containment: {
+      immediateActions: string[];
+      iamRevocation: string[];
+      networkIsolation: string[];
+      serviceSuspension: string[];
+    };
+    eradication: {
+      rootCauseRemoval: string[];
+      credentialRotation: string[];
+      patchRequirements: string[];
+      configRemediation: string[];
+    };
+    recovery: {
+      restorationSequence: string[];
+      verificationSteps: string[];
+      communicationPlan: string[];
+      regulatoryTimeline: string[];
+    };
+    postIncident: {
+      lessonsLearned: string[];
+      policyUpdates: string[];
+      trainingRecommendations: string[];
+      nextExerciseSchedule: string;
+    };
+  };
+
+  // Attack-path playbook (per-step with MC evidence)
+  attackPathPlaybook?: AttackPathStep[];
+
   appendix?: {
     scenarioDetails: Array<{
       scenarioId: string;
@@ -343,11 +521,19 @@ export interface ExerciseReport {
 }
 
 export async function generateExerciseReport(
-  projectId: string
+  projectId: string,
+  batchId?: string,
+  branchIds?: string[],
 ): Promise<{ data: { status: string } } | { error: string }> {
   return fetchApi<{ status: string }>(
     `/api/crucible/projects/${projectId}/exercise-report`,
-    { method: "POST" }
+    {
+      method: "POST",
+      body: JSON.stringify({
+        batch_id: batchId,
+        branch_ids: branchIds || [],
+      }),
+    },
   );
 }
 
@@ -437,4 +623,27 @@ export async function getComparativeReport(
       error: d.error as string | undefined,
     },
   };
+}
+
+// --- Risk Score ---
+
+export async function computeRiskScore(
+  projectId: string,
+  calibration?: Record<string, number>,
+): Promise<{ data: ExerciseReport["riskScore"] } | { error: string }> {
+  return fetchApi<NonNullable<ExerciseReport["riskScore"]>>(
+    `/api/crucible/projects/${projectId}/risk-score/compute`,
+    {
+      method: "POST",
+      body: JSON.stringify({ calibration }),
+    },
+  );
+}
+
+export async function getRiskScore(
+  projectId: string,
+): Promise<{ data: ExerciseReport["riskScore"] } | { error: string }> {
+  return fetchApi<NonNullable<ExerciseReport["riskScore"]>>(
+    `/api/crucible/projects/${projectId}/risk-score`,
+  );
 }

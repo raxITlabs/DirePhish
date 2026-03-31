@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { SimulationStatus, ThreatAnalysisResponse } from "@/app/types";
 import { formatDuration } from "@/app/lib/utils";
 
@@ -100,6 +101,30 @@ export default function PipelineStagesPanel({
   const totalSteps = stepOrder.length;
   const progress = totalSteps > 0 ? (completedCount / totalSteps) * 100 : 0;
 
+  // Live elapsed timer — ticks every second while pipeline is running
+  const completedDurationMs = stepOrder.reduce((sum, s) => sum + (steps[s.id]?.durationMs || 0), 0);
+  const isRunning = stepOrder.some((s) => steps[s.id]?.status === "running");
+  const startTimeRef = useRef<number | null>(null);
+  const [liveTick, setLiveTick] = useState(0);
+
+  useEffect(() => {
+    if (isRunning && !startTimeRef.current) {
+      startTimeRef.current = Date.now();
+    }
+    if (!isRunning && pipelineComplete) {
+      startTimeRef.current = null;
+    }
+  }, [isRunning, pipelineComplete]);
+
+  useEffect(() => {
+    if (!isRunning) return;
+    const interval = setInterval(() => setLiveTick((t) => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  const runningElapsed = isRunning && startTimeRef.current ? Date.now() - startTimeRef.current : 0;
+  const totalDurationMs = completedDurationMs + runningElapsed;
+
   // Determine overall status label
   const runningStep = stepOrder.find((s) => steps[s.id]?.status === "running");
   let statusLabel = "Waiting to start...";
@@ -145,9 +170,16 @@ export default function PipelineStagesPanel({
             style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="text-[10px] font-mono text-muted-foreground/40 mt-1">
-          {Math.round(progress)}% complete
-        </p>
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-[10px] font-mono text-muted-foreground/40">
+            {Math.round(progress)}% complete
+          </span>
+          {totalDurationMs > 0 && (
+            <span className="text-[10px] font-mono text-muted-foreground/40 tabular-nums">
+              {formatDuration(totalDurationMs)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Stage list */}

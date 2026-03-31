@@ -147,5 +147,55 @@ class LLMClient:
         try:
             return json.loads(cleaned_response)
         except json.JSONDecodeError:
+            # Recovery: LLM sometimes appends trailing garbage after valid JSON
+            # (common when json_object mode conflicts with array-returning prompts).
+            # Try to extract the outermost balanced JSON structure.
+            extracted = self._extract_json(cleaned_response)
+            if extracted is not None:
+                return extracted
             raise ValueError(f"Invalid JSON format returned by LLM: {cleaned_response}")
+
+    @staticmethod
+    def _extract_json(text: str):
+        """Extract the first balanced JSON object or array from *text*.
+
+        Handles trailing tokens the LLM appends after the valid JSON body.
+        Returns the parsed value or ``None`` if nothing could be recovered.
+        """
+        # Try whichever bracket appears first in the text so we don't
+        # accidentally match a later `{` when the real payload starts with `[`.
+        pairs = [("{", "}"), ("[", "]")]
+        positions = [(text.find(s), s, e) for s, e in pairs]
+        positions = [(p, s, e) for p, s, e in positions if p != -1]
+        positions.sort(key=lambda x: x[0])
+        for _, start_char, end_char in positions:
+            start = text.find(start_char)
+            if start == -1:
+                continue
+            depth = 0
+            in_string = False
+            escape = False
+            for i in range(start, len(text)):
+                ch = text[i]
+                if escape:
+                    escape = False
+                    continue
+                if ch == "\\":
+                    escape = True
+                    continue
+                if ch == '"':
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if ch == start_char:
+                    depth += 1
+                elif ch == end_char:
+                    depth -= 1
+                    if depth == 0:
+                        try:
+                            return json.loads(text[start:i + 1])
+                        except json.JSONDecodeError:
+                            break
+        return None
 

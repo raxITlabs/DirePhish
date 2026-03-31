@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const run = await start(cruciblePipeline, [{
     companyUrl,
     userContext: userContext || "",
-    mode: mode === "test" ? "test" : "standard",
+    mode: ["test", "quick", "standard", "deep"].includes(mode) ? mode : "test",
   }]);
 
   return Response.json({ data: { runId: (run as { id?: string; runId?: string }).id || (run as { id?: string; runId?: string }).runId || String(run) } }, { status: 201 });

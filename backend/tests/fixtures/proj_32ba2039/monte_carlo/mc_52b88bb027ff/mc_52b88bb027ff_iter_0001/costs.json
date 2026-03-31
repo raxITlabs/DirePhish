@@ -1,0 +1,5703 @@
+{
+  "sim_id": "mc_52b88bb027ff",
+  "total_cost_usd": 0.458229,
+  "created_at": "2026-03-30T22:19:54.325225+00:00",
+  "phases": {
+    "memory": {
+      "llm_input_tokens": 0,
+      "llm_output_tokens": 0,
+      "llm_cached_tokens": 0,
+      "llm_cost_usd": 0.0,
+      "search_queries": 0,
+      "search_cost_usd": 0.0,
+      "embedding_tokens": 50425,
+      "embedding_cost_usd": 0.007558,
+      "firestore_reads": 0,
+      "firestore_writes": 0,
+      "firestore_cost_usd": 0.0,
+      "cost_usd": 0.007558
+    },
+    "simulation": {
+      "llm_input_tokens": 1224089,
+      "llm_output_tokens": 76072,
+      "llm_cached_tokens": 0,
+      "llm_cost_usd": 0.420135,
+      "search_queries": 0,
+      "search_cost_usd": 0.0,
+      "embedding_tokens": 0,
+      "embedding_cost_usd": 0.0,
+      "firestore_reads": 0,
+      "firestore_writes": 0,
+      "firestore_cost_usd": 0.0,
+      "cost_usd": 0.420135
+    },
+    "graph_extraction": {
+      "llm_input_tokens": 19140,
+      "llm_output_tokens": 11852,
+      "llm_cached_tokens": 0,
+      "llm_cost_usd": 0.022561,
+      "search_queries": 0,
+      "search_cost_usd": 0.0,
+      "embedding_tokens": 0,
+      "embedding_cost_usd": 0.0,
+      "firestore_reads": 0,
+      "firestore_writes": 0,
+      "firestore_cost_usd": 0.0,
+      "cost_usd": 0.022561
+    },
+    "arbiter": {
+      "llm_input_tokens": 14500,
+      "llm_output_tokens": 2900,
+      "llm_cached_tokens": 0,
+      "llm_cost_usd": 0.007975,
+      "search_queries": 0,
+      "search_cost_usd": 0.0,
+      "embedding_tokens": 0,
+      "embedding_cost_usd": 0.0,
+      "firestore_reads": 0,
+      "firestore_writes": 0,
+      "firestore_cost_usd": 0.0,
+      "cost_usd": 0.007975
+    }
+  },
+  "entries": [
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2043,
+      "output_tokens": 171,
+      "cached_tokens": 0,
+      "cost_usd": 0.000767,
+      "description": "round_1_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1380,
+      "output_tokens": 106,
+      "cached_tokens": 0,
+      "cost_usd": 0.000504,
+      "description": "round_1_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1381,
+      "output_tokens": 145,
+      "cached_tokens": 0,
+      "cost_usd": 0.000563,
+      "description": "round_1_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1339,
+      "output_tokens": 195,
+      "cached_tokens": 0,
+      "cost_usd": 0.000627,
+      "description": "round_1_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2038,
+      "output_tokens": 193,
+      "cached_tokens": 0,
+      "cost_usd": 0.000799,
+      "description": "round_1_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1450,
+      "output_tokens": 170,
+      "cached_tokens": 0,
+      "cost_usd": 0.000617,
+      "description": "round_1_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1446,
+      "output_tokens": 144,
+      "cached_tokens": 0,
+      "cost_usd": 0.000577,
+      "description": "round_1_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1363,
+      "output_tokens": 207,
+      "cached_tokens": 0,
+      "cost_usd": 0.000651,
+      "description": "round_1_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1393,
+      "output_tokens": 202,
+      "cached_tokens": 0,
+      "cost_usd": 0.000651,
+      "description": "round_1_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1479,
+      "output_tokens": 115,
+      "cached_tokens": 0,
+      "cost_usd": 0.000542,
+      "description": "round_1_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1344,
+      "output_tokens": 154,
+      "cached_tokens": 0,
+      "cost_usd": 0.000567,
+      "description": "round_1_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1344,
+      "output_tokens": 174,
+      "cached_tokens": 0,
+      "cost_usd": 0.000597,
+      "description": "round_1_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1483,
+      "output_tokens": 183,
+      "cached_tokens": 0,
+      "cost_usd": 0.000645,
+      "description": "round_1_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1444,
+      "output_tokens": 196,
+      "cached_tokens": 0,
+      "cost_usd": 0.000655,
+      "description": "round_1_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1444,
+      "output_tokens": 177,
+      "cached_tokens": 0,
+      "cost_usd": 0.000626,
+      "description": "round_1_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1510,
+      "output_tokens": 157,
+      "cached_tokens": 0,
+      "cost_usd": 0.000613,
+      "description": "round_1_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1428,
+      "output_tokens": 148,
+      "cached_tokens": 0,
+      "cost_usd": 0.000579,
+      "description": "round_1_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1487,
+      "output_tokens": 151,
+      "cached_tokens": 0,
+      "cost_usd": 0.000598,
+      "description": "round_1_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1388,
+      "output_tokens": 153,
+      "cached_tokens": 0,
+      "cost_usd": 0.000576,
+      "description": "round_1_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1498,
+      "output_tokens": 164,
+      "cached_tokens": 0,
+      "cost_usd": 0.00062,
+      "description": "round_1_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1507,
+      "output_tokens": 158,
+      "cached_tokens": 0,
+      "cost_usd": 0.000614,
+      "description": "round_1_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1572,
+      "output_tokens": 196,
+      "cached_tokens": 0,
+      "cost_usd": 0.000687,
+      "description": "round_1_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1481,
+      "output_tokens": 198,
+      "cached_tokens": 0,
+      "cost_usd": 0.000667,
+      "description": "round_1_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1398,
+      "cost_usd": 0.00021,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1562,
+      "output_tokens": 122,
+      "cached_tokens": 0,
+      "cost_usd": 0.000574,
+      "description": "round_1_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1476,
+      "output_tokens": 129,
+      "cached_tokens": 0,
+      "cost_usd": 0.000562,
+      "description": "round_1_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3209,
+      "output_tokens": 173,
+      "cached_tokens": 0,
+      "cost_usd": 0.001062,
+      "description": "round_2_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1552,
+      "output_tokens": 164,
+      "cached_tokens": 0,
+      "cost_usd": 0.000634,
+      "description": "round_1_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1428,
+      "cost_usd": 0.000214,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1680,
+      "output_tokens": 158,
+      "cached_tokens": 0,
+      "cost_usd": 0.000657,
+      "description": "round_2_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1621,
+      "output_tokens": 135,
+      "cached_tokens": 0,
+      "cost_usd": 0.000608,
+      "description": "round_2_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1674,
+      "output_tokens": 195,
+      "cached_tokens": 0,
+      "cost_usd": 0.000711,
+      "description": "round_2_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1747,
+      "output_tokens": 184,
+      "cached_tokens": 0,
+      "cost_usd": 0.000713,
+      "description": "round_2_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1693,
+      "output_tokens": 155,
+      "cached_tokens": 0,
+      "cost_usd": 0.000656,
+      "description": "round_2_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1689,
+      "output_tokens": 200,
+      "cached_tokens": 0,
+      "cost_usd": 0.000722,
+      "description": "round_2_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3281,
+      "output_tokens": 187,
+      "cached_tokens": 0,
+      "cost_usd": 0.001101,
+      "description": "round_2_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1771,
+      "output_tokens": 133,
+      "cached_tokens": 0,
+      "cost_usd": 0.000642,
+      "description": "round_2_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1661,
+      "output_tokens": 178,
+      "cached_tokens": 0,
+      "cost_usd": 0.000682,
+      "description": "round_2_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1730,
+      "output_tokens": 241,
+      "cached_tokens": 0,
+      "cost_usd": 0.000794,
+      "description": "round_2_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1659,
+      "output_tokens": 169,
+      "cached_tokens": 0,
+      "cost_usd": 0.000668,
+      "description": "round_2_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1685,
+      "output_tokens": 240,
+      "cached_tokens": 0,
+      "cost_usd": 0.000781,
+      "description": "round_2_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1802,
+      "output_tokens": 160,
+      "cached_tokens": 0,
+      "cost_usd": 0.000691,
+      "description": "round_2_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1733,
+      "output_tokens": 125,
+      "cached_tokens": 0,
+      "cost_usd": 0.000621,
+      "description": "round_2_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1746,
+      "output_tokens": 135,
+      "cached_tokens": 0,
+      "cost_usd": 0.000639,
+      "description": "round_2_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1708,
+      "output_tokens": 194,
+      "cached_tokens": 0,
+      "cost_usd": 0.000718,
+      "description": "round_2_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1769,
+      "output_tokens": 157,
+      "cached_tokens": 0,
+      "cost_usd": 0.000678,
+      "description": "round_2_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1829,
+      "output_tokens": 195,
+      "cached_tokens": 0,
+      "cost_usd": 0.00075,
+      "description": "round_2_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1834,
+      "output_tokens": 225,
+      "cached_tokens": 0,
+      "cost_usd": 0.000796,
+      "description": "round_2_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1817,
+      "output_tokens": 136,
+      "cached_tokens": 0,
+      "cost_usd": 0.000658,
+      "description": "round_2_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1747,
+      "output_tokens": 163,
+      "cached_tokens": 0,
+      "cost_usd": 0.000681,
+      "description": "round_2_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1826,
+      "output_tokens": 125,
+      "cached_tokens": 0,
+      "cost_usd": 0.000644,
+      "description": "round_2_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1903,
+      "output_tokens": 158,
+      "cached_tokens": 0,
+      "cost_usd": 0.000713,
+      "description": "round_2_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1873,
+      "output_tokens": 122,
+      "cached_tokens": 0,
+      "cost_usd": 0.000651,
+      "description": "round_2_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1419,
+      "cost_usd": 0.000213,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1901,
+      "output_tokens": 128,
+      "cached_tokens": 0,
+      "cost_usd": 0.000667,
+      "description": "round_2_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1410,
+      "cost_usd": 0.000211,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 4112,
+      "output_tokens": 196,
+      "cached_tokens": 0,
+      "cost_usd": 0.001322,
+      "description": "round_3_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2002,
+      "output_tokens": 144,
+      "cached_tokens": 0,
+      "cost_usd": 0.000717,
+      "description": "round_3_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1891,
+      "output_tokens": 172,
+      "cached_tokens": 0,
+      "cost_usd": 0.000731,
+      "description": "round_3_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 4173,
+      "output_tokens": 160,
+      "cached_tokens": 0,
+      "cost_usd": 0.001283,
+      "description": "round_3_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2025,
+      "output_tokens": 215,
+      "cached_tokens": 0,
+      "cost_usd": 0.000829,
+      "description": "round_3_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2072,
+      "output_tokens": 141,
+      "cached_tokens": 0,
+      "cost_usd": 0.00073,
+      "description": "round_3_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1965,
+      "output_tokens": 150,
+      "cached_tokens": 0,
+      "cost_usd": 0.000716,
+      "description": "round_3_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1978,
+      "output_tokens": 137,
+      "cached_tokens": 0,
+      "cost_usd": 0.0007,
+      "description": "round_3_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1930,
+      "output_tokens": 164,
+      "cached_tokens": 0,
+      "cost_usd": 0.000728,
+      "description": "round_3_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2063,
+      "output_tokens": 210,
+      "cached_tokens": 0,
+      "cost_usd": 0.000831,
+      "description": "round_3_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2053,
+      "output_tokens": 112,
+      "cached_tokens": 0,
+      "cost_usd": 0.000681,
+      "description": "round_3_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2070,
+      "output_tokens": 147,
+      "cached_tokens": 0,
+      "cost_usd": 0.000738,
+      "description": "round_3_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2010,
+      "output_tokens": 156,
+      "cached_tokens": 0,
+      "cost_usd": 0.000736,
+      "description": "round_3_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2099,
+      "output_tokens": 148,
+      "cached_tokens": 0,
+      "cost_usd": 0.000747,
+      "description": "round_3_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1982,
+      "output_tokens": 187,
+      "cached_tokens": 0,
+      "cost_usd": 0.000776,
+      "description": "round_3_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2112,
+      "output_tokens": 145,
+      "cached_tokens": 0,
+      "cost_usd": 0.000745,
+      "description": "round_3_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2134,
+      "output_tokens": 203,
+      "cached_tokens": 0,
+      "cost_usd": 0.000838,
+      "description": "round_3_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2163,
+      "output_tokens": 151,
+      "cached_tokens": 0,
+      "cost_usd": 0.000767,
+      "description": "round_3_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2124,
+      "output_tokens": 151,
+      "cached_tokens": 0,
+      "cost_usd": 0.000758,
+      "description": "round_3_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2022,
+      "output_tokens": 141,
+      "cached_tokens": 0,
+      "cost_usd": 0.000717,
+      "description": "round_3_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2204,
+      "output_tokens": 149,
+      "cached_tokens": 0,
+      "cost_usd": 0.000775,
+      "description": "round_3_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2210,
+      "output_tokens": 177,
+      "cached_tokens": 0,
+      "cost_usd": 0.000818,
+      "description": "round_3_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2176,
+      "output_tokens": 186,
+      "cached_tokens": 0,
+      "cost_usd": 0.000823,
+      "description": "round_3_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2212,
+      "output_tokens": 201,
+      "cached_tokens": 0,
+      "cost_usd": 0.000855,
+      "description": "round_3_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2267,
+      "output_tokens": 179,
+      "cached_tokens": 0,
+      "cost_usd": 0.000835,
+      "description": "round_3_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1407,
+      "cost_usd": 0.000211,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "graph_extraction",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1803,
+      "output_tokens": 1023,
+      "cached_tokens": 0,
+      "cost_usd": 0.001985,
+      "description": "extract_graph_proj_32ba2039"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2282,
+      "output_tokens": 141,
+      "cached_tokens": 0,
+      "cost_usd": 0.000782,
+      "description": "round_3_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1485,
+      "cost_usd": 0.000223,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "graph_extraction",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1813,
+      "output_tokens": 1083,
+      "cached_tokens": 0,
+      "cost_usd": 0.002078,
+      "description": "extract_graph_proj_32ba2039"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_3"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_3"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 4405,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.001251,
+      "description": "round_4_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 4491,
+      "output_tokens": 162,
+      "cached_tokens": 0,
+      "cost_usd": 0.001366,
+      "description": "round_4_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2248,
+      "output_tokens": 230,
+      "cached_tokens": 0,
+      "cost_usd": 0.000907,
+      "description": "round_4_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2135,
+      "output_tokens": 111,
+      "cached_tokens": 0,
+      "cost_usd": 0.0007,
+      "description": "round_4_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2298,
+      "output_tokens": 154,
+      "cached_tokens": 0,
+      "cost_usd": 0.000806,
+      "description": "round_4_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2178,
+      "output_tokens": 101,
+      "cached_tokens": 0,
+      "cost_usd": 0.000696,
+      "description": "round_4_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2300,
+      "output_tokens": 107,
+      "cached_tokens": 0,
+      "cost_usd": 0.000736,
+      "description": "round_4_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2306,
+      "output_tokens": 209,
+      "cached_tokens": 0,
+      "cost_usd": 0.00089,
+      "description": "round_4_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2248,
+      "output_tokens": 153,
+      "cached_tokens": 0,
+      "cost_usd": 0.000791,
+      "description": "round_4_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2203,
+      "output_tokens": 192,
+      "cached_tokens": 0,
+      "cost_usd": 0.000839,
+      "description": "round_4_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2310,
+      "output_tokens": 123,
+      "cached_tokens": 0,
+      "cost_usd": 0.000762,
+      "description": "round_4_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2376,
+      "output_tokens": 170,
+      "cached_tokens": 0,
+      "cost_usd": 0.000849,
+      "description": "round_4_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2390,
+      "output_tokens": 99,
+      "cached_tokens": 0,
+      "cost_usd": 0.000746,
+      "description": "round_4_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2227,
+      "output_tokens": 192,
+      "cached_tokens": 0,
+      "cost_usd": 0.000845,
+      "description": "round_4_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2276,
+      "output_tokens": 162,
+      "cached_tokens": 0,
+      "cost_usd": 0.000812,
+      "description": "round_4_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2351,
+      "output_tokens": 174,
+      "cached_tokens": 0,
+      "cost_usd": 0.000849,
+      "description": "round_4_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2271,
+      "output_tokens": 149,
+      "cached_tokens": 0,
+      "cost_usd": 0.000791,
+      "description": "round_4_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2428,
+      "output_tokens": 140,
+      "cached_tokens": 0,
+      "cost_usd": 0.000817,
+      "description": "round_4_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2250,
+      "output_tokens": 203,
+      "cached_tokens": 0,
+      "cost_usd": 0.000867,
+      "description": "round_4_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2354,
+      "output_tokens": 160,
+      "cached_tokens": 0,
+      "cost_usd": 0.000829,
+      "description": "round_4_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2304,
+      "output_tokens": 131,
+      "cached_tokens": 0,
+      "cost_usd": 0.000772,
+      "description": "round_4_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2272,
+      "output_tokens": 150,
+      "cached_tokens": 0,
+      "cost_usd": 0.000793,
+      "description": "round_4_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2330,
+      "output_tokens": 112,
+      "cached_tokens": 0,
+      "cost_usd": 0.00075,
+      "description": "round_4_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2414,
+      "output_tokens": 178,
+      "cached_tokens": 0,
+      "cost_usd": 0.00087,
+      "description": "round_4_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2319,
+      "output_tokens": 143,
+      "cached_tokens": 0,
+      "cost_usd": 0.000794,
+      "description": "round_4_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1328,
+      "cost_usd": 0.000199,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2320,
+      "output_tokens": 214,
+      "cached_tokens": 0,
+      "cost_usd": 0.000901,
+      "description": "round_4_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1376,
+      "cost_usd": 0.000206,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_4"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_4"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 4598,
+      "output_tokens": 159,
+      "cached_tokens": 0,
+      "cost_usd": 0.001388,
+      "description": "round_5_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 4636,
+      "output_tokens": 74,
+      "cached_tokens": 0,
+      "cost_usd": 0.00127,
+      "description": "round_5_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2362,
+      "output_tokens": 241,
+      "cached_tokens": 0,
+      "cost_usd": 0.000952,
+      "description": "round_5_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2413,
+      "output_tokens": 111,
+      "cached_tokens": 0,
+      "cost_usd": 0.00077,
+      "description": "round_5_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2443,
+      "output_tokens": 145,
+      "cached_tokens": 0,
+      "cost_usd": 0.000828,
+      "description": "round_5_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2440,
+      "output_tokens": 129,
+      "cached_tokens": 0,
+      "cost_usd": 0.000803,
+      "description": "round_5_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2402,
+      "output_tokens": 159,
+      "cached_tokens": 0,
+      "cost_usd": 0.000839,
+      "description": "round_5_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2340,
+      "output_tokens": 225,
+      "cached_tokens": 0,
+      "cost_usd": 0.000923,
+      "description": "round_5_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2339,
+      "output_tokens": 152,
+      "cached_tokens": 0,
+      "cost_usd": 0.000813,
+      "description": "round_5_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2364,
+      "output_tokens": 161,
+      "cached_tokens": 0,
+      "cost_usd": 0.000833,
+      "description": "round_5_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2438,
+      "output_tokens": 176,
+      "cached_tokens": 0,
+      "cost_usd": 0.000874,
+      "description": "round_5_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2459,
+      "output_tokens": 162,
+      "cached_tokens": 0,
+      "cost_usd": 0.000858,
+      "description": "round_5_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2425,
+      "output_tokens": 170,
+      "cached_tokens": 0,
+      "cost_usd": 0.000861,
+      "description": "round_5_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2439,
+      "output_tokens": 101,
+      "cached_tokens": 0,
+      "cost_usd": 0.000761,
+      "description": "round_5_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2451,
+      "output_tokens": 168,
+      "cached_tokens": 0,
+      "cost_usd": 0.000865,
+      "description": "round_5_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2409,
+      "output_tokens": 154,
+      "cached_tokens": 0,
+      "cost_usd": 0.000833,
+      "description": "round_5_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2390,
+      "output_tokens": 154,
+      "cached_tokens": 0,
+      "cost_usd": 0.000829,
+      "description": "round_5_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2441,
+      "output_tokens": 133,
+      "cached_tokens": 0,
+      "cost_usd": 0.00081,
+      "description": "round_5_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2431,
+      "output_tokens": 147,
+      "cached_tokens": 0,
+      "cost_usd": 0.000828,
+      "description": "round_5_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2354,
+      "output_tokens": 137,
+      "cached_tokens": 0,
+      "cost_usd": 0.000794,
+      "description": "round_5_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2450,
+      "output_tokens": 134,
+      "cached_tokens": 0,
+      "cost_usd": 0.000813,
+      "description": "round_5_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2374,
+      "output_tokens": 163,
+      "cached_tokens": 0,
+      "cost_usd": 0.000838,
+      "description": "round_5_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2416,
+      "output_tokens": 121,
+      "cached_tokens": 0,
+      "cost_usd": 0.000785,
+      "description": "round_5_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2415,
+      "output_tokens": 207,
+      "cached_tokens": 0,
+      "cost_usd": 0.000914,
+      "description": "round_5_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2411,
+      "output_tokens": 228,
+      "cached_tokens": 0,
+      "cost_usd": 0.000945,
+      "description": "round_5_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1341,
+      "cost_usd": 0.000201,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2387,
+      "output_tokens": 219,
+      "cached_tokens": 0,
+      "cost_usd": 0.000925,
+      "description": "round_5_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1371,
+      "cost_usd": 0.000206,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_5"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_5"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 4882,
+      "output_tokens": 98,
+      "cached_tokens": 0,
+      "cost_usd": 0.001368,
+      "description": "round_6_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2460,
+      "output_tokens": 157,
+      "cached_tokens": 0,
+      "cost_usd": 0.000851,
+      "description": "round_6_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2520,
+      "output_tokens": 135,
+      "cached_tokens": 0,
+      "cost_usd": 0.000833,
+      "description": "round_6_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 4853,
+      "output_tokens": 104,
+      "cached_tokens": 0,
+      "cost_usd": 0.001369,
+      "description": "round_6_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2434,
+      "output_tokens": 216,
+      "cached_tokens": 0,
+      "cost_usd": 0.000932,
+      "description": "round_6_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2546,
+      "output_tokens": 167,
+      "cached_tokens": 0,
+      "cost_usd": 0.000887,
+      "description": "round_6_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2486,
+      "output_tokens": 203,
+      "cached_tokens": 0,
+      "cost_usd": 0.000926,
+      "description": "round_6_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2505,
+      "output_tokens": 135,
+      "cached_tokens": 0,
+      "cost_usd": 0.000829,
+      "description": "round_6_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2443,
+      "output_tokens": 182,
+      "cached_tokens": 0,
+      "cost_usd": 0.000884,
+      "description": "round_6_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2423,
+      "output_tokens": 236,
+      "cached_tokens": 0,
+      "cost_usd": 0.00096,
+      "description": "round_6_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2479,
+      "output_tokens": 160,
+      "cached_tokens": 0,
+      "cost_usd": 0.00086,
+      "description": "round_6_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2519,
+      "output_tokens": 109,
+      "cached_tokens": 0,
+      "cost_usd": 0.000793,
+      "description": "round_6_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2480,
+      "output_tokens": 162,
+      "cached_tokens": 0,
+      "cost_usd": 0.000863,
+      "description": "round_6_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2495,
+      "output_tokens": 235,
+      "cached_tokens": 0,
+      "cost_usd": 0.000976,
+      "description": "round_6_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2495,
+      "output_tokens": 195,
+      "cached_tokens": 0,
+      "cost_usd": 0.000916,
+      "description": "round_6_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2519,
+      "output_tokens": 141,
+      "cached_tokens": 0,
+      "cost_usd": 0.000841,
+      "description": "round_6_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2487,
+      "output_tokens": 176,
+      "cached_tokens": 0,
+      "cost_usd": 0.000886,
+      "description": "round_6_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2441,
+      "output_tokens": 186,
+      "cached_tokens": 0,
+      "cost_usd": 0.000889,
+      "description": "round_6_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2493,
+      "output_tokens": 127,
+      "cached_tokens": 0,
+      "cost_usd": 0.000814,
+      "description": "round_6_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2539,
+      "output_tokens": 145,
+      "cached_tokens": 0,
+      "cost_usd": 0.000852,
+      "description": "round_6_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2476,
+      "output_tokens": 210,
+      "cached_tokens": 0,
+      "cost_usd": 0.000934,
+      "description": "round_6_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2501,
+      "output_tokens": 135,
+      "cached_tokens": 0,
+      "cost_usd": 0.000828,
+      "description": "round_6_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2529,
+      "output_tokens": 123,
+      "cached_tokens": 0,
+      "cost_usd": 0.000817,
+      "description": "round_6_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2458,
+      "output_tokens": 127,
+      "cached_tokens": 0,
+      "cost_usd": 0.000805,
+      "description": "round_6_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2527,
+      "output_tokens": 213,
+      "cached_tokens": 0,
+      "cost_usd": 0.000951,
+      "description": "round_6_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1349,
+      "cost_usd": 0.000202,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "graph_extraction",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1746,
+      "output_tokens": 1090,
+      "cached_tokens": 0,
+      "cost_usd": 0.002071,
+      "description": "extract_graph_proj_32ba2039"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2484,
+      "output_tokens": 173,
+      "cached_tokens": 0,
+      "cost_usd": 0.00088,
+      "description": "round_6_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1406,
+      "cost_usd": 0.000211,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "graph_extraction",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1748,
+      "output_tokens": 1081,
+      "cached_tokens": 0,
+      "cost_usd": 0.002058,
+      "description": "extract_graph_proj_32ba2039"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_6"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_6"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5060,
+      "output_tokens": 101,
+      "cached_tokens": 0,
+      "cost_usd": 0.001417,
+      "description": "round_7_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5012,
+      "output_tokens": 79,
+      "cached_tokens": 0,
+      "cost_usd": 0.001372,
+      "description": "round_7_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2536,
+      "output_tokens": 148,
+      "cached_tokens": 0,
+      "cost_usd": 0.000856,
+      "description": "round_7_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2574,
+      "output_tokens": 161,
+      "cached_tokens": 0,
+      "cost_usd": 0.000885,
+      "description": "round_7_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2631,
+      "output_tokens": 139,
+      "cached_tokens": 0,
+      "cost_usd": 0.000866,
+      "description": "round_7_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2563,
+      "output_tokens": 174,
+      "cached_tokens": 0,
+      "cost_usd": 0.000902,
+      "description": "round_7_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2544,
+      "output_tokens": 179,
+      "cached_tokens": 0,
+      "cost_usd": 0.000905,
+      "description": "round_7_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2541,
+      "output_tokens": 277,
+      "cached_tokens": 0,
+      "cost_usd": 0.001051,
+      "description": "round_7_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2513,
+      "output_tokens": 324,
+      "cached_tokens": 0,
+      "cost_usd": 0.001114,
+      "description": "round_7_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2632,
+      "output_tokens": 162,
+      "cached_tokens": 0,
+      "cost_usd": 0.000901,
+      "description": "round_7_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2643,
+      "output_tokens": 219,
+      "cached_tokens": 0,
+      "cost_usd": 0.000989,
+      "description": "round_7_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2519,
+      "output_tokens": 156,
+      "cached_tokens": 0,
+      "cost_usd": 0.000864,
+      "description": "round_7_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2569,
+      "output_tokens": 182,
+      "cached_tokens": 0,
+      "cost_usd": 0.000915,
+      "description": "round_7_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2536,
+      "output_tokens": 238,
+      "cached_tokens": 0,
+      "cost_usd": 0.000991,
+      "description": "round_7_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2500,
+      "output_tokens": 174,
+      "cached_tokens": 0,
+      "cost_usd": 0.000886,
+      "description": "round_7_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2652,
+      "output_tokens": 245,
+      "cached_tokens": 0,
+      "cost_usd": 0.00103,
+      "description": "round_7_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2570,
+      "output_tokens": 135,
+      "cached_tokens": 0,
+      "cost_usd": 0.000845,
+      "description": "round_7_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2631,
+      "output_tokens": 153,
+      "cached_tokens": 0,
+      "cost_usd": 0.000887,
+      "description": "round_7_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2568,
+      "output_tokens": 172,
+      "cached_tokens": 0,
+      "cost_usd": 0.0009,
+      "description": "round_7_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2655,
+      "output_tokens": 132,
+      "cached_tokens": 0,
+      "cost_usd": 0.000862,
+      "description": "round_7_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2556,
+      "output_tokens": 227,
+      "cached_tokens": 0,
+      "cost_usd": 0.000979,
+      "description": "round_7_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2541,
+      "output_tokens": 161,
+      "cached_tokens": 0,
+      "cost_usd": 0.000877,
+      "description": "round_7_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2584,
+      "output_tokens": 171,
+      "cached_tokens": 0,
+      "cost_usd": 0.000902,
+      "description": "round_7_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2525,
+      "output_tokens": 163,
+      "cached_tokens": 0,
+      "cost_usd": 0.000876,
+      "description": "round_7_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2580,
+      "output_tokens": 202,
+      "cached_tokens": 0,
+      "cost_usd": 0.000948,
+      "description": "round_7_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1363,
+      "cost_usd": 0.000204,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2562,
+      "output_tokens": 136,
+      "cached_tokens": 0,
+      "cost_usd": 0.000844,
+      "description": "round_7_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1404,
+      "cost_usd": 0.000211,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_7"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_7"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5195,
+      "output_tokens": 117,
+      "cached_tokens": 0,
+      "cost_usd": 0.001474,
+      "description": "round_8_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5176,
+      "output_tokens": 90,
+      "cached_tokens": 0,
+      "cost_usd": 0.001429,
+      "description": "round_8_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2657,
+      "output_tokens": 169,
+      "cached_tokens": 0,
+      "cost_usd": 0.000918,
+      "description": "round_8_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2727,
+      "output_tokens": 128,
+      "cached_tokens": 0,
+      "cost_usd": 0.000874,
+      "description": "round_8_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2651,
+      "output_tokens": 153,
+      "cached_tokens": 0,
+      "cost_usd": 0.000892,
+      "description": "round_8_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2611,
+      "output_tokens": 228,
+      "cached_tokens": 0,
+      "cost_usd": 0.000995,
+      "description": "round_8_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2632,
+      "output_tokens": 205,
+      "cached_tokens": 0,
+      "cost_usd": 0.000965,
+      "description": "round_8_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2657,
+      "output_tokens": 141,
+      "cached_tokens": 0,
+      "cost_usd": 0.000876,
+      "description": "round_8_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2580,
+      "output_tokens": 293,
+      "cached_tokens": 0,
+      "cost_usd": 0.001084,
+      "description": "round_8_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2727,
+      "output_tokens": 157,
+      "cached_tokens": 0,
+      "cost_usd": 0.000917,
+      "description": "round_8_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2591,
+      "output_tokens": 122,
+      "cached_tokens": 0,
+      "cost_usd": 0.000831,
+      "description": "round_8_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2662,
+      "output_tokens": 154,
+      "cached_tokens": 0,
+      "cost_usd": 0.000897,
+      "description": "round_8_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2691,
+      "output_tokens": 153,
+      "cached_tokens": 0,
+      "cost_usd": 0.000902,
+      "description": "round_8_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2710,
+      "output_tokens": 98,
+      "cached_tokens": 0,
+      "cost_usd": 0.000825,
+      "description": "round_8_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2666,
+      "output_tokens": 150,
+      "cached_tokens": 0,
+      "cost_usd": 0.000892,
+      "description": "round_8_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2640,
+      "output_tokens": 145,
+      "cached_tokens": 0,
+      "cost_usd": 0.000878,
+      "description": "round_8_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2567,
+      "output_tokens": 191,
+      "cached_tokens": 0,
+      "cost_usd": 0.000928,
+      "description": "round_8_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2615,
+      "output_tokens": 106,
+      "cached_tokens": 0,
+      "cost_usd": 0.000813,
+      "description": "round_8_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2704,
+      "output_tokens": 178,
+      "cached_tokens": 0,
+      "cost_usd": 0.000943,
+      "description": "round_8_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2624,
+      "output_tokens": 246,
+      "cached_tokens": 0,
+      "cost_usd": 0.001025,
+      "description": "round_8_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2665,
+      "output_tokens": 149,
+      "cached_tokens": 0,
+      "cost_usd": 0.00089,
+      "description": "round_8_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2706,
+      "output_tokens": 116,
+      "cached_tokens": 0,
+      "cost_usd": 0.000851,
+      "description": "round_8_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2585,
+      "output_tokens": 223,
+      "cached_tokens": 0,
+      "cost_usd": 0.000981,
+      "description": "round_8_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2580,
+      "output_tokens": 148,
+      "cached_tokens": 0,
+      "cost_usd": 0.000867,
+      "description": "round_8_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2642,
+      "output_tokens": 219,
+      "cached_tokens": 0,
+      "cost_usd": 0.000989,
+      "description": "round_8_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1342,
+      "cost_usd": 0.000201,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2601,
+      "output_tokens": 157,
+      "cached_tokens": 0,
+      "cost_usd": 0.000886,
+      "description": "round_8_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1385,
+      "cost_usd": 0.000208,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_8"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_8"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5320,
+      "output_tokens": 102,
+      "cached_tokens": 0,
+      "cost_usd": 0.001483,
+      "description": "round_9_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5303,
+      "output_tokens": 68,
+      "cached_tokens": 0,
+      "cost_usd": 0.001428,
+      "description": "round_9_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2773,
+      "output_tokens": 149,
+      "cached_tokens": 0,
+      "cost_usd": 0.000917,
+      "description": "round_9_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2714,
+      "output_tokens": 148,
+      "cached_tokens": 0,
+      "cost_usd": 0.000901,
+      "description": "round_9_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2650,
+      "output_tokens": 255,
+      "cached_tokens": 0,
+      "cost_usd": 0.001045,
+      "description": "round_9_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2720,
+      "output_tokens": 166,
+      "cached_tokens": 0,
+      "cost_usd": 0.000929,
+      "description": "round_9_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2786,
+      "output_tokens": 199,
+      "cached_tokens": 0,
+      "cost_usd": 0.000995,
+      "description": "round_9_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2740,
+      "output_tokens": 199,
+      "cached_tokens": 0,
+      "cost_usd": 0.000983,
+      "description": "round_9_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2638,
+      "output_tokens": 314,
+      "cached_tokens": 0,
+      "cost_usd": 0.00113,
+      "description": "round_9_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2632,
+      "output_tokens": 138,
+      "cached_tokens": 0,
+      "cost_usd": 0.000865,
+      "description": "round_9_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2722,
+      "output_tokens": 226,
+      "cached_tokens": 0,
+      "cost_usd": 0.00102,
+      "description": "round_9_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2716,
+      "output_tokens": 237,
+      "cached_tokens": 0,
+      "cost_usd": 0.001035,
+      "description": "round_9_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2671,
+      "output_tokens": 118,
+      "cached_tokens": 0,
+      "cost_usd": 0.000845,
+      "description": "round_9_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2762,
+      "output_tokens": 124,
+      "cached_tokens": 0,
+      "cost_usd": 0.000877,
+      "description": "round_9_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2765,
+      "output_tokens": 151,
+      "cached_tokens": 0,
+      "cost_usd": 0.000918,
+      "description": "round_9_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2745,
+      "output_tokens": 151,
+      "cached_tokens": 0,
+      "cost_usd": 0.000913,
+      "description": "round_9_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2632,
+      "output_tokens": 255,
+      "cached_tokens": 0,
+      "cost_usd": 0.00104,
+      "description": "round_9_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2692,
+      "output_tokens": 137,
+      "cached_tokens": 0,
+      "cost_usd": 0.000879,
+      "description": "round_9_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2780,
+      "output_tokens": 165,
+      "cached_tokens": 0,
+      "cost_usd": 0.000942,
+      "description": "round_9_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2650,
+      "output_tokens": 227,
+      "cached_tokens": 0,
+      "cost_usd": 0.001003,
+      "description": "round_9_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2727,
+      "output_tokens": 183,
+      "cached_tokens": 0,
+      "cost_usd": 0.000956,
+      "description": "round_9_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2668,
+      "output_tokens": 240,
+      "cached_tokens": 0,
+      "cost_usd": 0.001027,
+      "description": "round_9_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2703,
+      "output_tokens": 162,
+      "cached_tokens": 0,
+      "cost_usd": 0.000919,
+      "description": "round_9_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1366,
+      "cost_usd": 0.000205,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "graph_extraction",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1759,
+      "output_tokens": 1055,
+      "cached_tokens": 0,
+      "cost_usd": 0.002022,
+      "description": "extract_graph_proj_32ba2039"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2762,
+      "output_tokens": 198,
+      "cached_tokens": 0,
+      "cost_usd": 0.000988,
+      "description": "round_9_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2615,
+      "output_tokens": 145,
+      "cached_tokens": 0,
+      "cost_usd": 0.000871,
+      "description": "round_9_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_9"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2653,
+      "output_tokens": 157,
+      "cached_tokens": 0,
+      "cost_usd": 0.000899,
+      "description": "round_9_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1352,
+      "cost_usd": 0.000203,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "graph_extraction",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1743,
+      "output_tokens": 1091,
+      "cached_tokens": 0,
+      "cost_usd": 0.002072,
+      "description": "extract_graph_proj_32ba2039"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_9"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5349,
+      "output_tokens": 87,
+      "cached_tokens": 0,
+      "cost_usd": 0.001468,
+      "description": "round_10_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5299,
+      "output_tokens": 85,
+      "cached_tokens": 0,
+      "cost_usd": 0.001452,
+      "description": "round_10_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2764,
+      "output_tokens": 172,
+      "cached_tokens": 0,
+      "cost_usd": 0.000949,
+      "description": "round_10_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2812,
+      "output_tokens": 189,
+      "cached_tokens": 0,
+      "cost_usd": 0.000986,
+      "description": "round_10_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2700,
+      "output_tokens": 243,
+      "cached_tokens": 0,
+      "cost_usd": 0.00104,
+      "description": "round_10_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2770,
+      "output_tokens": 196,
+      "cached_tokens": 0,
+      "cost_usd": 0.000986,
+      "description": "round_10_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2777,
+      "output_tokens": 195,
+      "cached_tokens": 0,
+      "cost_usd": 0.000987,
+      "description": "round_10_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2830,
+      "output_tokens": 156,
+      "cached_tokens": 0,
+      "cost_usd": 0.000941,
+      "description": "round_10_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2688,
+      "output_tokens": 139,
+      "cached_tokens": 0,
+      "cost_usd": 0.00088,
+      "description": "round_10_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2782,
+      "output_tokens": 195,
+      "cached_tokens": 0,
+      "cost_usd": 0.000988,
+      "description": "round_10_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2831,
+      "output_tokens": 132,
+      "cached_tokens": 0,
+      "cost_usd": 0.000906,
+      "description": "round_10_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2789,
+      "output_tokens": 177,
+      "cached_tokens": 0,
+      "cost_usd": 0.000963,
+      "description": "round_10_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2729,
+      "output_tokens": 131,
+      "cached_tokens": 0,
+      "cost_usd": 0.000879,
+      "description": "round_10_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2811,
+      "output_tokens": 137,
+      "cached_tokens": 0,
+      "cost_usd": 0.000908,
+      "description": "round_10_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2789,
+      "output_tokens": 116,
+      "cached_tokens": 0,
+      "cost_usd": 0.000871,
+      "description": "round_10_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2841,
+      "output_tokens": 141,
+      "cached_tokens": 0,
+      "cost_usd": 0.000922,
+      "description": "round_10_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2765,
+      "output_tokens": 152,
+      "cached_tokens": 0,
+      "cost_usd": 0.000919,
+      "description": "round_10_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2781,
+      "output_tokens": 178,
+      "cached_tokens": 0,
+      "cost_usd": 0.000962,
+      "description": "round_10_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2703,
+      "output_tokens": 208,
+      "cached_tokens": 0,
+      "cost_usd": 0.000988,
+      "description": "round_10_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2825,
+      "output_tokens": 119,
+      "cached_tokens": 0,
+      "cost_usd": 0.000885,
+      "description": "round_10_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2747,
+      "output_tokens": 147,
+      "cached_tokens": 0,
+      "cost_usd": 0.000907,
+      "description": "round_10_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1376,
+      "cost_usd": 0.000206,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_10"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5334,
+      "output_tokens": 88,
+      "cached_tokens": 0,
+      "cost_usd": 0.001466,
+      "description": "round_11_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2833,
+      "output_tokens": 163,
+      "cached_tokens": 0,
+      "cost_usd": 0.000953,
+      "description": "round_11_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2881,
+      "output_tokens": 149,
+      "cached_tokens": 0,
+      "cost_usd": 0.000944,
+      "description": "round_11_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2762,
+      "output_tokens": 274,
+      "cached_tokens": 0,
+      "cost_usd": 0.001102,
+      "description": "round_11_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2900,
+      "output_tokens": 127,
+      "cached_tokens": 0,
+      "cost_usd": 0.000915,
+      "description": "round_11_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2841,
+      "output_tokens": 215,
+      "cached_tokens": 0,
+      "cost_usd": 0.001033,
+      "description": "round_11_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2747,
+      "output_tokens": 155,
+      "cached_tokens": 0,
+      "cost_usd": 0.000919,
+      "description": "round_11_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2889,
+      "output_tokens": 101,
+      "cached_tokens": 0,
+      "cost_usd": 0.000874,
+      "description": "round_11_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2847,
+      "output_tokens": 112,
+      "cached_tokens": 0,
+      "cost_usd": 0.00088,
+      "description": "round_11_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2772,
+      "output_tokens": 145,
+      "cached_tokens": 0,
+      "cost_usd": 0.00091,
+      "description": "round_11_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2847,
+      "output_tokens": 134,
+      "cached_tokens": 0,
+      "cost_usd": 0.000913,
+      "description": "round_11_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2748,
+      "output_tokens": 221,
+      "cached_tokens": 0,
+      "cost_usd": 0.001019,
+      "description": "round_11_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2790,
+      "output_tokens": 183,
+      "cached_tokens": 0,
+      "cost_usd": 0.000972,
+      "description": "round_11_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1354,
+      "cost_usd": 0.000203,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_11"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5347,
+      "output_tokens": 81,
+      "cached_tokens": 0,
+      "cost_usd": 0.001458,
+      "description": "round_12_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2944,
+      "output_tokens": 94,
+      "cached_tokens": 0,
+      "cost_usd": 0.000877,
+      "description": "round_12_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2899,
+      "output_tokens": 154,
+      "cached_tokens": 0,
+      "cost_usd": 0.000956,
+      "description": "round_12_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2816,
+      "output_tokens": 261,
+      "cached_tokens": 0,
+      "cost_usd": 0.001095,
+      "description": "round_12_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2959,
+      "output_tokens": 112,
+      "cached_tokens": 0,
+      "cost_usd": 0.000908,
+      "description": "round_12_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2908,
+      "output_tokens": 143,
+      "cached_tokens": 0,
+      "cost_usd": 0.000941,
+      "description": "round_12_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2802,
+      "output_tokens": 133,
+      "cached_tokens": 0,
+      "cost_usd": 0.0009,
+      "description": "round_12_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2940,
+      "output_tokens": 102,
+      "cached_tokens": 0,
+      "cost_usd": 0.000888,
+      "description": "round_12_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2910,
+      "output_tokens": 122,
+      "cached_tokens": 0,
+      "cost_usd": 0.00091,
+      "description": "round_12_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2822,
+      "output_tokens": 118,
+      "cached_tokens": 0,
+      "cost_usd": 0.000883,
+      "description": "round_12_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2901,
+      "output_tokens": 136,
+      "cached_tokens": 0,
+      "cost_usd": 0.000929,
+      "description": "round_12_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2812,
+      "output_tokens": 208,
+      "cached_tokens": 0,
+      "cost_usd": 0.001015,
+      "description": "round_12_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2846,
+      "output_tokens": 138,
+      "cached_tokens": 0,
+      "cost_usd": 0.000919,
+      "description": "round_12_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1246,
+      "cost_usd": 0.000187,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "graph_extraction",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1586,
+      "output_tokens": 1079,
+      "cached_tokens": 0,
+      "cost_usd": 0.002015,
+      "description": "extract_graph_proj_32ba2039"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_12"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5476,
+      "output_tokens": 78,
+      "cached_tokens": 0,
+      "cost_usd": 0.001486,
+      "description": "round_13_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2982,
+      "output_tokens": 158,
+      "cached_tokens": 0,
+      "cost_usd": 0.000983,
+      "description": "round_13_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2901,
+      "output_tokens": 156,
+      "cached_tokens": 0,
+      "cost_usd": 0.000959,
+      "description": "round_13_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3017,
+      "output_tokens": 145,
+      "cached_tokens": 0,
+      "cost_usd": 0.000972,
+      "description": "round_13_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3006,
+      "output_tokens": 178,
+      "cached_tokens": 0,
+      "cost_usd": 0.001019,
+      "description": "round_13_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2887,
+      "output_tokens": 132,
+      "cached_tokens": 0,
+      "cost_usd": 0.00092,
+      "description": "round_13_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3035,
+      "output_tokens": 224,
+      "cached_tokens": 0,
+      "cost_usd": 0.001095,
+      "description": "round_13_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3002,
+      "output_tokens": 150,
+      "cached_tokens": 0,
+      "cost_usd": 0.000976,
+      "description": "round_13_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2922,
+      "output_tokens": 156,
+      "cached_tokens": 0,
+      "cost_usd": 0.000964,
+      "description": "round_13_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3032,
+      "output_tokens": 161,
+      "cached_tokens": 0,
+      "cost_usd": 0.000999,
+      "description": "round_13_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2991,
+      "output_tokens": 109,
+      "cached_tokens": 0,
+      "cost_usd": 0.000911,
+      "description": "round_13_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2898,
+      "output_tokens": 142,
+      "cached_tokens": 0,
+      "cost_usd": 0.000937,
+      "description": "round_13_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2931,
+      "output_tokens": 200,
+      "cached_tokens": 0,
+      "cost_usd": 0.001033,
+      "description": "round_13_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1394,
+      "cost_usd": 0.000209,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_13"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5465,
+      "output_tokens": 75,
+      "cached_tokens": 0,
+      "cost_usd": 0.001479,
+      "description": "round_14_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3030,
+      "output_tokens": 165,
+      "cached_tokens": 0,
+      "cost_usd": 0.001005,
+      "description": "round_14_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3075,
+      "output_tokens": 168,
+      "cached_tokens": 0,
+      "cost_usd": 0.001021,
+      "description": "round_14_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2950,
+      "output_tokens": 155,
+      "cached_tokens": 0,
+      "cost_usd": 0.00097,
+      "description": "round_14_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2938,
+      "output_tokens": 109,
+      "cached_tokens": 0,
+      "cost_usd": 0.000898,
+      "description": "round_14_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3086,
+      "output_tokens": 144,
+      "cached_tokens": 0,
+      "cost_usd": 0.000988,
+      "description": "round_14_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3050,
+      "output_tokens": 159,
+      "cached_tokens": 0,
+      "cost_usd": 0.001001,
+      "description": "round_14_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3078,
+      "output_tokens": 81,
+      "cached_tokens": 0,
+      "cost_usd": 0.000891,
+      "description": "round_14_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2972,
+      "output_tokens": 90,
+      "cached_tokens": 0,
+      "cost_usd": 0.000878,
+      "description": "round_14_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3037,
+      "output_tokens": 156,
+      "cached_tokens": 0,
+      "cost_usd": 0.000993,
+      "description": "round_14_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3029,
+      "output_tokens": 171,
+      "cached_tokens": 0,
+      "cost_usd": 0.001014,
+      "description": "round_14_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2946,
+      "output_tokens": 185,
+      "cached_tokens": 0,
+      "cost_usd": 0.001014,
+      "description": "round_14_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2981,
+      "output_tokens": 150,
+      "cached_tokens": 0,
+      "cost_usd": 0.00097,
+      "description": "round_14_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1279,
+      "cost_usd": 0.000192,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_14"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5525,
+      "output_tokens": 90,
+      "cached_tokens": 0,
+      "cost_usd": 0.001516,
+      "description": "round_15_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3121,
+      "output_tokens": 176,
+      "cached_tokens": 0,
+      "cost_usd": 0.001044,
+      "description": "round_15_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3042,
+      "output_tokens": 201,
+      "cached_tokens": 0,
+      "cost_usd": 0.001062,
+      "description": "round_15_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3145,
+      "output_tokens": 128,
+      "cached_tokens": 0,
+      "cost_usd": 0.000978,
+      "description": "round_15_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3028,
+      "output_tokens": 142,
+      "cached_tokens": 0,
+      "cost_usd": 0.00097,
+      "description": "round_15_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3144,
+      "output_tokens": 177,
+      "cached_tokens": 0,
+      "cost_usd": 0.001051,
+      "description": "round_15_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3156,
+      "output_tokens": 198,
+      "cached_tokens": 0,
+      "cost_usd": 0.001086,
+      "description": "round_15_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3137,
+      "output_tokens": 123,
+      "cached_tokens": 0,
+      "cost_usd": 0.000969,
+      "description": "round_15_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3043,
+      "output_tokens": 136,
+      "cached_tokens": 0,
+      "cost_usd": 0.000965,
+      "description": "round_15_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3142,
+      "output_tokens": 125,
+      "cached_tokens": 0,
+      "cost_usd": 0.000973,
+      "description": "round_15_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3028,
+      "output_tokens": 152,
+      "cached_tokens": 0,
+      "cost_usd": 0.000985,
+      "description": "round_15_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3097,
+      "output_tokens": 155,
+      "cached_tokens": 0,
+      "cost_usd": 0.001007,
+      "description": "round_15_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3064,
+      "output_tokens": 77,
+      "cached_tokens": 0,
+      "cost_usd": 0.000882,
+      "description": "round_15_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1337,
+      "cost_usd": 0.000201,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "graph_extraction",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1674,
+      "output_tokens": 1115,
+      "cached_tokens": 0,
+      "cost_usd": 0.002091,
+      "description": "extract_graph_proj_32ba2039"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_15"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2690,
+      "output_tokens": 286,
+      "cached_tokens": 0,
+      "cost_usd": 0.001102,
+      "description": "round_10_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2212,
+      "output_tokens": 147,
+      "cached_tokens": 0,
+      "cost_usd": 0.000773,
+      "description": "round_1_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2682,
+      "output_tokens": 175,
+      "cached_tokens": 0,
+      "cost_usd": 0.000933,
+      "description": "round_10_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1385,
+      "output_tokens": 146,
+      "cached_tokens": 0,
+      "cost_usd": 0.000565,
+      "description": "round_1_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1339,
+      "output_tokens": 121,
+      "cached_tokens": 0,
+      "cost_usd": 0.000516,
+      "description": "round_1_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1393,
+      "output_tokens": 106,
+      "cached_tokens": 0,
+      "cost_usd": 0.000507,
+      "description": "round_1_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2736,
+      "output_tokens": 227,
+      "cached_tokens": 0,
+      "cost_usd": 0.001025,
+      "description": "round_10_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1465,
+      "output_tokens": 167,
+      "cached_tokens": 0,
+      "cost_usd": 0.000617,
+      "description": "round_1_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1415,
+      "output_tokens": 132,
+      "cached_tokens": 0,
+      "cost_usd": 0.000552,
+      "description": "round_1_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1412,
+      "output_tokens": 181,
+      "cached_tokens": 0,
+      "cost_usd": 0.000624,
+      "description": "round_1_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2693,
+      "output_tokens": 173,
+      "cached_tokens": 0,
+      "cost_usd": 0.000933,
+      "description": "round_10_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1522,
+      "output_tokens": 192,
+      "cached_tokens": 0,
+      "cost_usd": 0.000669,
+      "description": "round_1_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1495,
+      "output_tokens": 124,
+      "cached_tokens": 0,
+      "cost_usd": 0.00056,
+      "description": "round_1_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1465,
+      "output_tokens": 193,
+      "cached_tokens": 0,
+      "cost_usd": 0.000656,
+      "description": "round_1_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2713,
+      "output_tokens": 162,
+      "cached_tokens": 0,
+      "cost_usd": 0.000921,
+      "description": "round_10_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1585,
+      "output_tokens": 176,
+      "cached_tokens": 0,
+      "cost_usd": 0.00066,
+      "description": "round_1_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1392,
+      "cost_usd": 0.000209,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1561,
+      "output_tokens": 208,
+      "cached_tokens": 0,
+      "cost_usd": 0.000702,
+      "description": "round_1_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_10"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1575,
+      "output_tokens": 159,
+      "cached_tokens": 0,
+      "cost_usd": 0.000632,
+      "description": "round_1_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1401,
+      "cost_usd": 0.00021,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5308,
+      "output_tokens": 80,
+      "cached_tokens": 0,
+      "cost_usd": 0.001447,
+      "description": "round_11_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3256,
+      "output_tokens": 212,
+      "cached_tokens": 0,
+      "cost_usd": 0.001132,
+      "description": "round_2_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2849,
+      "output_tokens": 176,
+      "cached_tokens": 0,
+      "cost_usd": 0.000976,
+      "description": "round_11_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1548,
+      "output_tokens": 123,
+      "cached_tokens": 0,
+      "cost_usd": 0.000571,
+      "description": "round_2_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2839,
+      "output_tokens": 199,
+      "cached_tokens": 0,
+      "cost_usd": 0.001008,
+      "description": "round_11_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1628,
+      "output_tokens": 109,
+      "cached_tokens": 0,
+      "cost_usd": 0.000571,
+      "description": "round_2_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1601,
+      "output_tokens": 155,
+      "cached_tokens": 0,
+      "cost_usd": 0.000633,
+      "description": "round_2_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2734,
+      "output_tokens": 304,
+      "cached_tokens": 0,
+      "cost_usd": 0.00114,
+      "description": "round_11_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2888,
+      "output_tokens": 171,
+      "cached_tokens": 0,
+      "cost_usd": 0.000978,
+      "description": "round_11_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1633,
+      "output_tokens": 113,
+      "cached_tokens": 0,
+      "cost_usd": 0.000578,
+      "description": "round_2_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2834,
+      "output_tokens": 185,
+      "cached_tokens": 0,
+      "cost_usd": 0.000986,
+      "description": "round_11_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1677,
+      "output_tokens": 151,
+      "cached_tokens": 0,
+      "cost_usd": 0.000646,
+      "description": "round_2_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1654,
+      "output_tokens": 177,
+      "cached_tokens": 0,
+      "cost_usd": 0.000679,
+      "description": "round_2_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2816,
+      "output_tokens": 92,
+      "cached_tokens": 0,
+      "cost_usd": 0.000842,
+      "description": "round_11_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2891,
+      "output_tokens": 140,
+      "cached_tokens": 0,
+      "cost_usd": 0.000933,
+      "description": "round_11_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2723,
+      "output_tokens": 292,
+      "cached_tokens": 0,
+      "cost_usd": 0.001119,
+      "description": "round_11_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1692,
+      "output_tokens": 163,
+      "cached_tokens": 0,
+      "cost_usd": 0.000668,
+      "description": "round_2_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1725,
+      "output_tokens": 180,
+      "cached_tokens": 0,
+      "cost_usd": 0.000701,
+      "description": "round_2_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1728,
+      "output_tokens": 144,
+      "cached_tokens": 0,
+      "cost_usd": 0.000648,
+      "description": "round_2_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2872,
+      "output_tokens": 119,
+      "cached_tokens": 0,
+      "cost_usd": 0.000897,
+      "description": "round_11_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2772,
+      "output_tokens": 236,
+      "cached_tokens": 0,
+      "cost_usd": 0.001047,
+      "description": "round_11_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1816,
+      "output_tokens": 170,
+      "cached_tokens": 0,
+      "cost_usd": 0.000709,
+      "description": "round_2_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1814,
+      "output_tokens": 183,
+      "cached_tokens": 0,
+      "cost_usd": 0.000728,
+      "description": "round_2_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2732,
+      "output_tokens": 141,
+      "cached_tokens": 0,
+      "cost_usd": 0.000895,
+      "description": "round_11_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1830,
+      "output_tokens": 141,
+      "cached_tokens": 0,
+      "cost_usd": 0.000669,
+      "description": "round_2_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1372,
+      "cost_usd": 0.000206,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2760,
+      "output_tokens": 143,
+      "cached_tokens": 0,
+      "cost_usd": 0.000905,
+      "description": "round_11_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1326,
+      "cost_usd": 0.000199,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_11"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 4327,
+      "output_tokens": 195,
+      "cached_tokens": 0,
+      "cost_usd": 0.001374,
+      "description": "round_3_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1906,
+      "output_tokens": 116,
+      "cached_tokens": 0,
+      "cost_usd": 0.000651,
+      "description": "round_3_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5357,
+      "output_tokens": 73,
+      "cached_tokens": 0,
+      "cost_usd": 0.001449,
+      "description": "round_12_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2046,
+      "output_tokens": 180,
+      "cached_tokens": 0,
+      "cost_usd": 0.000781,
+      "description": "round_3_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2048,
+      "output_tokens": 182,
+      "cached_tokens": 0,
+      "cost_usd": 0.000785,
+      "description": "round_3_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2886,
+      "output_tokens": 149,
+      "cached_tokens": 0,
+      "cost_usd": 0.000945,
+      "description": "round_12_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1996,
+      "output_tokens": 163,
+      "cached_tokens": 0,
+      "cost_usd": 0.000744,
+      "description": "round_3_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2072,
+      "output_tokens": 200,
+      "cached_tokens": 0,
+      "cost_usd": 0.000818,
+      "description": "round_3_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2917,
+      "output_tokens": 176,
+      "cached_tokens": 0,
+      "cost_usd": 0.000993,
+      "description": "round_12_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2124,
+      "output_tokens": 173,
+      "cached_tokens": 0,
+      "cost_usd": 0.00079,
+      "description": "round_3_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2809,
+      "output_tokens": 312,
+      "cached_tokens": 0,
+      "cost_usd": 0.00117,
+      "description": "round_12_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2054,
+      "output_tokens": 136,
+      "cached_tokens": 0,
+      "cost_usd": 0.000718,
+      "description": "round_3_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2148,
+      "output_tokens": 136,
+      "cached_tokens": 0,
+      "cost_usd": 0.000741,
+      "description": "round_3_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2879,
+      "output_tokens": 211,
+      "cached_tokens": 0,
+      "cost_usd": 0.001036,
+      "description": "round_12_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2955,
+      "output_tokens": 163,
+      "cached_tokens": 0,
+      "cost_usd": 0.000983,
+      "description": "round_12_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2805,
+      "output_tokens": 255,
+      "cached_tokens": 0,
+      "cost_usd": 0.001084,
+      "description": "round_12_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2173,
+      "output_tokens": 164,
+      "cached_tokens": 0,
+      "cost_usd": 0.000789,
+      "description": "round_3_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2861,
+      "output_tokens": 137,
+      "cached_tokens": 0,
+      "cost_usd": 0.000921,
+      "description": "round_12_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2834,
+      "output_tokens": 168,
+      "cached_tokens": 0,
+      "cost_usd": 0.00096,
+      "description": "round_12_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2263,
+      "output_tokens": 195,
+      "cached_tokens": 0,
+      "cost_usd": 0.000858,
+      "description": "round_3_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2960,
+      "output_tokens": 148,
+      "cached_tokens": 0,
+      "cost_usd": 0.000962,
+      "description": "round_12_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2227,
+      "output_tokens": 180,
+      "cached_tokens": 0,
+      "cost_usd": 0.000827,
+      "description": "round_3_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2809,
+      "output_tokens": 146,
+      "cached_tokens": 0,
+      "cost_usd": 0.000921,
+      "description": "round_12_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2948,
+      "output_tokens": 147,
+      "cached_tokens": 0,
+      "cost_usd": 0.000958,
+      "description": "round_12_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2274,
+      "output_tokens": 124,
+      "cached_tokens": 0,
+      "cost_usd": 0.000754,
+      "description": "round_3_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1418,
+      "cost_usd": 0.000213,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "graph_extraction",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1782,
+      "output_tokens": 1027,
+      "cached_tokens": 0,
+      "cost_usd": 0.001986,
+      "description": "extract_graph_proj_32ba2039"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2835,
+      "output_tokens": 118,
+      "cached_tokens": 0,
+      "cost_usd": 0.000886,
+      "description": "round_12_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1358,
+      "cost_usd": 0.000204,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "graph_extraction",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1738,
+      "output_tokens": 1134,
+      "cached_tokens": 0,
+      "cost_usd": 0.002135,
+      "description": "extract_graph_proj_32ba2039"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_12"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_3"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5395,
+      "output_tokens": 77,
+      "cached_tokens": 0,
+      "cost_usd": 0.001464,
+      "description": "round_13_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 4669,
+      "output_tokens": 188,
+      "cached_tokens": 0,
+      "cost_usd": 0.001449,
+      "description": "round_4_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2933,
+      "output_tokens": 170,
+      "cached_tokens": 0,
+      "cost_usd": 0.000988,
+      "description": "round_13_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2970,
+      "output_tokens": 149,
+      "cached_tokens": 0,
+      "cost_usd": 0.000966,
+      "description": "round_13_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2176,
+      "output_tokens": 111,
+      "cached_tokens": 0,
+      "cost_usd": 0.00071,
+      "description": "round_4_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2872,
+      "output_tokens": 295,
+      "cached_tokens": 0,
+      "cost_usd": 0.001161,
+      "description": "round_13_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2291,
+      "output_tokens": 142,
+      "cached_tokens": 0,
+      "cost_usd": 0.000786,
+      "description": "round_4_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2373,
+      "output_tokens": 171,
+      "cached_tokens": 0,
+      "cost_usd": 0.00085,
+      "description": "round_4_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3009,
+      "output_tokens": 117,
+      "cached_tokens": 0,
+      "cost_usd": 0.000928,
+      "description": "round_13_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2930,
+      "output_tokens": 169,
+      "cached_tokens": 0,
+      "cost_usd": 0.000986,
+      "description": "round_13_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2249,
+      "output_tokens": 186,
+      "cached_tokens": 0,
+      "cost_usd": 0.000841,
+      "description": "round_4_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2404,
+      "output_tokens": 148,
+      "cached_tokens": 0,
+      "cost_usd": 0.000823,
+      "description": "round_4_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2315,
+      "output_tokens": 132,
+      "cached_tokens": 0,
+      "cost_usd": 0.000777,
+      "description": "round_4_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2872,
+      "output_tokens": 245,
+      "cached_tokens": 0,
+      "cost_usd": 0.001086,
+      "description": "round_13_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2918,
+      "output_tokens": 207,
+      "cached_tokens": 0,
+      "cost_usd": 0.00104,
+      "description": "round_13_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3010,
+      "output_tokens": 162,
+      "cached_tokens": 0,
+      "cost_usd": 0.000996,
+      "description": "round_13_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2429,
+      "output_tokens": 142,
+      "cached_tokens": 0,
+      "cost_usd": 0.00082,
+      "description": "round_4_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2304,
+      "output_tokens": 158,
+      "cached_tokens": 0,
+      "cost_usd": 0.000813,
+      "description": "round_4_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2315,
+      "output_tokens": 229,
+      "cached_tokens": 0,
+      "cost_usd": 0.000922,
+      "description": "round_4_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2895,
+      "output_tokens": 170,
+      "cached_tokens": 0,
+      "cost_usd": 0.000979,
+      "description": "round_13_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3002,
+      "output_tokens": 106,
+      "cached_tokens": 0,
+      "cost_usd": 0.00091,
+      "description": "round_13_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2462,
+      "output_tokens": 205,
+      "cached_tokens": 0,
+      "cost_usd": 0.000923,
+      "description": "round_4_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2864,
+      "output_tokens": 131,
+      "cached_tokens": 0,
+      "cost_usd": 0.000913,
+      "description": "round_13_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2364,
+      "output_tokens": 187,
+      "cached_tokens": 0,
+      "cost_usd": 0.000871,
+      "description": "round_4_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2888,
+      "output_tokens": 120,
+      "cached_tokens": 0,
+      "cost_usd": 0.000902,
+      "description": "round_13_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1320,
+      "cost_usd": 0.000198,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2320,
+      "output_tokens": 191,
+      "cached_tokens": 0,
+      "cost_usd": 0.000866,
+      "description": "round_4_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1379,
+      "cost_usd": 0.000207,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_13"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5391,
+      "output_tokens": 96,
+      "cached_tokens": 0,
+      "cost_usd": 0.001492,
+      "description": "round_14_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_4"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3020,
+      "output_tokens": 112,
+      "cached_tokens": 0,
+      "cost_usd": 0.000923,
+      "description": "round_14_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2980,
+      "output_tokens": 193,
+      "cached_tokens": 0,
+      "cost_usd": 0.001035,
+      "description": "round_14_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3057,
+      "output_tokens": 125,
+      "cached_tokens": 0,
+      "cost_usd": 0.000952,
+      "description": "round_14_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2927,
+      "output_tokens": 278,
+      "cached_tokens": 0,
+      "cost_usd": 0.001149,
+      "description": "round_14_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 4791,
+      "output_tokens": 173,
+      "cached_tokens": 0,
+      "cost_usd": 0.001457,
+      "description": "round_5_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2983,
+      "output_tokens": 207,
+      "cached_tokens": 0,
+      "cost_usd": 0.001056,
+      "description": "round_14_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3059,
+      "output_tokens": 107,
+      "cached_tokens": 0,
+      "cost_usd": 0.000925,
+      "description": "round_14_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2432,
+      "output_tokens": 139,
+      "cached_tokens": 0,
+      "cost_usd": 0.000816,
+      "description": "round_5_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2503,
+      "output_tokens": 155,
+      "cached_tokens": 0,
+      "cost_usd": 0.000858,
+      "description": "round_5_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2922,
+      "output_tokens": 191,
+      "cached_tokens": 0,
+      "cost_usd": 0.001017,
+      "description": "round_14_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2338,
+      "output_tokens": 194,
+      "cached_tokens": 0,
+      "cost_usd": 0.000875,
+      "description": "round_5_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3059,
+      "output_tokens": 109,
+      "cached_tokens": 0,
+      "cost_usd": 0.000928,
+      "description": "round_14_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2990,
+      "output_tokens": 134,
+      "cached_tokens": 0,
+      "cost_usd": 0.000949,
+      "description": "round_14_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2455,
+      "output_tokens": 137,
+      "cached_tokens": 0,
+      "cost_usd": 0.000819,
+      "description": "round_5_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2948,
+      "output_tokens": 133,
+      "cached_tokens": 0,
+      "cost_usd": 0.000937,
+      "description": "round_14_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2367,
+      "output_tokens": 123,
+      "cached_tokens": 0,
+      "cost_usd": 0.000776,
+      "description": "round_5_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2468,
+      "output_tokens": 197,
+      "cached_tokens": 0,
+      "cost_usd": 0.000913,
+      "description": "round_5_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2372,
+      "output_tokens": 179,
+      "cached_tokens": 0,
+      "cost_usd": 0.000861,
+      "description": "round_5_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2453,
+      "output_tokens": 140,
+      "cached_tokens": 0,
+      "cost_usd": 0.000823,
+      "description": "round_5_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2909,
+      "output_tokens": 164,
+      "cached_tokens": 0,
+      "cost_usd": 0.000973,
+      "description": "round_14_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2490,
+      "output_tokens": 165,
+      "cached_tokens": 0,
+      "cost_usd": 0.00087,
+      "description": "round_5_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2934,
+      "output_tokens": 153,
+      "cached_tokens": 0,
+      "cost_usd": 0.000963,
+      "description": "round_14_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1310,
+      "cost_usd": 0.000197,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2427,
+      "output_tokens": 156,
+      "cached_tokens": 0,
+      "cost_usd": 0.000841,
+      "description": "round_5_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2520,
+      "output_tokens": 220,
+      "cached_tokens": 0,
+      "cost_usd": 0.00096,
+      "description": "round_5_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_14"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2386,
+      "output_tokens": 195,
+      "cached_tokens": 0,
+      "cost_usd": 0.000889,
+      "description": "round_5_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1424,
+      "cost_usd": 0.000214,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_5"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 68,
+      "cost_usd": 1e-05,
+      "description": "embed 10 text(s) (RETRIEVAL_QUERY)"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5396,
+      "output_tokens": 86,
+      "cached_tokens": 0,
+      "cost_usd": 0.001478,
+      "description": "round_15_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3085,
+      "output_tokens": 151,
+      "cached_tokens": 0,
+      "cost_usd": 0.000998,
+      "description": "round_15_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 5086,
+      "output_tokens": 91,
+      "cached_tokens": 0,
+      "cost_usd": 0.001408,
+      "description": "round_6_The Silent IP Drain Operator_c2-channel"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3061,
+      "output_tokens": 141,
+      "cached_tokens": 0,
+      "cost_usd": 0.000977,
+      "description": "round_15_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2993,
+      "output_tokens": 292,
+      "cached_tokens": 0,
+      "cost_usd": 0.001186,
+      "description": "round_15_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2426,
+      "output_tokens": 169,
+      "cached_tokens": 0,
+      "cost_usd": 0.00086,
+      "description": "round_6_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3129,
+      "output_tokens": 177,
+      "cached_tokens": 0,
+      "cost_usd": 0.001048,
+      "description": "round_15_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3050,
+      "output_tokens": 219,
+      "cached_tokens": 0,
+      "cost_usd": 0.001091,
+      "description": "round_15_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2496,
+      "output_tokens": 138,
+      "cached_tokens": 0,
+      "cost_usd": 0.000831,
+      "description": "round_6_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2981,
+      "output_tokens": 192,
+      "cached_tokens": 0,
+      "cost_usd": 0.001033,
+      "description": "round_15_Sarah Friar_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2587,
+      "output_tokens": 185,
+      "cached_tokens": 0,
+      "cost_usd": 0.000924,
+      "description": "round_6_Fidji Simo_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2474,
+      "output_tokens": 140,
+      "cached_tokens": 0,
+      "cost_usd": 0.000829,
+      "description": "round_6_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3126,
+      "output_tokens": 177,
+      "cached_tokens": 0,
+      "cost_usd": 0.001047,
+      "description": "round_15_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3046,
+      "output_tokens": 136,
+      "cached_tokens": 0,
+      "cost_usd": 0.000965,
+      "description": "round_15_Elena Rodriguez_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2559,
+      "output_tokens": 180,
+      "cached_tokens": 0,
+      "cost_usd": 0.00091,
+      "description": "round_6_Jakub Pachocki_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2520,
+      "output_tokens": 174,
+      "cached_tokens": 0,
+      "cost_usd": 0.000891,
+      "description": "round_6_Marcus Thorne_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3010,
+      "output_tokens": 223,
+      "cached_tokens": 0,
+      "cost_usd": 0.001087,
+      "description": "round_15_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3117,
+      "output_tokens": 131,
+      "cached_tokens": 0,
+      "cost_usd": 0.000976,
+      "description": "round_15_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2583,
+      "output_tokens": 140,
+      "cached_tokens": 0,
+      "cost_usd": 0.000856,
+      "description": "round_6_Elena Rodriguez_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2495,
+      "output_tokens": 289,
+      "cached_tokens": 0,
+      "cost_usd": 0.001057,
+      "description": "round_6_Che Chang_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2527,
+      "output_tokens": 191,
+      "cached_tokens": 0,
+      "cost_usd": 0.000918,
+      "description": "round_6_Dane Stuckey_incident-war-room"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2978,
+      "output_tokens": 159,
+      "cached_tokens": 0,
+      "cost_usd": 0.000983,
+      "description": "round_15_Greg Brockman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2617,
+      "output_tokens": 200,
+      "cached_tokens": 0,
+      "cost_usd": 0.000954,
+      "description": "round_6_Marcus Thorne_technical-triage"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 3010,
+      "output_tokens": 137,
+      "cached_tokens": 0,
+      "cost_usd": 0.000958,
+      "description": "round_15_Sam Altman_executive-strategy"
+    },
+    {
+      "type": "llm",
+      "phase": "simulation",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 2534,
+      "output_tokens": 144,
+      "cached_tokens": 0,
+      "cost_usd": 0.000849,
+      "description": "round_6_Dane Stuckey_executive-strategy"
+    },
+    {
+      "type": "embedding",
+      "phase": "memory",
+      "model": "gemini-embedding-001",
+      "input_tokens": 1361,
+      "cost_usd": 0.000204,
+      "description": "embed 13 text(s) (RETRIEVAL_DOCUMENT)"
+    },
+    {
+      "type": "llm",
+      "phase": "graph_extraction",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 1748,
+      "output_tokens": 1074,
+      "cached_tokens": 0,
+      "cost_usd": 0.002048,
+      "description": "extract_graph_proj_32ba2039"
+    },
+    {
+      "type": "llm",
+      "phase": "arbiter",
+      "model": "gemini-3.1-flash-lite-preview",
+      "input_tokens": 500,
+      "output_tokens": 100,
+      "cached_tokens": 0,
+      "cost_usd": 0.000275,
+      "description": "arbiter_round_15"
+    }
+  ]
+}

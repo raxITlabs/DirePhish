@@ -41,7 +41,7 @@ class MonteCarloMode(str, Enum):
 
 
 MODE_CONFIGS = {
-    MonteCarloMode.TEST:     {"iterations": 1,   "max_workers": 1},
+    MonteCarloMode.TEST:     {"iterations": 3,   "max_workers": 2},
     MonteCarloMode.QUICK:    {"iterations": 10,  "max_workers": 2},
     MonteCarloMode.STANDARD: {"iterations": 50,  "max_workers": 3},
     MonteCarloMode.DEEP:     {"iterations": 100, "max_workers": 3},
@@ -105,13 +105,15 @@ class MonteCarloEngine:
         cost_limit_usd: float = 5.0,
         variation_params: dict | None = None,
         custom_iterations: int | None = None,
+        skip_gating: bool = False,
     ) -> str:
         """Launch a Monte Carlo batch. Returns batch_id."""
         if isinstance(mode, str):
             mode = MonteCarloMode(mode)
 
         # Mode gating: standard/deep require a completed test batch
-        if mode in (MonteCarloMode.STANDARD, MonteCarloMode.DEEP):
+        # Pipeline runs bypass this since they always run the full sequence
+        if not skip_gating and mode in (MonteCarloMode.STANDARD, MonteCarloMode.DEEP):
             test_results_path = (
                 UPLOADS_DIR / "crucible_projects" / project_id
                 / "monte_carlo" / "test_results.json"
@@ -336,23 +338,87 @@ async def _run_batch(
 
     # Aggregate results
     try:
+        from dataclasses import asdict
+        from pathlib import Path as _Path
         from .monte_carlo_aggregator import aggregate_batch, IterationResult
 
-        valid_results = [
-            IterationResult(**r) for r in batch.results if r.get("status") == "completed"
-        ]
+        valid_results = []
+
+        # Disk-based recovery: if batch.results is empty (e.g. Flask reloader
+        # cleared in-memory state), rebuild from iteration dirs on disk.
+        if not batch.results:
+            logger.info("batch.results empty — recovering from disk for %s", batch.batch_id)
+            for iter_dir_candidate in sorted(mc_dir.iterdir()):
+                if iter_dir_candidate.is_dir() and "_iter_" in iter_dir_candidate.name:
+                    summary_path = iter_dir_candidate / "summary.json"
+                    if summary_path.exists():
+                        with open(summary_path) as f:
+                            s = json.load(f)
+                        batch.results.append({
+                            "iteration_id": iter_dir_candidate.name,
+                            "status": "completed",
+                            "output_dir": str(iter_dir_candidate),
+                            "seed": s.get("seed", 0),
+                            "total_rounds": s.get("total_rounds", 0),
+                            "total_actions": s.get("total_actions", 0),
+                            "cost_usd": s.get("cost_usd", 0),
+                            "variation_description": s.get("variation_description", ""),
+                            "completed_at": s.get("completed_at", ""),
+                        })
+            logger.info("Recovered %d iteration(s) from disk", len(batch.results))
+
+        for r in batch.results:
+            if r.get("status") != "completed":
+                continue
+            try:
+                # Load actions + summary from disk (sim runner writes files but
+                # doesn't include them in the return dict)
+                iter_dir = _Path(r.get("output_dir", ""))
+                actions = []
+                actions_path = iter_dir / "actions.jsonl"
+                if actions_path.exists():
+                    with open(actions_path) as f:
+                        for line in f:
+                            line = line.strip()
+                            if line:
+                                try:
+                                    actions.append(json.loads(line))
+                                except json.JSONDecodeError:
+                                    continue
+                summary = {}
+                summary_path = iter_dir / "summary.json"
+                if summary_path.exists():
+                    with open(summary_path) as f:
+                        summary = json.load(f)
+
+                valid_results.append(IterationResult(
+                    iteration_id=r["iteration_id"],
+                    seed=r.get("seed", 0),
+                    total_rounds=r.get("total_rounds", 0),
+                    total_actions=r.get("total_actions", 0),
+                    actions=actions,
+                    summary=summary,
+                    cost_usd=r.get("cost_usd", 0),
+                    variation_description=r.get("variation_description", ""),
+                    completed_at=r.get("completed_at", ""),
+                    output_dir=r.get("output_dir", ""),
+                ))
+            except Exception as e:
+                logger.warning("Failed to build IterationResult for %s: %s", r.get("iteration_id"), e)
+
         if valid_results:
             aggregation = aggregate_batch(valid_results)
             agg_path = mc_dir / "aggregation.json"
+            agg_dict = asdict(aggregation)
             with open(agg_path, "w") as f:
-                json.dump(aggregation.__dict__ if hasattr(aggregation, "__dict__") else str(aggregation), f, indent=2, default=str)
+                json.dump(agg_dict, f, indent=2, default=str)
             logger.info("Aggregation saved: %s", agg_path)
 
             # Data flywheel: store aggregate outcomes for future learning
             try:
                 from .firestore_memory import FirestoreMemory
                 flywheel = FirestoreMemory()
-                agg_dict = aggregation.__dict__ if hasattr(aggregation, "__dict__") else {}
+                crs = agg_dict.get("containment_round_stats") or {}
                 flywheel.store_aggregate_outcome({
                     "batch_id": batch.batch_id,
                     "project_id": batch.project_id,
@@ -360,15 +426,17 @@ async def _run_batch(
                     "iterations": batch.iterations_completed,
                     "outcome_distribution": agg_dict.get("outcome_distribution", {}),
                     "containment_round_stats": {
-                        "mean": getattr(agg_dict.get("containment_round_stats"), "mean", 0),
-                        "median": getattr(agg_dict.get("containment_round_stats"), "median", 0),
-                        "std": getattr(agg_dict.get("containment_round_stats"), "std", 0),
-                    } if agg_dict.get("containment_round_stats") else {},
+                        "mean": crs.get("mean", 0),
+                        "median": crs.get("median", 0),
+                        "std": crs.get("std", 0),
+                    } if crs else {},
                     "cost_summary": {"total_usd": batch.cost_tracker.total_cost()},
                 })
                 logger.info("Data flywheel: stored aggregate for batch %s", batch.batch_id)
             except Exception as e:
                 logger.warning("Data flywheel store failed (non-fatal): %s", e)
+        else:
+            logger.warning("No valid iteration results to aggregate for batch %s", batch.batch_id)
     except Exception as e:
         logger.error("Aggregation failed for batch %s: %s", batch.batch_id, e)
 
@@ -437,12 +505,16 @@ async def _run_iteration(
         logger.info("Starting iteration %d/%d for batch %s", iteration_index + 1, batch.iterations_total, batch.batch_id)
         MissionControl.mc_iteration(iteration_index + 1, batch.iterations_total, "running")
 
-        # Register iteration sim so frontend can poll its actions
+        # Register iteration sim so frontend can poll its actions.
+        # Use adaptive_depth.max_rounds when enabled so the round counter
+        # doesn't show "20/14" when the arbiter extends the sim.
+        ad = base_config.get("adaptive_depth", {})
+        effective_total = ad.get("max_rounds", base_config.get("total_rounds", 5)) if ad.get("enabled") else base_config.get("total_rounds", 5)
         _simulations[iteration_id] = {
             "sim_id": iteration_id,
             "status": "running",
             "current_round": 0,
-            "total_rounds": base_config.get("total_rounds", 5),
+            "total_rounds": effective_total,
             "action_count": 0,
             "graph_id": batch.project_id,
             "output_dir": str(iter_dir),
@@ -479,6 +551,8 @@ async def _run_iteration(
                 result["iteration_index"] = iteration_index
                 result["variation_description"] = variation_desc
                 result["iteration_id"] = iteration_id
+                result.setdefault("status", "completed")
+                result.setdefault("output_dir", str(iter_dir))
                 batch.results.append(result)
             else:
                 batch.results.append({
@@ -488,6 +562,24 @@ async def _run_iteration(
                     "status": "completed",
                     "raw_result": str(result),
                 })
+
+            # Enrich summary.json with variation data + cost (sim runner doesn't have this)
+            import re as _re
+            _seed_match = _re.search(r"seed=(\d+)", variation_desc)
+            _seed_val = int(_seed_match.group(1)) if _seed_match else iteration_index
+            summary_path = iter_dir / "summary.json"
+            if summary_path.exists():
+                try:
+                    with open(summary_path) as f:
+                        summary = json.load(f)
+                    summary["variation_description"] = variation_desc
+                    summary["seed"] = _seed_val
+                    summary["cost_usd"] = result.get("cost_usd", 0) if isinstance(result, dict) else 0
+                    summary["iteration_index"] = iteration_index
+                    with open(summary_path, "w") as f:
+                        json.dump(summary, f, indent=2, ensure_ascii=False, default=str)
+                except Exception as e:
+                    logger.warning("Failed to enrich summary.json for %s: %s", iteration_id, e)
 
             batch.iterations_completed += 1
             if iteration_id in _simulations:

@@ -61,6 +61,38 @@ export const securityPostureSchema = z.object({
   bugBountyProgram: z.boolean().optional(),
 });
 
+export const vendorEntitySchema = z.object({
+  name: z.string(),
+  category: z.string(),
+  criticality: z.enum(["low", "medium", "high", "critical"]),
+  systemsProvided: z.array(z.string()),
+  contractType: z.string().optional(),
+  singlePointOfFailure: z.boolean().optional(),
+});
+
+export const dataFlowSchema = z.object({
+  source: z.string(),
+  target: z.string(),
+  dataTypes: z.array(z.string()),
+  protocol: z.string().optional(),
+  encrypted: z.boolean().optional(),
+  frequency: z.string().optional(),
+});
+
+export const accessMappingSchema = z.object({
+  role: z.string(),
+  systems: z.array(z.string()),
+  privilegeLevel: z.enum(["admin", "read-write", "read-only", "operator"]),
+  mfaRequired: z.boolean().optional(),
+});
+
+export const networkZoneSchema = z.object({
+  zone: z.string(),
+  systems: z.array(z.string()),
+  exposedToInternet: z.boolean(),
+  connectedZones: z.array(z.string()).optional(),
+});
+
 export const dossierSchema = z.object({
   company: z.object({
     name: z.string(),
@@ -84,6 +116,10 @@ export const dossierSchema = z.object({
   risks: z.array(riskInfoSchema),
   recentEvents: z.array(eventInfoSchema),
   securityPosture: securityPostureSchema.optional(),
+  vendorEntities: z.array(vendorEntitySchema).optional(),
+  dataFlows: z.array(dataFlowSchema).optional(),
+  accessMappings: z.array(accessMappingSchema).optional(),
+  networkTopology: z.array(networkZoneSchema).optional(),
 });
 
 export type DossierFormValues = z.infer<typeof dossierSchema>;
