@@ -4,10 +4,9 @@ interface Props {
   score: number;
   description: string;
   fairIncrement: string;
-  isInferred?: boolean;
 }
 
-export default function StepRiskMini({ score, description, fairIncrement, isInferred }: Props) {
+export default function StepRiskMini({ score, description, fairIncrement }: Props) {
   // Normalize: scores may be 0-10 or 0-100 scale
   const normalizedScore = score <= 10 ? score * 10 : score;
   const ringColor =
@@ -27,9 +26,6 @@ export default function StepRiskMini({ score, description, fairIncrement, isInfe
       <div className="flex-1 min-w-0">
         <p className="text-xs text-pitch-black-400 mb-0.5">
           Risk at this phase
-          {isInferred && (
-            <span className="ml-1 text-pitch-black-300">~estimated</span>
-          )}
         </p>
         <p className="text-sm text-pitch-black-700 leading-snug">
           {description}

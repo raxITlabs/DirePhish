@@ -3,7 +3,6 @@
 interface Props {
   label: string;
   type: "success" | "warning" | "danger" | "info";
-  isInferred?: boolean;
 }
 
 const typeStyles: Record<Props["type"], string> = {
@@ -20,13 +19,13 @@ const dotStyles: Record<Props["type"], string> = {
   info: "bg-royal-azure-500",
 };
 
-export default function EvidenceChip({ label, type, isInferred }: Props) {
+export default function EvidenceChip({ label, type }: Props) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${typeStyles[type]}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dotStyles[type]}`} />
-      {isInferred ? `~${label}` : label}
+      {label}
     </span>
   );
 }

@@ -42,9 +42,6 @@ export default function PlaybookFirstLayout({
   // MC summary stats for sidebar
   const mc = report.monteCarloStats;
   const resilience = report.resilience;
-  const riskScore = report.riskScore;
-  const fairEstimates = riskScore?.fair_estimates;
-
   return (
     <div className="flex min-h-[calc(100vh-80px)]">
       {/* ── Left Sidebar ── */}
@@ -146,35 +143,6 @@ export default function PlaybookFirstLayout({
                 <span className="text-pitch-black-400">Escalated</span>
                 <span className="font-semibold text-pitch-black-700">
                   {mc.outcome_distribution.escalated ?? 0}%
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* FAIR Estimate */}
-        {fairEstimates && (
-          <div>
-            <p className="text-[10px] uppercase tracking-widest text-pitch-black-400 mb-2">
-              FAIR Estimate
-            </p>
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-pitch-black-400">ALE</span>
-                <span className="font-semibold text-burnt-peach-600">
-                  ${(fairEstimates.ale / 1_000_000).toFixed(0)}M
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-pitch-black-400">P10 Loss</span>
-                <span className="font-semibold text-pitch-black-700">
-                  ${(fairEstimates.p10_loss / 1_000_000).toFixed(0)}M
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-pitch-black-400">P90 Loss</span>
-                <span className="font-semibold text-pitch-black-700">
-                  ${(fairEstimates.p90_loss / 1_000_000).toFixed(0)}M
                 </span>
               </div>
             </div>

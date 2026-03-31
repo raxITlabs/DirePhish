@@ -1,7 +1,6 @@
 "use client";
 
 import type { ResponseAction } from "@/app/actions/report";
-import EvidenceChip from "./EvidenceChip";
 
 interface Props {
   action: ResponseAction;
@@ -55,27 +54,11 @@ export default function ResponseActionCard({ action, index }: Props) {
         </div>
       )}
 
-      {/* Evidence chips */}
-      {action.evidence_chips.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3 pl-9">
-          {action.evidence_chips.map((chip, i) => (
-            <EvidenceChip
-              key={i}
-              label={chip.label}
-              type={chip.type}
-              isInferred={chip.is_inferred}
-            />
-          ))}
-        </div>
-      )}
-
       {/* Meta */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-pitch-black-400 pl-9 pt-2 border-t border-pitch-black-100">
-        <span>Owner: <span className="text-pitch-black-600 font-medium">{action.owner}</span></span>
-        <span>SLA: <span className="text-pitch-black-600 font-medium">{action.sla}</span></span>
-        {action.regulatory_refs.map((ref, i) => (
-          <span key={i} className="text-pitch-black-400">{ref}</span>
-        ))}
+      <div className="text-xs text-pitch-black-400 pl-9 pt-2 border-t border-pitch-black-100">
+        <span className="text-pitch-black-600 font-medium">{action.owner}</span>
+        <span className="mx-1.5">·</span>
+        <span>{action.sla}</span>
       </div>
     </div>
   );

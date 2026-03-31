@@ -54,38 +54,40 @@ export default function KillChainNav({
             <div key={step.step} className="flex items-stretch shrink-0">
               <button
                 onClick={() => onStepClick(i)}
-                className={`relative px-4 py-3 rounded-lg border min-w-[130px] max-w-[180px] text-left transition-all cursor-pointer ${
+                className={`flex items-start gap-2.5 px-3 py-2.5 rounded-lg border min-w-[130px] max-w-[180px] text-left transition-all cursor-pointer ${
                   isActive
                     ? `${colors.bg} ${colors.border} ring-2 ring-offset-1 ring-pitch-black-200 shadow-sm`
                     : "bg-pitch-black-50 border-pitch-black-200 hover:border-pitch-black-300 hover:bg-pitch-black-100"
                 }`}
               >
-                {/* Step number badge */}
-                <div
-                  className={`absolute -top-2 -left-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm ${
+                {/* Step number badge — inline, always visible */}
+                <span
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5 ${
                     isActive ? colors.badge : "bg-pitch-black-400"
                   }`}
                 >
                   {i + 1}
-                </div>
+                </span>
 
-                <p
-                  className={`text-[10px] uppercase tracking-wider mb-0.5 ${
-                    isActive ? colors.text : "text-pitch-black-500"
-                  }`}
-                >
-                  {step.tactic}
-                </p>
-                <p
-                  className={`text-xs font-semibold leading-tight ${
-                    isActive ? "text-pitch-black-800" : "text-pitch-black-600"
-                  }`}
-                >
-                  {step.technique}
-                </p>
-                <p className="text-[10px] text-pitch-black-400 mt-1 truncate">
-                  {step.target}
-                </p>
+                <div className="min-w-0">
+                  <p
+                    className={`text-[10px] uppercase tracking-wider mb-0.5 ${
+                      isActive ? colors.text : "text-pitch-black-500"
+                    }`}
+                  >
+                    {step.tactic}
+                  </p>
+                  <p
+                    className={`text-xs font-semibold leading-tight ${
+                      isActive ? "text-pitch-black-800" : "text-pitch-black-600"
+                    }`}
+                  >
+                    {step.technique}
+                  </p>
+                  <p className="text-[10px] text-pitch-black-400 mt-0.5 truncate">
+                    {step.target}
+                  </p>
+                </div>
               </button>
 
               {/* Arrow connector */}
