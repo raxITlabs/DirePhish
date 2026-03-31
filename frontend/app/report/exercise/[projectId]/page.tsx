@@ -11,6 +11,8 @@ import CISOView from "@/app/components/report/exercise/CISOView";
 import SecurityTeamView from "@/app/components/report/exercise/SecurityTeamView";
 import PlaybookView from "@/app/components/report/exercise/PlaybookView";
 import RiskScoreView from "@/app/components/report/exercise/RiskScoreView";
+import PlaybookFirstLayout from "@/app/components/report/exercise/PlaybookFirstLayout";
+import ExportButton from "@/app/components/report/exercise/ExportButton";
 import { Skeleton } from "@/app/components/ui/skeleton";
 import { AlertTriangle, Home, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/app/components/ui/card";
@@ -115,6 +117,43 @@ export default function ExerciseReportPage({
     );
   }
 
+  // Use PlaybookFirstLayout when attack-path playbook data exists
+  const hasAttackPathPlaybook =
+    report.attackPathPlaybook && report.attackPathPlaybook.length > 0;
+
+  if (hasAttackPathPlaybook) {
+    return (
+      <div>
+        {/* Compact header for playbook-first layout */}
+        <div className="flex items-center gap-4 px-6 py-3 border-b border-pitch-black-200 print:hidden">
+          <Link
+            href="/"
+            className="flex items-center justify-center w-8 h-8 rounded-md bg-pitch-black-100 hover:bg-pitch-black-200 transition-colors"
+          >
+            <Home size={16} className="text-pitch-black-600" />
+          </Link>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold">
+              {report.companyName || "Exercise"} — Exercise Report
+            </h1>
+            {report.generatedAt && (
+              <p className="text-xs text-muted-foreground">
+                {new Date(report.generatedAt).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </p>
+            )}
+          </div>
+          <ExportButton report={report} />
+        </div>
+        <PlaybookFirstLayout report={report} projectId={projectId} />
+      </div>
+    );
+  }
+
+  // Fallback: legacy tab layout for reports without attack-path playbook
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
