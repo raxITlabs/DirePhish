@@ -185,6 +185,60 @@ export async function getReportDownloadUrl(reportId: string): Promise<string> {
   return `${base}/api/report/${reportId}/download`;
 }
 
+// --- Attack-path playbook types ---
+
+export interface EvidenceChipData {
+  label: string;
+  type: "success" | "warning" | "danger" | "info";
+  is_inferred: boolean;
+}
+
+export interface ResponseAction {
+  title: string;
+  description: string;
+  commands: string[];
+  priority: "critical" | "high" | "medium";
+  owner: string;
+  sla: string;
+  evidence_chips: EvidenceChipData[];
+  regulatory_refs: string[];
+}
+
+export interface WhatIfScenario {
+  scenario: string;
+  containment_delta: string;
+  rounds_delta: number;
+  exposure_delta: string;
+  direction: "positive" | "negative";
+  source: "counterfactual" | "estimated";
+}
+
+export interface AttackPathStep {
+  attack_path_index: number;
+  step_index: number;
+  tactic: string;
+  technique_id: string;
+  description: string;
+  error?: string;
+  evidence: {
+    containment_rate: string;
+    avg_detection_round: number;
+    systems_affected: number;
+    divergence_pct: number;
+    is_inferred: boolean;
+  };
+  response_actions: ResponseAction[];
+  team_performance: Record<string, number>;
+  what_if: WhatIfScenario[];
+  regulatory_timeline: Array<{ time: string; action: string }>;
+  risk_at_step: {
+    score: number;
+    description: string;
+    fair_increment: string;
+    is_inferred: boolean;
+  };
+}
+
 // --- Exercise report (unified) ---
 
 export interface ExerciseReport {
@@ -434,6 +488,9 @@ export interface ExerciseReport {
       nextExerciseSchedule: string;
     };
   };
+
+  // Attack-path playbook (per-step with MC evidence)
+  attackPathPlaybook?: AttackPathStep[];
 
   appendix?: {
     scenarioDetails: Array<{
