@@ -14,11 +14,10 @@ interface KillChainStep {
   description: string;
 }
 
-type ViewId = "playbook" | "board" | "ciso" | "security" | "risk-score";
+type ViewId = "playbook" | "executive" | "security" | "risk-score";
 
 const VIEWS: { id: ViewId; label: string }[] = [
-  { id: "board", label: "Board Summary" },
-  { id: "ciso", label: "CISO Analysis" },
+  { id: "executive", label: "Executive Summary" },
   { id: "security", label: "Security Team" },
   { id: "risk-score", label: "Risk Score" },
 ];

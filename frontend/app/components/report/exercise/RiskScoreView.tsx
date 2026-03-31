@@ -69,7 +69,7 @@ export default function RiskScoreView({ report, projectId }: Props) {
             )}
             <button
               onClick={handleCompute}
-              className="px-6 py-2 bg-verdigris-600 hover:bg-verdigris-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="px-6 py-2 bg-royal-azure-600 hover:bg-royal-azure-700 text-white rounded-lg text-sm font-medium transition-colors"
             >
               Compute Risk Score
             </button>
@@ -96,9 +96,9 @@ export default function RiskScoreView({ report, projectId }: Props) {
     <div className="space-y-6">
       {/* Methodology badges */}
       <div className="flex items-center gap-2">
-        <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-verdigris-900/30 text-verdigris-400">FAIR</span>
-        <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-blue-900/30 text-blue-400">ATT&CK</span>
-        <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-purple-900/30 text-purple-400">Monte Carlo</span>
+        <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-royal-azure-50 text-royal-azure-700 border border-royal-azure-200">FAIR</span>
+        <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-royal-azure-50 text-royal-azure-700 border border-royal-azure-200">ATT&CK</span>
+        <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-royal-azure-50 text-royal-azure-700 border border-royal-azure-200">Monte Carlo</span>
         <span className="text-[11px] text-pitch-black-500 ml-2">
           {riskScore.confidence_flag === "low" ? "⚠ Low confidence" : ""} · {(report.monteCarloStats?.iteration_count ?? 0)} iterations
         </span>

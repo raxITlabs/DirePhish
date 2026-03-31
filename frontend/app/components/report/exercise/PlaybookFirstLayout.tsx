@@ -10,8 +10,7 @@ import {
 import ReportStagesPanel from "./ReportStagesPanel";
 import MiniGraph from "./MiniGraph";
 import StepDetail from "./StepDetail";
-import BoardView from "./BoardView";
-import CISOView from "./CISOView";
+import ExecutiveSummaryView from "./ExecutiveSummaryView";
 import SecurityTeamView from "./SecurityTeamView";
 import RiskScoreView from "./RiskScoreView";
 
@@ -19,7 +18,7 @@ function formatTactic(t: string): string {
   return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
-type ViewId = "playbook" | "board" | "ciso" | "security" | "risk-score";
+type ViewId = "playbook" | "executive" | "security" | "risk-score";
 
 interface PlaybookFirstLayoutProps {
   report: ExerciseReport;
@@ -43,13 +42,11 @@ export default function PlaybookFirstLayout({
   const panelTitle =
     activeView === "playbook"
       ? `${currentStep ? formatTactic(currentStep.tactic) : "Step"} · ${currentStep?.technique_id ?? ""}`
-      : activeView === "board"
-        ? "Board Summary"
-        : activeView === "ciso"
-          ? "CISO Analysis"
-          : activeView === "security"
-            ? "Security Team"
-            : "Risk Score";
+      : activeView === "executive"
+        ? "Executive Summary"
+        : activeView === "security"
+          ? "Security Team"
+          : "Risk Score";
 
   return (
     <div
@@ -103,10 +100,8 @@ export default function PlaybookFirstLayout({
                       <p className="text-sm">Select a kill chain step</p>
                     </div>
                   )
-                ) : activeView === "board" ? (
-                  <BoardView report={report} />
-                ) : activeView === "ciso" ? (
-                  <CISOView report={report} />
+                ) : activeView === "executive" ? (
+                  <ExecutiveSummaryView report={report} />
                 ) : activeView === "security" ? (
                   <SecurityTeamView report={report} />
                 ) : activeView === "risk-score" ? (
