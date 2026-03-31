@@ -849,6 +849,206 @@ def _generate_playbook(
         return None
 
 
+# ─── Attack-Path Playbook (per-step with MC evidence) ───
+
+_ATTACK_PATH_PLAYBOOK_PREAMBLE = """You are generating an incident response playbook step for a cybersecurity exercise simulation.
+ALL output must be specific to the simulation exercise data provided.
+Reference ACTUAL system names, ACTUAL attack techniques, ACTUAL team responses from the exercise.
+Evidence chips must reference Monte Carlo simulation results where available.
+Output valid JSON matching the schema exactly."""
+
+
+def _generate_attack_path_step(
+    llm: LLMClient,
+    step: dict,
+    step_index: int,
+    all_steps: list[dict],
+    mc_stats: dict | None,
+    sim_data_list: list[dict],
+    graph_data: dict,
+    cost_tracker: CostTracker,
+) -> dict:
+    """Generate per-step playbook entry with response actions and MC evidence."""
+
+    # Extract relevant MC data for this step
+    mc_context = ""
+    if mc_stats:
+        iteration_count = mc_stats.get("iteration_count", 0)
+        outcome_dist = mc_stats.get("outcome_distribution", {})
+        containment_stats = mc_stats.get("containment_round_stats", {})
+        divergence_points = mc_stats.get("decision_divergence_points", [])
+        agent_consistency = mc_stats.get("agent_consistency", {})
+
+        # Find divergence points near this step's expected round
+        relevant_divergence = [
+            dp for dp in divergence_points
+            if abs(dp.get("round", 0) - (step_index + 1)) <= 1
+        ]
+
+        mc_context = f"""
+MONTE CARLO SIMULATION DATA ({iteration_count} iterations):
+- Outcome distribution: {json.dumps(outcome_dist)}
+- Containment stats: mean={containment_stats.get('mean', 'N/A')} rounds, std={containment_stats.get('std', 'N/A')}
+- Divergence points near this step: {json.dumps(relevant_divergence) if relevant_divergence else 'None'}
+- Agent consistency scores: {json.dumps(agent_consistency)}
+"""
+
+    # Extract systems and compliance from graph
+    systems = [s.get("name", "") for s in graph_data.get("systems", [])]
+    compliance = [c.get("name", "") for c in graph_data.get("compliance", [])]
+
+    prompt = f"""{_ATTACK_PATH_PLAYBOOK_PREAMBLE}
+
+KILL CHAIN STEP {step_index + 1} of {len(all_steps)}:
+  Tactic: {step.get('tactic', '')}
+  Technique: {step.get('technique', '')}
+  Target: {step.get('target', '')}
+  Description: {step.get('description', '')}
+
+FULL KILL CHAIN CONTEXT (all steps for sequencing):
+{json.dumps(all_steps, indent=2)}
+{mc_context}
+ORGANIZATION SYSTEMS: {json.dumps(systems)}
+COMPLIANCE REQUIREMENTS: {json.dumps(compliance)}
+
+Generate a playbook entry for THIS kill chain step. Include:
+1. Evidence attribution (infer from MC aggregate data how this step contributes to containment)
+2. 2-4 response actions ranked by containment impact, each with specific CLI commands
+3. 1-2 what-if alternate scenarios (one negative delay, one positive acceleration)
+4. Regulatory timeline deadlines
+5. Per-step risk assessment
+
+VALIDATION: Per-step evidence must be consistent with overall MC stats. Mark all evidence as inferred (is_inferred: true) since we are attributing aggregate MC data to individual steps.
+
+Output JSON:
+{{
+  "attack_path_index": 0,
+  "step_index": {step_index},
+  "tactic": "{step.get('tactic', '')}",
+  "technique_id": "{step.get('technique', '')}",
+  "description": "{step.get('description', '').replace('"', '\\"')}",
+  "evidence": {{
+    "containment_rate": "X/Y format — infer from MC data",
+    "avg_detection_round": 0,
+    "systems_affected": 0,
+    "divergence_pct": 0,
+    "is_inferred": true
+  }},
+  "response_actions": [
+    {{
+      "title": "action title",
+      "description": "what to do and why, referencing simulation evidence",
+      "commands": ["specific CLI command for target cloud/system"],
+      "priority": "critical|high|medium",
+      "owner": "role title (e.g., DevOps Lead, IAM Team, SOC Analyst)",
+      "sla": "time window (e.g., 15 minutes, 1 hour)",
+      "evidence_chips": [
+        {{"label": "evidence text referencing MC data", "type": "success|warning|danger|info", "is_inferred": true}}
+      ],
+      "regulatory_refs": ["specific regulation references"]
+    }}
+  ],
+  "team_performance": {{"team_name": 0}},
+  "what_if": [
+    {{
+      "scenario": "what happens if response is delayed",
+      "containment_delta": "percentage change",
+      "rounds_delta": 0,
+      "exposure_delta": "dollar amount change",
+      "direction": "negative",
+      "source": "estimated"
+    }}
+  ],
+  "regulatory_timeline": [
+    {{"time": "T+1hr", "action": "regulatory action required"}}
+  ],
+  "risk_at_step": {{
+    "score": 0,
+    "description": "risk description at this phase",
+    "fair_increment": "$X per hour of delay",
+    "is_inferred": true
+  }}
+}}"""
+
+    result = llm.chat_json([{"role": "user", "content": prompt}])
+    _track_call(llm, cost_tracker, f"attack_path_step_{step_index}")
+    return result
+
+
+def _generate_attack_path_playbook(
+    llm: LLMClient,
+    methodology: dict,
+    mc_aggregation: dict | None,
+    sim_data_list: list[dict],
+    graph_data: dict,
+    cost_tracker: CostTracker,
+) -> list[dict] | None:
+    """Generate per-step attack-path playbook with MC evidence for all kill chain steps."""
+
+    attack_paths = methodology.get("attackPaths", [])
+    if not attack_paths:
+        logger.warning("No attack paths found in methodology — skipping attack path playbook")
+        return None
+
+    kill_chain = attack_paths[0].get("killChain", [])
+    if not kill_chain:
+        logger.warning("No kill chain steps found — skipping attack path playbook")
+        return None
+
+    logger.info(f"Generating attack-path playbook for {len(kill_chain)} kill chain steps...")
+
+    steps = []
+    # Generate in parallel using threads
+    results = [None] * len(kill_chain)
+    errors = [None] * len(kill_chain)
+
+    def generate_step(idx, kc_step):
+        try:
+            results[idx] = _generate_attack_path_step(
+                llm, kc_step, idx, kill_chain,
+                mc_aggregation, sim_data_list, graph_data, cost_tracker,
+            )
+        except Exception as e:
+            logger.warning(f"Attack path step {idx} failed: {e}")
+            errors[idx] = str(e)
+
+    threads = []
+    for idx, kc_step in enumerate(kill_chain):
+        t = threading.Thread(target=generate_step, args=(idx, kc_step))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join(timeout=60)
+
+    for idx in range(len(kill_chain)):
+        if results[idx]:
+            steps.append(results[idx])
+        elif errors[idx]:
+            # Partial failure — include a stub so the UI knows this step exists but failed
+            steps.append({
+                "attack_path_index": 0,
+                "step_index": idx,
+                "tactic": kill_chain[idx].get("tactic", ""),
+                "technique_id": kill_chain[idx].get("technique", ""),
+                "description": kill_chain[idx].get("description", ""),
+                "error": errors[idx],
+                "evidence": {"containment_rate": "N/A", "avg_detection_round": 0, "systems_affected": 0, "divergence_pct": 0, "is_inferred": True},
+                "response_actions": [],
+                "team_performance": {},
+                "what_if": [],
+                "regulatory_timeline": [],
+                "risk_at_step": {"score": 0, "description": "Generation failed", "fair_increment": "N/A", "is_inferred": True},
+            })
+
+    if steps:
+        logger.info(f"Attack-path playbook generated: {len(steps)} steps ({sum(1 for e in errors if e)} failures)")
+        return steps
+    else:
+        logger.warning("Attack-path playbook produced no steps")
+        return None
+
+
 # ─── Main pipeline ───
 
 def run_exercise_report(
@@ -1091,10 +1291,24 @@ def _generate_exercise_report(
             mc_aggregation, cost_tracker,
         )
 
-        # ─── Step 15: Collect pipeline costs ───
+        # ─── Step 15: Generate attack-path playbook (per-step with MC evidence) ───
+        attack_path_playbook = None
+        try:
+            logger.info("Step 15: Generating attack-path playbook...")
+            attack_path_playbook = _generate_attack_path_playbook(
+                llm, methodology, mc_aggregation, sim_data_list, graph_data, cost_tracker,
+            )
+            if attack_path_playbook:
+                logger.info(f"Attack-path playbook: {len(attack_path_playbook)} steps generated")
+            else:
+                logger.warning("Attack-path playbook returned None — will fall back to generic playbook in frontend")
+        except Exception as e:
+            logger.warning(f"Attack-path playbook generation failed: {e} — frontend will use generic playbook")
+
+        # ─── Step 16: Collect pipeline costs ───
         # Save exercise report costs first so _collect_pipeline_costs can read them
         cost_tracker.save(str(out_dir))
-        logger.info("Step 11: Collecting pipeline costs...")
+        logger.info("Step 16: Collecting pipeline costs...")
         costs = _collect_pipeline_costs(project_id, sim_data_list)
 
         # ─── Assemble ───
@@ -1133,6 +1347,7 @@ def _generate_exercise_report(
             "resilience": resilience,
             "counterfactualComparison": cf_comparison,
             "playbook": playbook,
+            "attackPathPlaybook": attack_path_playbook,
         }
 
         with open(report_path, "w") as f:
