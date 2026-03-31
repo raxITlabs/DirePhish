@@ -43,9 +43,11 @@ export default function PlaybookFirstLayout({
   const mc = report.monteCarloStats;
   const resilience = report.resilience;
   return (
-    <div className="flex min-h-[calc(100vh-80px)]">
-      {/* ── Left Sidebar ── */}
-      <aside className="w-60 shrink-0 bg-pitch-black-50 border-r border-pitch-black-200 p-4 overflow-y-auto space-y-6">
+    <div className="flex h-full">
+      {/* ── Left Sidebar — matches AppSidebar styling ── */}
+      <aside className="shrink-0 h-full p-2 hidden md:flex flex-col w-[17rem]">
+      <div className="bg-card rounded-xl border border-border/20 shadow-sm flex-1 overflow-hidden flex flex-col">
+      <div className="flex-1 overflow-y-auto p-3 space-y-6">
         {/* Exercise Metadata */}
         <div>
           <p className="text-[10px] uppercase tracking-widest text-pitch-black-400 mb-1">
@@ -170,6 +172,8 @@ export default function PlaybookFirstLayout({
             ))}
           </div>
         </div>
+      </div>
+      </div>
       </aside>
 
       {/* ── Main Content ── */}
