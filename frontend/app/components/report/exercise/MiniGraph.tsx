@@ -62,7 +62,7 @@ export default function MiniGraph({ projectId }: MiniGraphProps) {
 
   if (loading) {
     return (
-      <div className="h-[300px] rounded-lg bg-pitch-black-50 animate-pulse flex items-center justify-center">
+      <div className="h-full min-h-[300px] rounded-lg bg-pitch-black-50 animate-pulse flex items-center justify-center">
         <span className="text-xs text-pitch-black-400">Loading graph...</span>
       </div>
     );
@@ -70,7 +70,7 @@ export default function MiniGraph({ projectId }: MiniGraphProps) {
 
   if (nodes.length === 0) {
     return (
-      <div className="h-[300px] rounded-lg bg-pitch-black-50 flex items-center justify-center">
+      <div className="h-full min-h-[300px] rounded-lg bg-pitch-black-50 flex items-center justify-center">
         <span className="text-xs text-pitch-black-400">No graph data available</span>
       </div>
     );
@@ -86,7 +86,7 @@ export default function MiniGraph({ projectId }: MiniGraphProps) {
     <div className="space-y-2">
       <p className="text-sm font-medium text-pitch-black-600">Attack Surface</p>
       <div className="rounded-lg border border-pitch-black-100 bg-pitch-black-50/50 overflow-hidden">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-[300px]">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full min-h-[300px]">
           {/* Dot grid background */}
           <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
             <circle cx="10" cy="10" r="0.5" className="fill-pitch-black-200" />

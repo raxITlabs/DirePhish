@@ -122,37 +122,7 @@ export default function ExerciseReportPage({
     report.attackPathPlaybook && report.attackPathPlaybook.length > 0;
 
   if (hasAttackPathPlaybook) {
-    return (
-      <div className="flex flex-col h-full">
-        {/* Compact header */}
-        <div className="flex items-center gap-4 px-6 py-3 border-b border-border shrink-0 print:hidden">
-          <Link
-            href="/"
-            className="flex items-center justify-center w-8 h-8 rounded-md bg-pitch-black-100 hover:bg-pitch-black-200 transition-colors"
-          >
-            <Home size={16} className="text-pitch-black-600" />
-          </Link>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold">
-              {report.companyName || "Exercise"} — Exercise Report
-            </h1>
-            {report.generatedAt && (
-              <p className="text-xs text-muted-foreground">
-                {new Date(report.generatedAt).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-            )}
-          </div>
-          <ExportButton report={report} />
-        </div>
-        <div className="flex-1 min-h-0">
-          <PlaybookFirstLayout report={report} projectId={projectId} />
-        </div>
-      </div>
-    );
+    return <PlaybookFirstLayout report={report} projectId={projectId} />;
   }
 
   // Fallback: legacy tab layout for reports without attack-path playbook

@@ -2,22 +2,20 @@
 
 import { useState } from "react";
 import type { ExerciseReport, AttackPathStep } from "@/app/actions/report";
-import KillChainNav from "./KillChainNav";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/app/components/ui/resizable";
+import ReportStagesPanel from "./ReportStagesPanel";
+import MiniGraph from "./MiniGraph";
 import StepDetail from "./StepDetail";
 import BoardView from "./BoardView";
 import CISOView from "./CISOView";
 import SecurityTeamView from "./SecurityTeamView";
 import RiskScoreView from "./RiskScoreView";
 
-type SidebarView = "playbook" | "board" | "ciso" | "security" | "risk-score";
-
-const SIDEBAR_VIEWS: { id: SidebarView; label: string }[] = [
-  { id: "playbook", label: "Attack Path Playbook" },
-  { id: "board", label: "Board Summary" },
-  { id: "ciso", label: "CISO Analysis" },
-  { id: "security", label: "Security Team" },
-  { id: "risk-score", label: "Risk Score" },
-];
+type ViewId = "playbook" | "board" | "ciso" | "security" | "risk-score";
 
 interface PlaybookFirstLayoutProps {
   report: ExerciseReport;
@@ -29,192 +27,88 @@ export default function PlaybookFirstLayout({
   projectId,
 }: PlaybookFirstLayoutProps) {
   const [activeStep, setActiveStep] = useState(0);
-  const [sidebarView, setSidebarView] = useState<SidebarView>("playbook");
+  const [activeView, setActiveView] = useState<ViewId>("playbook");
 
   const attackPathPlaybook = report.attackPathPlaybook ?? [];
   const killChain =
     report.methodology?.attackPaths?.[0]?.killChain ?? [];
-  const threatName =
-    report.methodology?.attackPaths?.[0]?.threatName;
   const currentStep: AttackPathStep | undefined =
     attackPathPlaybook[activeStep];
 
-  // MC summary stats for sidebar
-  const mc = report.monteCarloStats;
-  const resilience = report.resilience;
+  // Panel header label
+  const panelTitle =
+    activeView === "playbook"
+      ? `${currentStep?.tactic ?? "Step"} · ${currentStep?.technique_id ?? ""}`
+      : activeView === "board"
+        ? "Board Summary"
+        : activeView === "ciso"
+          ? "CISO Analysis"
+          : activeView === "security"
+            ? "Security Team"
+            : "Risk Score";
+
   return (
-    <div className="flex h-full">
-      {/* ── Left Sidebar — matches AppSidebar styling ── */}
-      <aside className="shrink-0 h-full p-2 hidden md:flex flex-col w-[17rem]">
-      <div className="bg-card rounded-xl border border-border/20 shadow-sm flex-1 overflow-hidden flex flex-col">
-      <div className="flex-1 overflow-y-auto p-3 space-y-6">
-        {/* Exercise Metadata */}
-        <div>
-          <p className="text-[10px] uppercase tracking-widest text-pitch-black-400 mb-1">
-            Exercise
-          </p>
-          <p className="text-sm font-semibold text-pitch-black-800">
-            {report.companyName ?? "Exercise Report"}
-          </p>
-          <p className="text-xs text-pitch-black-400 mt-0.5">
-            {report.generatedAt
-              ? new Date(report.generatedAt).toLocaleDateString()
-              : ""}
-          </p>
-        </div>
+    <div
+      className="flex overflow-hidden"
+      style={{ width: "100%", height: "calc(100svh - 3rem)" }}
+    >
+      {/* Left: Stages Panel (fixed width, not resizable) */}
+      <ReportStagesPanel
+        killChain={killChain}
+        activeStep={activeStep}
+        onStepClick={setActiveStep}
+        report={report}
+        activeView={activeView}
+        onViewChange={setActiveView}
+      />
 
-        {/* Readiness Score */}
-        {resilience && (
-          <div>
-            <p className="text-[10px] uppercase tracking-widest text-pitch-black-400 mb-2">
-              Readiness Score
-            </p>
-            <div className="flex items-center justify-center">
-              <div className="relative w-20 h-20">
-                <svg viewBox="0 0 100 100" className="w-full h-full">
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="42"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    className="text-pitch-black-200"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="42"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    className="text-tuscan-sun-500"
-                    strokeDasharray={`${(resilience.overall / 100) * 264} 264`}
-                    strokeDashoffset="-66"
-                    strokeLinecap="round"
-                    transform="rotate(-90 50 50)"
-                  />
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-lg font-bold text-tuscan-sun-600">
-                  {resilience.overall}
+      {/* Center + Right: Resizable */}
+      <div className="flex-1 min-w-0">
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
+          {/* Center: Attack Graph */}
+          <ResizablePanel defaultSize={55} minSize={30}>
+            <div className="h-full overflow-y-auto p-4">
+              <MiniGraph projectId={projectId} highlightAttackPath />
+            </div>
+          </ResizablePanel>
+
+          {/* Handle — matches pipeline */}
+          <ResizableHandle className="w-0 bg-transparent after:w-3 hover:after:bg-border/30 after:transition-colors after:duration-200 after:rounded-full" />
+
+          {/* Right: Detail Panel */}
+          <ResizablePanel defaultSize={45} minSize={25}>
+            <div className="flex flex-col h-[calc(100%-16px)] mt-2 mr-2 bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden">
+              {/* Panel Header */}
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border/10 shrink-0">
+                <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+                  {panelTitle}
                 </span>
+              </div>
+
+              {/* Panel Content */}
+              <div className="flex-1 overflow-y-auto px-5 py-4">
+                {activeView === "playbook" ? (
+                  currentStep ? (
+                    <StepDetail step={currentStep} />
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <p className="text-sm">Select a kill chain step</p>
+                    </div>
+                  )
+                ) : activeView === "board" ? (
+                  <BoardView report={report} />
+                ) : activeView === "ciso" ? (
+                  <CISOView report={report} />
+                ) : activeView === "security" ? (
+                  <SecurityTeamView report={report} />
+                ) : activeView === "risk-score" ? (
+                  <RiskScoreView report={report} projectId={projectId} />
+                ) : null}
               </div>
             </div>
-            <p className="text-[10px] text-pitch-black-400 text-center mt-1">
-              / 100
-            </p>
-          </div>
-        )}
-
-        {/* MC Stats */}
-        {mc && (
-          <div>
-            <p className="text-[10px] uppercase tracking-widest text-pitch-black-400 mb-2">
-              Monte Carlo
-            </p>
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-pitch-black-400">Iterations</span>
-                <span className="font-semibold text-pitch-black-700">
-                  {mc.iteration_count}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-pitch-black-400">Contained</span>
-                <span className="font-semibold text-verdigris-600">
-                  {mc.iteration_count > 0
-                    ? Math.round(
-                        ((mc.outcome_distribution.contained_early +
-                          mc.outcome_distribution.contained_late) /
-                          mc.iteration_count) *
-                          100,
-                      )
-                    : 0}
-                  %
-                </span>
-              </div>
-              {mc.containment_round_stats && (
-                <div className="flex justify-between">
-                  <span className="text-pitch-black-400">Avg Rounds</span>
-                  <span className="font-semibold text-pitch-black-700">
-                    {mc.containment_round_stats.mean.toFixed(1)}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-pitch-black-400">Escalated</span>
-                <span className="font-semibold text-pitch-black-700">
-                  {mc.outcome_distribution.escalated ?? 0}%
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* View Switcher */}
-        <div>
-          <p className="text-[10px] uppercase tracking-widest text-pitch-black-400 mb-2">
-            Views
-          </p>
-          <div className="space-y-0.5">
-            {SIDEBAR_VIEWS.map((v) => (
-              <button
-                key={v.id}
-                onClick={() => setSidebarView(v.id)}
-                className={`w-full text-left px-3 py-2 rounded text-xs transition-colors ${
-                  sidebarView === v.id
-                    ? "bg-royal-azure-50 text-royal-azure-700 font-medium"
-                    : "text-pitch-black-500 hover:bg-pitch-black-100 hover:text-pitch-black-700"
-                }`}
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
-        </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
-      </div>
-      </aside>
-
-      {/* ── Main Content ── */}
-      <main className="flex-1 overflow-y-auto">
-        {sidebarView === "playbook" ? (
-          <div className="space-y-6 p-6">
-            {/* Kill Chain Navigation */}
-            <KillChainNav
-              killChain={killChain}
-              activeStep={activeStep}
-              onStepClick={setActiveStep}
-              threatName={threatName}
-            />
-
-            {/* Step Detail */}
-            {currentStep ? (
-              <StepDetail step={currentStep} />
-            ) : (
-              <div className="text-center py-12 text-pitch-black-400">
-                <p>Select a kill chain step to see response actions</p>
-              </div>
-            )}
-          </div>
-        ) : sidebarView === "board" ? (
-          <div className="p-6">
-            <BoardView report={report} />
-          </div>
-        ) : sidebarView === "ciso" ? (
-          <div className="p-6">
-            <CISOView report={report} />
-          </div>
-        ) : sidebarView === "security" ? (
-          <div className="p-6">
-            <SecurityTeamView report={report} />
-          </div>
-        ) : sidebarView === "risk-score" ? (
-          <div className="p-6">
-            <RiskScoreView report={report} projectId={projectId} />
-          </div>
-        ) : null}
-      </main>
     </div>
   );
 }
