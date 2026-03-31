@@ -11,7 +11,6 @@ import {
 import type { ExerciseReport } from "@/app/actions/report";
 import OutcomeDistributionBar from "./OutcomeDistributionBar";
 import ReadinessGauge from "./ReadinessGauge";
-import MiniGraph from "./MiniGraph";
 import StressTestResults from "./StressTestResults";
 
 interface BoardViewProps {
@@ -130,11 +129,6 @@ export default function BoardView({ report }: BoardViewProps) {
             ) : (
               <EmptySection label="Readiness scoring not available — run stress tests to generate" />
             )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <MiniGraph projectId={report.projectId} />
           </CardContent>
         </Card>
       </div>

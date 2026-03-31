@@ -1,5 +1,9 @@
 "use client";
 
+function formatTactic(t: string): string {
+  return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
 interface KillChainStep {
   step: number;
   tactic: string;
@@ -75,7 +79,7 @@ export default function KillChainNav({
                       isActive ? colors.text : "text-pitch-black-500"
                     }`}
                   >
-                    {step.tactic}
+                    {formatTactic(step.tactic)}
                   </p>
                   <p
                     className={`text-xs font-semibold leading-tight ${

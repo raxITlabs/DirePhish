@@ -8,6 +8,10 @@ import WhatIfTimeline from "./WhatIfTimeline";
 import RegulatoryTimeline from "./RegulatoryTimeline";
 import StepRiskMini from "./StepRiskMini";
 
+function formatTactic(t: string): string {
+  return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
 const TEAM_LIMIT = 5;
 
 interface StepDetailProps {
@@ -42,7 +46,7 @@ export default function StepDetail({ step }: StepDetailProps) {
       {/* Step Header Card */}
       <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-5">
         <div className="inline-flex items-center gap-2 bg-royal-azure-50 border border-royal-azure-200 px-3 py-1 rounded-full text-[11px] text-royal-azure-700 font-medium mb-3">
-          MITRE ATT&CK · {step.technique_id} · {step.tactic}
+          MITRE ATT&CK · {step.technique_id} · {formatTactic(step.tactic)}
         </div>
         <h2 className="text-base font-semibold text-pitch-black-800 leading-snug mb-3">
           {step.description}

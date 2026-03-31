@@ -1,5 +1,9 @@
 "use client";
 
+function formatTactic(t: string): string {
+  return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
 interface KillChainStep {
   step: number;
   tactic: string;
@@ -44,7 +48,7 @@ export default function KillChainFlow({ killChain, threatName }: KillChainFlowPr
               className={`relative px-4 py-3 rounded-lg border min-w-[140px] max-w-[180px] ${STEP_COLORS[i % STEP_COLORS.length]}`}
             >
               <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5">
-                {step.tactic}
+                {formatTactic(step.tactic)}
               </p>
               <p className="text-xs font-semibold leading-tight">
                 {step.technique}

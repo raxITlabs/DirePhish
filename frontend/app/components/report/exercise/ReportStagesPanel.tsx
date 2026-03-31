@@ -2,6 +2,10 @@
 
 import type { ExerciseReport } from "@/app/actions/report";
 
+function formatTactic(t: string): string {
+  return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
 interface KillChainStep {
   step: number;
   tactic: string;
@@ -126,7 +130,7 @@ export default function ReportStagesPanel({
                           : "text-foreground/70"
                       }`}
                     >
-                      {step.tactic}
+                      {formatTactic(step.tactic)}
                     </span>
                     <span className="text-[10px] font-mono text-muted-foreground/60 truncate block mt-0.5">
                       {step.technique} · {step.target}

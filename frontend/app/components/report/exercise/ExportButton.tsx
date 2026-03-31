@@ -3,6 +3,10 @@
 import { useCallback } from "react";
 import type { ExerciseReport, AttackPathStep } from "@/app/actions/report";
 
+function formatTactic(t: string): string {
+  return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
 interface ExportButtonProps {
   report: ExerciseReport;
 }
@@ -24,7 +28,7 @@ function generateMarkdown(report: ExerciseReport): string {
   md += `---\n\n`;
 
   for (const step of steps) {
-    md += `## Step ${step.step_index + 1}: ${step.tactic} (${step.technique_id})\n\n`;
+    md += `## Step ${step.step_index + 1}: ${formatTactic(step.tactic)} (${step.technique_id})\n\n`;
     md += `${step.description}\n\n`;
 
     if (step.evidence) {

@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
 import type { ExerciseReport } from "@/app/actions/report";
 import KillChainFlow from "./KillChainFlow";
-import MiniGraph from "./MiniGraph";
 
 interface SecurityTeamViewProps {
   report: ExerciseReport;
@@ -98,12 +97,6 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
           </CardContent>
         </Card>
 
-        {/* Attack Surface Graph */}
-        <Card>
-          <CardContent className="p-5">
-            <MiniGraph projectId={report.projectId} highlightAttackPath />
-          </CardContent>
-        </Card>
       </div>
 
       {/* Indicators of Compromise */}

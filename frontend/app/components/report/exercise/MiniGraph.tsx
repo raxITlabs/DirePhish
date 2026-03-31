@@ -24,6 +24,10 @@ interface MiniGraphProps {
   activeStep?: number;
 }
 
+function formatTactic(t: string): string {
+  return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function getInitials(name: string): string {
   return name
     .split(/[\s_-]+/)
@@ -266,7 +270,7 @@ export default function MiniGraph({
                   }`}
                   style={{ fontFamily: "var(--font-geist-mono), monospace" }}
                 >
-                  {step.tactic}
+                  {formatTactic(step.tactic)}
                 </text>
 
                 {/* Technique ID */}

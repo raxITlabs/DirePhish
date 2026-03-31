@@ -15,6 +15,10 @@ import CISOView from "./CISOView";
 import SecurityTeamView from "./SecurityTeamView";
 import RiskScoreView from "./RiskScoreView";
 
+function formatTactic(t: string): string {
+  return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
 type ViewId = "playbook" | "board" | "ciso" | "security" | "risk-score";
 
 interface PlaybookFirstLayoutProps {
@@ -38,7 +42,7 @@ export default function PlaybookFirstLayout({
   // Panel header label
   const panelTitle =
     activeView === "playbook"
-      ? `${currentStep?.tactic ?? "Step"} · ${currentStep?.technique_id ?? ""}`
+      ? `${currentStep ? formatTactic(currentStep.tactic) : "Step"} · ${currentStep?.technique_id ?? ""}`
       : activeView === "board"
         ? "Board Summary"
         : activeView === "ciso"
