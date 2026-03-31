@@ -62,7 +62,7 @@ export default function MiniGraph({
 
   if (loading) {
     return (
-      <div className="h-full min-h-[300px] rounded-lg bg-pitch-black-50 animate-pulse flex items-center justify-center">
+      <div className="min-h-[200px] rounded-lg bg-pitch-black-50 animate-pulse flex items-center justify-center">
         <span className="text-xs text-pitch-black-400">Loading graph...</span>
       </div>
     );
@@ -71,7 +71,7 @@ export default function MiniGraph({
   // If no kill chain, show empty state
   if (!killChain || killChain.length === 0) {
     return (
-      <div className="h-full min-h-[300px] rounded-lg bg-pitch-black-50 flex items-center justify-center">
+      <div className="min-h-[200px] rounded-lg bg-pitch-black-50 flex items-center justify-center">
         <span className="text-xs text-pitch-black-400">
           No attack path data available
         </span>
@@ -99,14 +99,15 @@ export default function MiniGraph({
   );
 
   return (
-    <div className="h-full flex flex-col">
-      <p className="text-sm font-medium text-pitch-black-600 mb-2 shrink-0">
+    <div>
+      <p className="text-sm font-medium text-pitch-black-600 mb-2">
         Attack Timeline
       </p>
-      <div className="flex-1 rounded-lg border border-pitch-black-100 bg-pitch-black-50/50 overflow-hidden">
+      <div className="rounded-lg border border-pitch-black-100 bg-pitch-black-50/50 overflow-hidden">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-full"
+          className="w-full"
+          style={{ maxHeight: "400px" }}
           preserveAspectRatio="xMidYMid meet"
         >
           <defs>

@@ -68,8 +68,8 @@ export default function PlaybookFirstLayout({
         {activeView === "playbook" ? (
           /* Playbook: graph + detail split */
           <ResizablePanelGroup orientation="horizontal" className="h-full">
-            <ResizablePanel defaultSize={55} minSize={30}>
-              <div className="h-full overflow-y-auto p-4">
+            <ResizablePanel defaultSize={40} minSize={25}>
+              <div className="overflow-y-auto p-4">
                 <MiniGraph
                   projectId={projectId}
                   killChain={killChain}
@@ -80,7 +80,7 @@ export default function PlaybookFirstLayout({
 
             <ResizableHandle className="w-0 bg-transparent after:w-3 hover:after:bg-border/30 after:transition-colors after:duration-200 after:rounded-full" />
 
-            <ResizablePanel defaultSize={45} minSize={25}>
+            <ResizablePanel defaultSize={60} minSize={30}>
               <div className="flex flex-col h-[calc(100%-16px)] mt-2 mr-2 bg-card rounded-xl border border-border/20 shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-2 border-b border-border/10 shrink-0">
                   <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
