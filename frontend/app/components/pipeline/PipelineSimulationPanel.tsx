@@ -78,11 +78,6 @@ function getAgentName(action: AgentAction): string {
   return action.agent || (action.type === "inject" ? "SYSTEM" : action.type === "arbiter" ? "ARBITER" : "");
 }
 
-function getActionBorderColor(action: string): string {
-  if (action === "send_message") return "border-l-2 border-royal-azure-300";
-  if (action === "send_email") return "border-l-2 border-tuscan-sun-300";
-  return "border-l-2 border-pitch-black-200";
-}
 
 function getStatusStyle(status: string): string {
   switch (status) {
@@ -365,100 +360,222 @@ export default function PipelineSimulationPanel({
   );
 }
 
+/* ── Shared Renderers ── */
+
+function InjectBanner({ action }: { action: AgentAction }) {
+  return (
+    <div className="rounded-lg bg-tuscan-sun-50 border border-tuscan-sun-200 px-3 py-2.5 text-xs font-mono my-1.5">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-sm">⚠</span>
+        <span className="text-tuscan-sun-700 font-bold uppercase text-[10px] tracking-wide">Inject</span>
+        {action.kill_chain_step && (
+          <span className="text-[10px] bg-tuscan-sun-100 text-tuscan-sun-700 px-1.5 py-0.5 rounded uppercase ml-auto">{action.kill_chain_step}</span>
+        )}
+      </div>
+      <p className="text-tuscan-sun-600 leading-relaxed">{action.description || (action.args?.content as string)}</p>
+    </div>
+  );
+}
+
+function ArbiterBanner({ action }: { action: AgentAction }) {
+  return (
+    <div className="rounded-lg bg-verdigris-50 border border-verdigris-200 px-3 py-2.5 text-xs font-mono my-1.5">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-verdigris-700 font-bold uppercase text-[10px] tracking-wide">~ Scenario</span>
+        <span className="text-[10px] text-verdigris-500">{action.decision || "continue"}</span>
+      </div>
+      <p className="text-verdigris-600 leading-relaxed">{action.reason || action.complication}</p>
+    </div>
+  );
+}
+
+function getInitials(name: string): string {
+  return name.split(" ").map((n) => n[0]).join("").slice(0, 2);
+}
+
+/* ── Slack-Style Message ── */
+
+function SlackMessage({ action, expanded, onToggle }: {
+  action: AgentAction; expanded: boolean; onToggle: () => void;
+}) {
+  const isThreatActor = action.role === "threat_actor" || action.type === "threat_actor";
+  const isThread = action.action === "reply_in_thread";
+  const { content } = getActionContent(action);
+  const isLong = content.length > 300;
+  const displayContent = isLong && !expanded ? content.slice(0, 300) + "..." : content;
+  const time = formatTime(action.timestamp);
+  const name = getAgentName(action);
+  const initials = getInitials(name);
+
+  const wrapper = isThread ? "ml-10 border-l-2 border-pitch-black-700 pl-3" : "";
+  const threatBg = isThreatActor ? "bg-[rgba(200,50,50,0.08)] border-l-[3px] border-l-burnt-peach-500 rounded-r-lg" : "";
+
+  return (
+    <div className={`${wrapper} ${threatBg}`}>
+      {isThread && (
+        <div className="text-[10px] font-mono text-pitch-black-500 mb-1">↳ Thread reply</div>
+      )}
+      <div className={`flex gap-2.5 ${isThread ? "py-1" : "py-2"}`}>
+        <div className={`${isThread ? "w-6 h-6 text-[9px]" : "w-8 h-8 text-[11px]"} rounded-md flex-shrink-0 flex items-center justify-center font-bold text-white ${isThreatActor ? "bg-burnt-peach-500" : ""}`}
+          style={!isThreatActor ? { backgroundColor: getRoleHex(action.role) } : undefined}
+        >
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-1.5 mb-0.5">
+            <span className={`font-semibold ${isThread ? "text-xs" : "text-sm"} ${isThreatActor ? "text-burnt-peach-400" : "text-pitch-black-100"}`}>
+              {name}
+            </span>
+            <span className="text-[10px] font-mono text-pitch-black-500 bg-pitch-black-800 px-1.5 py-0 rounded">{action.role}</span>
+            <span className="text-[10px] font-mono text-pitch-black-600 ml-auto tabular-nums">{time}</span>
+          </div>
+          <div className={`${isThread ? "text-xs text-pitch-black-400" : "text-sm text-pitch-black-300"} leading-relaxed whitespace-pre-wrap ${isThreatActor ? "italic" : ""}`}>
+            {displayContent}
+            {isLong && (
+              <button onClick={onToggle} className="text-[10px] font-mono text-royal-azure-400 hover:text-royal-azure-300 ml-1">
+                {expanded ? "Show less" : "Show more"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Email-Style Card ── */
+
+function EmailCard({ action, expanded, onToggle }: {
+  action: AgentAction; expanded: boolean; onToggle: () => void;
+}) {
+  const isReply = action.action === "reply_email";
+  const name = getAgentName(action);
+  const initials = getInitials(name);
+  const { content } = getActionContent(action);
+  const isLong = content.length > 300;
+  const displayContent = isLong && !expanded ? content.slice(0, 300) + "..." : content;
+  const time = formatTime(action.timestamp);
+  const subject = (action.args.subject as string) || "";
+  const to = (action.args.to as string) || "";
+  const cc = (action.args.cc as string) || "";
+
+  return (
+    <div className={`bg-white border border-pitch-black-200 rounded-lg overflow-hidden my-1.5 ${isReply ? "ml-5 border-l-[3px] border-l-tuscan-sun-400" : ""}`}>
+      {/* Email header */}
+      <div className="px-3 py-2.5 border-b border-pitch-black-100">
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
+            style={{ backgroundColor: getRoleHex(action.role) }}
+          >
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-sm font-semibold text-pitch-black-900">{name}</span>
+              <span className="text-[10px] font-mono text-pitch-black-400">{action.role}</span>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono text-pitch-black-400 tabular-nums">{time}</span>
+        </div>
+        {to && <div className="text-[11px] font-mono text-pitch-black-400"><span className="text-pitch-black-300">To:</span> {to}</div>}
+        {cc && <div className="text-[11px] font-mono text-pitch-black-400"><span className="text-pitch-black-300">Cc:</span> {cc}</div>}
+        {subject && (
+          <div className="text-sm font-semibold text-pitch-black-800 mt-1.5">
+            {isReply ? `Re: ${subject}` : subject}
+          </div>
+        )}
+      </div>
+      {/* Email body */}
+      <div className="px-3 py-2.5 text-sm text-pitch-black-700 leading-relaxed whitespace-pre-wrap">
+        {displayContent}
+        {isLong && (
+          <button onClick={onToggle} className="text-[10px] font-mono text-royal-azure-600 hover:text-royal-azure-500 ml-1">
+            {expanded ? "Show less" : "Show more"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Role color hex for avatars ── */
+
+const ROLE_HEX: Record<string, string> = {
+  ir_lead: "#3a7ae0", ciso: "#2d9c8f", ceo: "#b87333", legal: "#c06040",
+  vp_eng: "#8b6914", cto: "#2855a0", soc_analyst: "#1a8a7a",
+  chief_legal_officer: "#c06040", chief_security_officer: "#2d9c8f",
+  soc_manager: "#3a7ae0", lead_security_researcher: "#1a8a7a",
+  head_of_trust_and_safety: "#8b6914", vp_of_engineering: "#8b6914",
+  cfo: "#b87333", president: "#9a5c30", field_ciso: "#2d9c8f",
+  lead_incident_responder: "#3a7ae0", head_of_threat_intelligence: "#1a8a7a",
+  threat_actor: "#c44444",
+};
+
+function getRoleHex(role: string): string {
+  return ROLE_HEX[role] || "#666";
+}
+
 /* ── Timeline View ── */
 
 function TimelineView({ actions }: { actions: AgentAction[] }) {
   let lastRound = -1;
+  const [expandedSet, setExpandedSet] = useState<Set<number>>(new Set());
+  const toggleExpand = (i: number) => setExpandedSet(prev => {
+    const next = new Set(prev); next.has(i) ? next.delete(i) : next.add(i); return next;
+  });
 
   return (
-    <div className="relative pl-6">
+    <div className="relative pl-7">
       {/* Vertical line */}
-      <div className="absolute left-2 top-0 bottom-0 w-px bg-border/30" />
+      <div className="absolute left-[11px] top-0 bottom-0 w-px bg-border/30" />
 
       {actions.map((action, i) => {
         const showRoundDivider = action.round !== lastRound;
         lastRound = action.round;
         const time = formatTime(action.timestamp);
-        const { content, meta } = getActionContent(action);
-        const preview = action.action === "send_email"
-          ? (action.args.subject as string) || content.slice(0, 120)
-          : content.length > 120 ? content.slice(0, 120) + "..." : content;
-
         const isInject = action.type === "inject" || action.action === "inject";
         const isArbiter = action.type === "arbiter";
         const isThreatActor = action.role === "threat_actor" || action.type === "threat_actor";
+        const isEmail = action.action === "send_email" || action.action === "reply_email";
 
         return (
           <div key={i}>
             {showRoundDivider && (
-              <div className="relative flex items-center -ml-6 my-3">
-                <div className="w-full bg-pitch-black-50 rounded px-3 py-1">
-                  <span className="text-[10px] font-mono text-pitch-black-500 uppercase tracking-wider font-semibold">
-                    Round {action.round}
-                  </span>
+              <div className="relative flex items-center -ml-7 my-3">
+                <div className="absolute left-[7px] w-[9px] h-[9px] rounded-full bg-tuscan-sun-400 ring-2 ring-card z-10" />
+                <div className="ml-7 text-[10px] font-mono text-pitch-black-500 uppercase tracking-widest font-semibold">
+                  Round {action.round}
                 </div>
               </div>
             )}
 
-            {isInject ? (
-              <div className="relative flex items-start gap-3 py-1.5">
-                <div className="absolute -left-[17px] top-2.5 w-2 h-2 rounded-full ring-2 ring-card bg-tuscan-sun-400" />
-                <div className="text-[10px] font-mono text-muted-foreground/50 w-14 shrink-0 pt-0.5 tabular-nums">{time}</div>
-                <div className="flex-1 min-w-0 rounded-md bg-tuscan-sun-50 border border-tuscan-sun-200 px-3 py-2 text-xs font-mono">
-                  <span className="text-tuscan-sun-700 font-bold">!! INJECT</span>
-                  <span className="text-tuscan-sun-600 ml-2">{action.description || (action.args?.content as string)}</span>
-                  {action.kill_chain_step && (
-                    <span className="ml-2 text-[10px] bg-tuscan-sun-100 text-tuscan-sun-700 px-1.5 py-0.5 rounded uppercase">{action.kill_chain_step}</span>
-                  )}
-                </div>
-              </div>
-            ) : isArbiter ? (
-              <div className="relative flex items-start gap-3 py-1.5">
-                <div className="absolute -left-[17px] top-2.5 w-2 h-2 rounded-full ring-2 ring-card bg-verdigris-400" />
-                <div className="text-[10px] font-mono text-muted-foreground/50 w-14 shrink-0 pt-0.5 tabular-nums">{time}</div>
-                <div className="flex-1 min-w-0 rounded-md bg-verdigris-50 border border-verdigris-200 px-3 py-2 text-xs font-mono">
-                  <span className="text-verdigris-700 font-bold">~ SCENARIO</span>
-                  <span className="text-verdigris-600 ml-2">{action.reason || action.complication}</span>
-                </div>
-              </div>
-            ) : (
-              <div className="relative flex items-start gap-3 py-1.5">
-                {/* Node dot */}
-                <div className={`absolute -left-[17px] top-2.5 w-2 h-2 rounded-full ring-2 ring-card ${isThreatActor ? "bg-burnt-peach-400" : getRoleDotColor(action.role)}`} />
+            <div className="relative py-1">
+              {/* Timeline dot */}
+              <div className={`absolute -left-[20px] top-3 w-[8px] h-[8px] rounded-full ring-2 ring-card z-10 ${
+                isInject ? "bg-tuscan-sun-400" :
+                isArbiter ? "bg-verdigris-400" :
+                isThreatActor ? "bg-burnt-peach-400" :
+                getRoleDotColor(action.role)
+              }`} />
 
-                {/* Time label */}
-                <div className="text-[10px] font-mono text-muted-foreground/50 w-14 shrink-0 pt-0.5 tabular-nums">
-                  {time}
-                </div>
+              {/* Time label */}
+              {!isInject && !isArbiter && (
+                <div className="text-[10px] font-mono text-muted-foreground/40 mb-0.5 tabular-nums">{time}</div>
+              )}
 
-                {/* Card */}
-                <div className={`flex-1 min-w-0 rounded-md px-3 py-2 bg-muted/20 ${getActionBorderColor(action.action)} ${isThreatActor ? "bg-burnt-peach-50/50 border-l-2 border-l-burnt-peach-400" : ""}`}>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold text-foreground">
-                      {isThreatActor && <span className="text-burnt-peach-600 mr-1 text-[9px] font-mono uppercase">ATTACKER</span>}
-                      {getAgentName(action)}
-                    </span>
-                    <Badge
-                      variant="secondary"
-                      className={`text-[9px] font-mono py-0 h-4 ${getRoleColor(action.role)}`}
-                    >
-                      {action.role}
-                    </Badge>
-                    <span className="text-[9px] font-mono text-muted-foreground/50 ml-auto">
-                      {action.action === "send_message" ? "slack" : action.action === "send_email" ? "email" : action.action}
-                    </span>
-                  </div>
-                  {meta && (
-                    <p className="text-[9px] font-mono text-muted-foreground/60 mt-1 truncate">{meta}</p>
-                  )}
-                  {preview && (
-                    <p className="text-[11px] text-foreground/70 mt-1 leading-relaxed line-clamp-2">
-                      {preview}
-                    </p>
-                  )}
+              {/* Content — platform-native skin */}
+              {isInject ? (
+                <InjectBanner action={action} />
+              ) : isArbiter ? (
+                <ArbiterBanner action={action} />
+              ) : isEmail ? (
+                <EmailCard action={action} expanded={expandedSet.has(i)} onToggle={() => toggleExpand(i)} />
+              ) : (
+                <div className="bg-[#1a1a2e] rounded-lg px-3 py-2">
+                  <SlackMessage action={action} expanded={expandedSet.has(i)} onToggle={() => toggleExpand(i)} />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         );
       })}
@@ -478,6 +595,7 @@ function ActionFeed({
   onToggleExpand: (index: number) => void;
 }) {
   let lastRound = -1;
+  let lastChannel = "";
 
   return (
     <>
@@ -485,25 +603,15 @@ function ActionFeed({
         const showRoundDivider = action.round !== lastRound;
         lastRound = action.round;
 
-        const agentName = getAgentName(action);
-        const initials = agentName
-          .split(" ")
-          .map((n) => n[0])
-          .join("")
-          .slice(0, 2);
-
-        const { content, meta } = getActionContent(action);
-        const isLong = content.length > 300;
-        const isExpanded = expandedActions.has(i);
-        const displayContent = isLong && !isExpanded ? content.slice(0, 300) + "..." : content;
-        const time = formatTime(action.timestamp);
-
-        // Inject event — amber banner
         const isInject = action.type === "inject" || action.action === "inject";
-        // Arbiter event — teal notification
         const isArbiter = action.type === "arbiter";
-        // Threat actor — red-tinted card
-        const isThreatActor = action.role === "threat_actor" || action.type === "threat_actor";
+        const isEmail = action.action === "send_email" || action.action === "reply_email";
+        const isSlack = action.action === "send_message" || action.action === "reply_in_thread";
+
+        // Show channel header when channel changes
+        const channel = action.world || "";
+        const showChannelHeader = isSlack && channel !== lastChannel;
+        if (isSlack) lastChannel = channel;
 
         return (
           <div key={i}>
@@ -517,76 +625,33 @@ function ActionFeed({
               </div>
             )}
 
-            {/* Inject event banner */}
             {isInject ? (
-              <div className="rounded-md bg-tuscan-sun-50 border border-tuscan-sun-200 px-3 py-2 text-xs font-mono my-1">
-                <span className="text-tuscan-sun-700 font-bold">!! INJECT</span>
-                <span className="text-tuscan-sun-600 ml-2">{action.description || (action.args?.content as string)}</span>
-                {action.kill_chain_step && (
-                  <span className="ml-2 text-[10px] bg-tuscan-sun-100 text-tuscan-sun-700 px-1.5 py-0.5 rounded uppercase">{action.kill_chain_step}</span>
-                )}
-              </div>
+              <InjectBanner action={action} />
             ) : isArbiter ? (
-              /* Arbiter event notification */
-              <div className="rounded-md bg-verdigris-50 border border-verdigris-200 px-3 py-2 text-xs font-mono my-1">
-                <span className="text-verdigris-700 font-bold">~ SCENARIO</span>
-                <span className="text-verdigris-600 ml-2">{action.reason || action.complication}</span>
-              </div>
+              <ArbiterBanner action={action} />
+            ) : isEmail ? (
+              <EmailCard action={action} expanded={expandedActions.has(i)} onToggle={() => onToggleExpand(i)} />
+            ) : isSlack ? (
+              <>
+                {showChannelHeader && (
+                  <div className="mt-2 mb-1 px-2">
+                    <span className="text-[10px] font-mono text-pitch-black-500 bg-pitch-black-800 px-2 py-0.5 rounded"># {channel}</span>
+                  </div>
+                )}
+                <div className="bg-[#1a1a2e] rounded-lg px-3">
+                  <SlackMessage action={action} expanded={expandedActions.has(i)} onToggle={() => onToggleExpand(i)} />
+                </div>
+              </>
             ) : (
-              /* Regular / threat actor action card */
-              <div className={`flex gap-2 py-1.5 pl-2 rounded-sm ${getActionBorderColor(action.action)} ${isThreatActor ? "bg-burnt-peach-50/50 border-l-2 border-l-burnt-peach-400" : ""}`}>
-                <div
-                  className={`w-7 h-7 rounded-md flex-shrink-0 flex items-center justify-center text-xs font-bold ${getRoleColor(action.role)}`}
-                >
-                  {initials}
+              /* Fallback for unknown action types */
+              <div className="flex gap-2 py-1.5 pl-2 rounded-sm border-l-2 border-pitch-black-200">
+                <div className={`w-7 h-7 rounded-md flex-shrink-0 flex items-center justify-center text-xs font-bold ${getRoleColor(action.role)}`}>
+                  {getInitials(getAgentName(action))}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-foreground">
-                      {isThreatActor && <span className="text-burnt-peach-600 mr-1 text-[10px] font-mono uppercase">ATTACKER</span>}
-                      {agentName}
-                    </span>
-                    <Badge
-                      variant="secondary"
-                      className={`text-[10px] font-mono ${getRoleColor(action.role)}`}
-                    >
-                      {action.role}
-                    </Badge>
-                    <span className="text-[10px] font-mono text-muted-foreground">
-                      {action.world}:{action.action}
-                    </span>
-                    {time && (
-                      <span className="text-[10px] font-mono text-muted-foreground/40 ml-auto tabular-nums">
-                        {time}
-                      </span>
-                    )}
-                  </div>
-                  {meta && (
-                    <div className="text-[10px] font-mono text-muted-foreground/70 mt-1 space-y-0.5">
-                      {(action.args.to as string) && (
-                        <div>To: {action.args.to as string}</div>
-                      )}
-                      {(action.args.cc as string) && (
-                        <div>Cc: {action.args.cc as string}</div>
-                      )}
-                      {(action.args.subject as string) && (
-                        <div className="font-semibold text-foreground/70">Sub: {action.args.subject as string}</div>
-                      )}
-                    </div>
-                  )}
-                  {content && (
-                    <div className="text-sm text-foreground mt-1 whitespace-pre-wrap">
-                      {displayContent}
-                      {isLong && (
-                        <button
-                          onClick={() => onToggleExpand(i)}
-                          className="text-[10px] font-mono text-primary hover:text-primary/80 ml-1"
-                        >
-                          {isExpanded ? "Show less" : "Show more"}
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  <span className="text-sm font-semibold text-foreground">{getAgentName(action)}</span>
+                  <span className="text-[10px] font-mono text-muted-foreground ml-2">{action.action}</span>
+                  <p className="text-sm text-foreground mt-1 whitespace-pre-wrap">{getActionContent(action).content}</p>
                 </div>
               </div>
             )}
