@@ -12,6 +12,7 @@ import type {
   SimulationConfig,
 } from "@/app/types";
 import type { ResearchProgress } from "@/app/hooks/useResearchPolling";
+import { useSimulationPolling } from "@/app/hooks/useSimulationPolling";
 import { getExerciseReport, type ExerciseReport } from "@/app/actions/report";
 import PipelineDossierPanel from "./PipelineDossierPanel";
 import PipelineSimulationPanel from "./PipelineSimulationPanel";
@@ -216,7 +217,12 @@ const SEVERITY_COLORS: Record<string, string> = {
   medium: "bg-royal-azure-50 text-royal-azure-700",
 };
 
-function MCIterationList({ batchId, live }: { batchId: string; live?: boolean }) {
+function MCIterationList({ batchId, live, selectedIterationId, onSelectIteration }: {
+  batchId: string;
+  live?: boolean;
+  selectedIterationId?: string | null;
+  onSelectIteration?: (iterationId: string) => void;
+}) {
   const [iterations, setIterations] = useState<Array<{
     iteration_id: string; variation_description: string;
     total_rounds: number; total_actions: number; cost_usd: number;
@@ -301,10 +307,16 @@ function MCIterationList({ batchId, live }: { batchId: string; live?: boolean })
         const changes = parseVariation(iter.variation_description || "");
         const outcome = outcomeLabel(iter.outcome);
         return (
-          <div key={iter.iteration_id} className="border border-border/40 rounded-lg px-3 py-2.5 space-y-2">
+          <div
+            key={iter.iteration_id}
+            className={`border rounded-lg px-3 py-2.5 space-y-2 transition-colors ${
+              onSelectIteration ? "cursor-pointer hover:bg-muted/40" : ""
+            } ${selectedIterationId === iter.iteration_id ? "border-royal-azure-400 bg-royal-azure-50/30" : "border-border/40"}`}
+            onClick={() => onSelectIteration?.(iter.iteration_id)}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-mono text-foreground/80">
-                <span className="w-1.5 h-1.5 rounded-full bg-verdigris-500 shrink-0" />
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedIterationId === iter.iteration_id ? "bg-royal-azure-500" : "bg-verdigris-500"}`} />
                 <span className="font-medium">Variation {idx + 1}</span>
                 {outcome && <span className={`text-2xs ${outcome.color}`}>{outcome.text}</span>}
               </div>
@@ -603,6 +615,10 @@ function StageDetail({
   researchProgress?: ResearchProgress;
   mcLiveProgress?: { completed: number; total: number } | null;
 }) {
+  // MC iteration selection for viewing actions on completed runs
+  const [selectedMcIterId, setSelectedMcIterId] = useState<string | null>(null);
+  const { simStatus: selectedMcStatus, simActions: selectedMcActions } = useSimulationPolling(selectedMcIterId);
+
   // Research — live activity or entity summary
   if (stageId === "research") {
     const isRunning = state?.status === "running";
@@ -1042,8 +1058,24 @@ function StageDetail({
               <span className="text-xs font-mono font-semibold text-foreground/80">${parsed.totalCost.toFixed(2)}</span>
             </div>
           )}
-          {parsed?.batchId && <MCIterationList batchId={parsed.batchId} />}
-          {(mcSimStatus || mcCfSimStatus) && (mcSimActions || mcCfSimActions) && ((mcSimActions || mcCfSimActions)?.length ?? 0) > 0 && (
+          {parsed?.batchId && (
+            <MCIterationList
+              batchId={parsed.batchId}
+              selectedIterationId={selectedMcIterId}
+              onSelectIteration={(id) => setSelectedMcIterId(prev => prev === id ? null : id)}
+            />
+          )}
+          {selectedMcIterId && selectedMcStatus && selectedMcActions && selectedMcActions.length > 0 && (
+            <PipelineSimulationPanel
+              simStatus={selectedMcStatus}
+              simActions={selectedMcActions}
+              graphData={graphData}
+              activeSimIndex={0}
+              totalSims={1}
+              scenarioTitle={parsed?.scenarioTitle ? `Stress Test: ${parsed.scenarioTitle}` : "Stress Test Results"}
+            />
+          )}
+          {!selectedMcIterId && (mcSimStatus || mcCfSimStatus) && (mcSimActions || mcCfSimActions) && ((mcSimActions || mcCfSimActions)?.length ?? 0) > 0 && (
             <PipelineSimulationPanel
               simStatus={(mcSimStatus || mcCfSimStatus)!}
               simActions={(mcSimActions || mcCfSimActions)!}
