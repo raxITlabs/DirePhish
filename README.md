@@ -45,6 +45,13 @@ Sharpened by [raxIT Labs](https://raxit.ai).
 
 ## How it works
 
+<p align="center">
+  <img src="./docs/architecture/pipeline-flow.png" alt="DirePhish Pipeline" width="700" />
+</p>
+<p align="center">
+  <img src="./docs/architecture/system-architecture.png" alt="System Architecture" width="700" />
+</p>
+
 ```
  YOU                                           DIREPHISH
   |
@@ -70,12 +77,13 @@ Sharpened by [raxIT Labs](https://raxit.ai).
                            │ confirmed dossier
                            v
 ┌─────────────────────────────────────────────────────────────────┐
-│ 3. THREAT ANALYSIS                                              │
-│    LLM generates threat scenarios from dossier + graph.         │
-│    Maps MITRE ATT&CK kill chains, scores probability/severity.  │
+│ 3. THREAT ANALYSIS (4 LLM calls)                                │
+│    Analyze threat landscape ─► map vulnerabilities ─►           │
+│    generate attack paths ─► frame scenarios with                │
+│    uncertainty axes. Maps MITRE ATT&CK kill chains.             │
 │                                                                 │
 │    Output:  3-5 ranked scenarios with attack paths              │
-│    Stores:  scenarios.json (disk)                               │
+│    Stores:  threat_analysis.json (disk)                         │
 └──────────────────────────┬──────────────────────────────────────┘
                            │ top 1-2 scenarios
                            v
@@ -92,7 +100,7 @@ Sharpened by [raxIT Labs](https://raxit.ai).
 │    critical systems ranked by connectivity, lateral movement    │
 │    paths, defender blind spots.                                 │
 │                                                                 │
-│    Output:  config.json with 8-14 agents, 3-5 worlds,           │
+│    Output:  scenarios/<id>.json with 8-14 agents, 3-5 worlds,   │
 │             8-15 injects, adaptive depth (3-30 rounds)          │
 └──────────────────────────┬──────────────────────────────────────┘
                            │ simulation config(s)
@@ -123,7 +131,7 @@ Sharpened by [raxIT Labs](https://raxit.ai).
 │    ┌──────────┬──────┬─────────┬───────────┬────────┐            │
 │    │   Mode   │ Iter │ Workers │ Max rnds  │  Cost  │            │
 │    ├──────────┼──────┼─────────┼───────────┼────────┤            │
-│    │ Test     │   1  │    1    │  8 (5 ag) │  ~$1   │            │
+│    │ Test     │   3  │    2    │ 10 (7 ag) │  ~$1   │            │
 │    │ Quick    │  10  │    2    │ 30        │  ~$7   │            │
 │    │ Standard │  50  │    3    │ 30        │  ~$35  │            │
 │    │ Deep     │ 100+ │    3    │ 30        │  ~$70+ │            │
@@ -155,24 +163,25 @@ Sharpened by [raxIT Labs](https://raxit.ai).
 ┌─────────────────────────────────────────────────────────────────┐
 │ 8. EXERCISE REPORT                                              │
 │                                                                 │
-│    LLM generates executive-grade report combining:              │
-│    ├── Simulation timeline with MITRE ATT&CK mapping            │
-│    ├── Monte Carlo probability distribution                     │
-│    ├── Counterfactual "what if" analysis                        │
-│    ├── Agent performance breakdown                              │
-│    └── Concrete recommendations ranked by impact                │
+│    ReACT agent with Firestore vector search tools generates     │
+│    executive-grade report across 5 views:                       │
+│    ├── Board View — KPIs, incident timeline, team metrics       │
+│    ├── CISO View — threat assessment, top risks, org impact     │
+│    ├── Security Team — role-specific performance breakdown      │
+│    ├── Playbook — 6-part IR playbook (evidence → recovery)      │
+│    └── Risk Score — FAIR methodology, confidence intervals      │
 │                                                                 │
 │    All in predictive language — this is a forecast, not a       │
 │    post-mortem.                                                 │
 └─────────────────────────────────────────────────────────────────┘
 
 Data stores:
-  Firestore:  sim_episodes · graph_nodes · graph_edges · mc_aggregates
-  Disk:       dossier.json · scenarios.json · config.json · actions.jsonl
+  Firestore:  sim_episodes · graph_nodes · graph_edges · mc_aggregates · risk_scores
+  Disk:       dossier.json · threat_analysis.json · scenarios/*.json · actions.jsonl
 ```
 
-**What the numbers mean:** In test mode, DirePhish runs 1 Monte Carlo
-iteration with a lightweight config (5 agents, 2 worlds, max 8 rounds)
+**What the numbers mean:** In test mode, DirePhish runs 3 Monte Carlo
+iterations with a capped config (7 agents, 3 worlds, max 10 rounds)
 and 1 counterfactual fork — enough to validate the entire pipeline
 end-to-end in ~3-5 minutes. In standard mode, 50 iterations with full
 configs produce statistically meaningful outcome distributions: "73%
@@ -261,57 +270,86 @@ npm run dev
 > Without portless, the apps still work at `http://localhost:3000` and
 > `http://localhost:5001`.
 
-### Docker
-
-Copy `.env.example` to `.env` and set your API keys before running either stack.
-
-**Development** (hot reload):
-
-```bash
-docker compose up --build
-```
-
-**Production** (`next build` + `next start`, Flask via Gunicorn):
-
-```bash
-docker compose -f docker-compose.prod.yml up --build
-```
-
-Both stacks expose:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5001
-
-**Portless URLs for Docker** — register the container ports with portless:
-
-```bash
-npm run docker:alias
-```
-
-Then access via https://direphish.localhost and https://api.direphish.localhost.
-
-**Custom ports** — if 3000 or 5001 are already in use, set overrides in `.env`:
-
-```env
-HOST_PORT_FRONTEND=3010
-HOST_PORT_BACKEND=5010
-```
-
-**Data persistence** — workflow run history is stored in a named Docker volume
-(`workflow-data`). It survives `docker compose down` but is removed by
-`docker compose down -v`. Backend uploads are bind-mounted to `./backend/uploads`.
-
 ## Tech stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | Next.js 16, React 19, Tailwind CSS 4, shadcn/ui |
-| Backend | Flask, Python 3.11+ |
-| Models | Google Gemini with grounded search |
-| Simulation | [Crucible](https://github.com/raxITlabs/crucible) (enterprise IR) + Monte Carlo engine |
-| Memory | Google Cloud Firestore Vector Search (replaces local Graphiti/Kuzu) |
-| Embeddings | Gemini Embedding API (768-dim vectors) |
-| Orchestration | Vercel WDK (durable workflows) |
-| Observability | OpenTelemetry |
+### Frontend
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| [Next.js](https://nextjs.org/) | 16.2 | App router, server actions, API routes |
+| [React](https://react.dev/) | 19.2 | UI rendering with server components |
+| [TypeScript](https://www.typescriptlang.org/) | 5 | Strict type safety across the entire frontend |
+| [Tailwind CSS](https://tailwindcss.com/) | 4 | Utility-first styling |
+| [shadcn/ui](https://ui.shadcn.com/) | 4.1 | Component library (Radix + Tailwind) |
+| [Base UI](https://base-ui.com/) | 1.3 | Headless UI primitives |
+| [D3.js](https://d3js.org/) | 7.9 | Force-directed knowledge graph visualization |
+| [XYFlow](https://reactflow.dev/) | 12.10 | Pipeline canvas node graph |
+| [dagre](https://github.com/dagrejs/dagre) | 0.8 | Directed graph layout algorithm (used with XYFlow) |
+| [Motion](https://motion.dev/) | 12.38 | Animations and transitions |
+| [Zod](https://zod.dev/) | 4.3 | Schema validation |
+| [TanStack Form](https://tanstack.com/form) | 1.28 | Dossier editor form management |
+| [react-markdown](https://github.com/remarkjs/react-markdown) | 10.1 | Report markdown rendering |
+| [remark-gfm](https://github.com/remarkjs/remark-gfm) | 4.0 | GitHub-flavored markdown tables, task lists |
+| [react-resizable-panels](https://github.com/bvaughn/react-resizable-panels) | 4.7 | Split-panel layouts (research, simulation, report views) |
+| [Lucide](https://lucide.dev/) | 0.577 | Icon set |
+| [Playwright](https://playwright.dev/) | 1.58 | End-to-end testing |
+
+### Backend
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Python | 3.11+ | Runtime |
+| [Flask](https://flask.palletsprojects.com/) | 3.0+ | REST API server |
+| [Flask-CORS](https://flask-cors.readthedocs.io/) | 6.0+ | Cross-origin request handling |
+| [Gunicorn](https://gunicorn.org/) | 23.0+ | Production WSGI server |
+| [OpenAI SDK](https://github.com/openai/openai-python) | 1.0+ | Unified LLM client (OpenAI-compatible format, points to Gemini) |
+| [google-genai](https://github.com/googleapis/python-genai) | 1.0+ | Gemini SDK for embeddings and grounded search |
+| [Pydantic](https://docs.pydantic.dev/) | 2.0+ | Data validation and serialization |
+| [PyMuPDF](https://pymupdf.readthedocs.io/) | 1.24+ | PDF document parsing |
+| [python-dotenv](https://github.com/theskumar/python-dotenv) | 1.0+ | Environment variable loading |
+
+### AI / Models
+
+| Technology | Purpose |
+|------------|---------|
+| [Google Gemini](https://ai.google.dev/) | LLM for research, threat analysis, config expansion, report generation |
+| [Gemini Embedding API](https://ai.google.dev/gemini-api/docs/embeddings) | 768-dim vectors for Firestore vector search (`gemini-embedding-001`) |
+| [Gemini Grounded Search](https://ai.google.dev/gemini-api/docs/grounding) | Web search during research phase |
+
+### Simulation Engine
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| [Crucible](https://github.com/raxITlabs/crucible) | git | Enterprise incident response simulation engine |
+| [CAMEL-AI](https://github.com/camel-ai/camel) | 0.2.78 | Multi-agent framework powering agent personas and interactions |
+| [CAMEL-OASIS](https://github.com/camel-ai/oasis) | 0.2.5 | Social simulation platform (upstream agent runtime) |
+| Monte Carlo Engine | — | Parallel iterations with 4 variation axes (temperature, persona, timing, order) |
+| Counterfactual Engine | — | Fork simulations at decision points, replay alternate timelines |
+
+### Data & Memory
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| [Google Cloud Firestore](https://cloud.google.com/firestore) | 2.16+ | Vector search over simulation episodes, knowledge graph persistence |
+| [Cloudflare Workers](https://developers.cloudflare.com/workers/) | — | Web scraping via `/crawl` API during research |
+
+### Orchestration & Observability
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| [Vercel WDK](https://vercel.com/docs/workflow-kit) | 4.2-beta | Durable 9-step pipeline workflows with streaming progress |
+| [OpenTelemetry](https://opentelemetry.io/) | 1.40+ | Distributed tracing across LLM calls and pipeline stages |
+
+### Dev Tooling
+
+| Technology | Purpose |
+|------------|---------|
+| [uv](https://docs.astral.sh/uv/) | Python package manager and virtual environment |
+| [pnpm](https://pnpm.io/) | Frontend package manager |
+| [portless](https://github.com/nicepkg/portless) | Local HTTPS dev URLs (`direphish.localhost`, `api.direphish.localhost`) |
+| [concurrently](https://github.com/open-cli-tools/concurrently) | Parallel backend + frontend dev server runner |
+| [wait-on](https://github.com/jeffbski/wait-on) | Backend health check before frontend starts |
+| [Hatchling](https://hatch.pypa.io/) | Python build backend |
 
 ## Monte Carlo simulation
 
@@ -322,13 +360,13 @@ probabilistic threat intelligence instead of a single narrative.
 
 | Mode | Iterations | Workers | Max rounds | Agents | Cost est. |
 |------|-----------|---------|------------|--------|-----------|
-| Test | 1 | 1 (sequential) | 8 | 5 | ~$1 |
+| Test | 3 | 2 | 10 | 7 | ~$1 |
 | Quick | 10 | 2 | 30 | 8-14 | ~$7 |
 | Standard | 50 | 3 | 30 | 8-14 | ~$35 |
 | Deep | 100+ | 3 | 30 | 8-14 | ~$70+ |
 
-Test mode runs a lightweight config (5 agents, 2 worlds, max 8 rounds) for
-fast end-to-end validation in ~3-5 minutes. Must complete a test run before
+Test mode runs 3 iterations with a capped config (7 agents, 3 worlds, max 10
+rounds) for fast end-to-end validation in ~3-5 minutes. Must complete a test run before
 unlocking standard/deep. Cost tracking at every level with hard spend limits.
 
 **What you get:**

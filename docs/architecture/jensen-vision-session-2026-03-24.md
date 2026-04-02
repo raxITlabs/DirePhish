@@ -1,5 +1,7 @@
 # Jensen Vision — DirePhish Architecture Session (2026-03-24)
 
+> **Historical decision record.** Some implementation details may have evolved since this session. See [data-flow-diagram.md](data-flow-diagram.md) for the current architecture.
+
 > This document captures the architectural decisions made during a session where Jensen Huang (NVIDIA CEO, roleplayed) evaluated the DirePhish threat simulation platform and directed its transformation from a demo into an enterprise-grade probabilistic threat intelligence engine. Every technical decision, debugging session, and implementation detail is recorded here as a permanent reference.
 
 ---
