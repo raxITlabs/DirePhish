@@ -191,7 +191,8 @@ def create_project():
             f.save(str(project_dir / "files" / f.filename))
 
     # Start research AFTER files are saved and project metadata is complete
-    run_research(project["project_id"])
+    callback_token = request.form.get("callback_token")
+    run_research(project["project_id"], callback_token=callback_token)
 
     return jsonify({"data": {"projectId": project["project_id"]}}), 201
 
@@ -346,7 +347,8 @@ def analyze_threats(project_id):
     if not project:
         return jsonify({"error": "Project not found"}), 404
     from ..services.threat_analyzer import run_threat_analysis
-    run_threat_analysis(project_id)
+    data = request.get_json(silent=True) or {}
+    run_threat_analysis(project_id, callback_token=data.get("callback_token"))
     return jsonify({"data": {"status": "analyzing"}}), 202
 
 
@@ -371,7 +373,7 @@ def generate_configs(project_id):
     if not project:
         return jsonify({"error": "Project not found"}), 404
     from ..services.config_expander import run_config_expansion
-    run_config_expansion(project_id, data["scenario_ids"], test_mode=data.get("test_mode", False), mode=data.get("mode"))
+    run_config_expansion(project_id, data["scenario_ids"], test_mode=data.get("test_mode", False), mode=data.get("mode"), callback_token=data.get("callback_token"))
     return jsonify({"data": {"status": "generating"}}), 202
 
 
@@ -386,9 +388,13 @@ def launch_project_simulations(project_id):
     configs = project_manager.get_all_scenarios(project_id)
     if not configs:
         return jsonify({"error": "No configs ready"}), 404
+    data = request.get_json(silent=True) or {}
+    callback_tokens = data.get("callback_tokens", {})
     sim_ids = []
     for config in configs:
-        sim_id = launch_simulation(config)
+        sim_id_preview = config.get("simulation_id", "")
+        token = callback_tokens.get(sim_id_preview)
+        sim_id = launch_simulation(config, callback_token=token)
         sim_ids.append(sim_id)
     project_manager.update_project(project_id, sim_ids=sim_ids)
     return jsonify({"data": {"sim_ids": sim_ids}}), 201
@@ -419,7 +425,7 @@ def trigger_exercise_report(project_id):
     data = request.get_json(silent=True) or {}
     batch_id = data.get("batch_id")
     branch_ids = data.get("branch_ids", [])
-    run_exercise_report(project_id, batch_id=batch_id, branch_ids=branch_ids)
+    run_exercise_report(project_id, batch_id=batch_id, branch_ids=branch_ids, callback_token=data.get("callback_token"))
     return jsonify({"data": {"status": "generating"}}), 202
 
 
@@ -502,6 +508,7 @@ def monte_carlo_launch():
             variation_params=variation_params,
             custom_iterations=custom_iterations,
             skip_gating=data.get("skip_gating", False),
+            callback_token=data.get("callback_token"),
         )
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
@@ -662,6 +669,8 @@ def simulation_fork(sim_id):
     if fork_round is None or modifications is None:
         return jsonify({"error": "fork_round and modifications are required"}), 400
 
+    callback_token = data.get("callback_token")
+
     try:
         result = CounterfactualEngine.fork_from_checkpoint(
             original_sim_id=sim_id,
@@ -676,7 +685,7 @@ def simulation_fork(sim_id):
 
     # Launch the forked simulation
     try:
-        fork_sim_id = CounterfactualEngine.launch_fork(result)
+        fork_sim_id = CounterfactualEngine.launch_fork(result, callback_token=callback_token)
         result["sim_id"] = fork_sim_id
     except Exception as e:
         _cf_logger.warning("Fork created but launch failed: %s", e)

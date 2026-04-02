@@ -112,6 +112,47 @@ export default function PipelinePage({
     steps["research"]?.status === "running",
   );
 
+  // MC batch progress polling — workflow is suspended, so poll Flask directly.
+  // Uses separate state to avoid fighting with the WDK stream updates on steps.
+  const [mcBatchId, setMcBatchId] = useState<string | null>(null);
+  const [mcLiveProgress, setMcLiveProgress] = useState<{ completed: number; total: number } | null>(null);
+  useEffect(() => {
+    if (steps["monte_carlo"]?.status === "running" && steps["monte_carlo"]?.detail) {
+      try {
+        const parsed = JSON.parse(steps["monte_carlo"].detail);
+        if (parsed.batchId) setMcBatchId(parsed.batchId);
+      } catch { /* not JSON */ }
+    }
+    if (steps["monte_carlo"]?.status === "completed" || steps["monte_carlo"]?.status === "failed") {
+      setMcLiveProgress(null);
+    }
+  }, [steps["monte_carlo"]?.detail, steps["monte_carlo"]?.status]);
+
+  useEffect(() => {
+    if (!mcBatchId || steps["monte_carlo"]?.status !== "running") return;
+    // Set initial sim ID immediately (iteration 0 is first to run)
+    setMcSimId(`${mcBatchId}_iter_0000`);
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`http://localhost:5001/api/crucible/monte-carlo/${mcBatchId}/status`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const d = json.data;
+        if (d) {
+          const completed = d.iterations_completed || 0;
+          const total = d.iterations_total || 0;
+          setMcLiveProgress({ completed, total });
+          // Track the currently RUNNING iteration for live action feed
+          if (completed < total) {
+            const runningSimId = `${mcBatchId}_iter_${String(completed).padStart(4, "0")}`;
+            setMcSimId(runningSimId);
+          }
+        }
+      } catch { /* polling failure is ok */ }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [mcBatchId, steps["monte_carlo"]?.status]);
+
   // Merge: use simulation graph if available, otherwise project graph
   const graphData = simGraphData.nodes.length > 0 ? simGraphData : projectGraph;
 
@@ -359,6 +400,7 @@ export default function PipelinePage({
                 cfSimStatus={cfStatus}
                 cfSimActions={cfActions}
                 researchProgress={researchProgress}
+                mcLiveProgress={mcLiveProgress}
               />
             </ResizablePanel>
           </ResizablePanelGroup>

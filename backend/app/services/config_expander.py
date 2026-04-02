@@ -34,19 +34,20 @@ MODE_CAPS = {
 }
 
 
-def run_config_expansion(project_id: str, scenario_ids: list[str], test_mode: bool = False, mode: str | None = None) -> None:
+def run_config_expansion(project_id: str, scenario_ids: list[str], test_mode: bool = False, mode: str | None = None, callback_token: str | None = None) -> None:
     """Expand selected scenarios into full configs in a background thread."""
     # mode takes precedence over test_mode for backward compat
     effective_mode = mode if mode and mode in MODE_CAPS else ("test" if test_mode else "standard")
     thread = threading.Thread(
         target=_expansion_pipeline,
         args=(project_id, scenario_ids, effective_mode),
+        kwargs={"callback_token": callback_token},
         daemon=True,
     )
     thread.start()
 
 
-def _expansion_pipeline(project_id: str, scenario_ids: list[str], mode: str = "standard") -> None:
+def _expansion_pipeline(project_id: str, scenario_ids: list[str], mode: str = "standard", callback_token: str | None = None) -> None:
     """Generate full SimulationConfig for each selected scenario."""
     try:
         project_manager.update_project(project_id,
@@ -107,12 +108,15 @@ def _expansion_pipeline(project_id: str, scenario_ids: list[str], mode: str = "s
                     threat_actors = [a for a in agents if a.get("role") == "threat_actor" or a.get("agent_type") == "threat_actor"]
                     defenders = [a for a in agents if a not in threat_actors]
                     config["agent_profiles"] = defenders[:caps["agents"] - len(threat_actors)] + threat_actors
-                # Cap worlds (keep c2 worlds for threat actors)
+                # Cap worlds (keep c2 and email worlds, trim slack overflow)
                 worlds = config.get("worlds", [])
                 if len(worlds) > caps["worlds"]:
                     c2_worlds = [w for w in worlds if w.get("name", "").startswith("c2")]
-                    non_c2 = [w for w in worlds if w not in c2_worlds]
-                    config["worlds"] = non_c2[:caps["worlds"] - len(c2_worlds)] + c2_worlds
+                    email_worlds = [w for w in worlds if w.get("type") == "email" and w not in c2_worlds]
+                    slack_worlds = [w for w in worlds if w not in c2_worlds and w not in email_worlds]
+                    protected = email_worlds + c2_worlds
+                    slack_slots = max(caps["worlds"] - len(protected), 1)
+                    config["worlds"] = slack_worlds[:slack_slots] + protected
                 # Cap scheduled events
                 events = config.get("scheduled_events", [])
                 if len(events) > caps["events"]:
@@ -142,6 +146,9 @@ def _expansion_pipeline(project_id: str, scenario_ids: list[str], mode: str = "s
                 status="failed",
                 error_message=f"All scenario expansions failed: {failed_scenarios}",
                 progress_message="Config generation failed.")
+            if callback_token:
+                from .workflow_callback import resume_workflow_hook
+                resume_workflow_hook(callback_token, {"status": "failed", "error": f"All scenario expansions failed: {failed_scenarios}", "project_id": project_id})
         else:
             msg = f"{completed} config(s) ready."
             if failed_scenarios:
@@ -149,12 +156,18 @@ def _expansion_pipeline(project_id: str, scenario_ids: list[str], mode: str = "s
             project_manager.update_project(project_id,
                 status="configs_ready", progress=100,
                 progress_message=msg)
+            if callback_token:
+                from .workflow_callback import resume_workflow_hook
+                resume_workflow_hook(callback_token, {"status": "configs_ready", "project_id": project_id})
 
     except Exception as e:
         logger.error(f"Config expansion pipeline failed for {project_id}: {e}")
         project_manager.update_project(project_id,
             status="failed", error_message=str(e),
             progress_message="Config generation failed.")
+        if callback_token:
+            from .workflow_callback import resume_workflow_hook
+            resume_workflow_hook(callback_token, {"status": "failed", "error": str(e), "project_id": project_id})
 
 
 def _build_threat_context(scenario: dict, threats: list[dict], vulnerabilities: list[dict]) -> str:
@@ -250,6 +263,18 @@ def _expand_single_scenario(
 
     # Call 8: World Design
     worlds = _generate_worlds(llm, scenario, agents)
+    # Ensure at least one email world exists (LLM sometimes skips it)
+    has_email = any(w.get("type") == "email" for w in worlds)
+    if not has_email:
+        legal_roles = [a["role"] for a in agents if any(k in a.get("role", "").lower() for k in ("legal", "compliance", "ceo", "cfo", "privacy"))]
+        if not legal_roles:
+            legal_roles = [agents[0]["role"]] if agents else ["ceo"]
+        worlds.append({
+            "type": "email",
+            "name": "Regulatory Disclosure",
+            "description": "Formal regulatory notifications, legal holds, and board communications",
+            "participants": legal_roles[:4],
+        })
     _track("world_design")
 
     # Call 9: Time Config
@@ -546,7 +571,7 @@ REQUIREMENTS:
 - participants must use role IDs from the agent list above (lowercase, underscored)
 - NOT every agent in every channel — create natural information silos
 - At least 1 tactical channel (SOC/engineering focused) and 1 strategic channel (executive focused)
-- At least 1 email thread for formal/regulatory communication
+- MANDATORY: Include exactly 1 email thread (type "email") for formal/regulatory/legal communication. Real incidents always involve formal written communications to regulators, legal counsel, or the board. This is NOT optional.
 - Channels should create realistic coordination challenges — teams need to bridge between channels"""
 
     return _extract_list(llm.chat_json([{"role": "user", "content": prompt}]))
