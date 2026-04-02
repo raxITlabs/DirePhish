@@ -25,9 +25,9 @@ from . import project_manager
 logger = get_logger("research_agent")
 
 
-def run_research(project_id: str) -> None:
+def run_research(project_id: str, callback_token: str | None = None) -> None:
     """Run the full research pipeline in a background thread with a 5-minute watchdog."""
-    thread = threading.Thread(target=_research_pipeline, args=(project_id,), daemon=True)
+    thread = threading.Thread(target=_research_pipeline, args=(project_id,), kwargs={"callback_token": callback_token}, daemon=True)
     thread.start()
 
     def _watchdog():
@@ -46,7 +46,7 @@ def run_research(project_id: str) -> None:
     threading.Thread(target=_watchdog, daemon=True).start()
 
 
-def _research_pipeline(project_id: str) -> None:
+def _research_pipeline(project_id: str, callback_token: str | None = None) -> None:
     """Execute research steps sequentially with progress tracking."""
     MissionControl.phase("RESEARCH", project_id)
     research_log = {"project_id": project_id, "steps": []}
@@ -130,6 +130,9 @@ def _research_pipeline(project_id: str) -> None:
             progress_message="Research complete.",
             graph_id=graph_id,
         )
+        if callback_token:
+            from .workflow_callback import resume_workflow_hook
+            resume_workflow_hook(callback_token, {"status": "research_complete", "project_id": project_id, "graph_id": graph_id})
     except Exception as e:
         logger.error(f"Research failed for {project_id}: {e}", exc_info=True)
         research_log["error"] = str(e)
@@ -146,6 +149,9 @@ def _research_pipeline(project_id: str) -> None:
             error_message=str(e),
             progress_message="Research failed.",
         )
+        if callback_token:
+            from .workflow_callback import resume_workflow_hook
+            resume_workflow_hook(callback_token, {"status": "failed", "error": str(e), "project_id": project_id})
 
 
 def _scrape_website(url: str) -> str:

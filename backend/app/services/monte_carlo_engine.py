@@ -106,6 +106,7 @@ class MonteCarloEngine:
         variation_params: dict | None = None,
         custom_iterations: int | None = None,
         skip_gating: bool = False,
+        callback_token: str | None = None,
     ) -> str:
         """Launch a Monte Carlo batch. Returns batch_id."""
         if isinstance(mode, str):
@@ -149,9 +150,10 @@ class MonteCarloEngine:
         MissionControl.mc_header(batch_id, mode.value, iterations, mode_cfg["max_workers"], cost_limit_usd)
 
         # Spawn background thread to run the async batch
+        _cb_token = callback_token
         thread = threading.Thread(
             target=lambda: asyncio.run(
-                _run_batch(batch, base_config, variation_params or {})
+                _run_batch(batch, base_config, variation_params or {}, callback_token=_cb_token)
             ),
             daemon=True,
         )
@@ -262,6 +264,7 @@ async def _run_batch(
     batch: MonteCarloBatch,
     base_config: dict,
     variation_params: dict,
+    callback_token: str | None = None,
 ):
     """Run all iterations with semaphore-based concurrency."""
     batch.status = "running"
@@ -467,6 +470,17 @@ async def _run_batch(
         batch.iterations_completed, batch.iterations_failed,
         batch.cost_tracker.total_cost(),
     )
+
+    if callback_token:
+        from .workflow_callback import resume_workflow_hook
+        resume_workflow_hook(callback_token, {
+            "status": batch.status,
+            "batch_id": batch.batch_id,
+            "iterations_completed": batch.iterations_completed,
+            "iterations_failed": batch.iterations_failed,
+            "error": batch.error or "",
+        })
+
     MissionControl.sim_complete(
         batch.batch_id,
         batch.iterations_completed,

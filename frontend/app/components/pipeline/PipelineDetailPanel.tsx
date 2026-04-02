@@ -76,6 +76,7 @@ interface PipelineDetailPanelProps {
   cfSimStatus?: SimulationStatus | null;
   cfSimActions?: AgentAction[];
   researchProgress?: ResearchProgress;
+  mcLiveProgress?: { completed: number; total: number } | null;
 }
 
 export default function PipelineDetailPanel({
@@ -103,6 +104,7 @@ export default function PipelineDetailPanel({
   cfSimStatus,
   cfSimActions,
   researchProgress,
+  mcLiveProgress,
 }: PipelineDetailPanelProps) {
   const state = steps[stageId];
   const status = state?.status || "pending";
@@ -201,6 +203,7 @@ export default function PipelineDetailPanel({
           cfSimActions={cfSimActions}
           cfSimStatus={cfSimStatus}
           researchProgress={researchProgress}
+          mcLiveProgress={mcLiveProgress}
         />
       </div>
     </div>
@@ -242,7 +245,7 @@ function MCIterationList({ batchId, live }: { batchId: string; live?: boolean })
     const tempMatch = desc.match(/temp=([\d.]+)/);
     if (tempMatch) {
       const temp = parseFloat(tempMatch[1]);
-      const color = temp > 0.8 ? "bg-red-50 text-red-600" : temp > 0.65 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600";
+      const color = temp > 0.8 ? "bg-tuscan-sun-100 text-tuscan-sun-700" : temp > 0.65 ? "bg-tuscan-sun-50 text-tuscan-sun-600" : "bg-verdigris-50 text-verdigris-700";
       const label = temp > 0.8 ? "High pressure" : temp > 0.65 ? "Moderate pressure" : "Cautious";
       items.push({ label, detail: `temp ${temp.toFixed(2)}`, color });
     }
@@ -253,7 +256,7 @@ function MCIterationList({ batchId, live }: { batchId: string; live?: boolean })
       items.push({
         label: "Modified priorities",
         detail: agents.length > 2 ? `${agents.slice(0, 2).join(", ")} +${agents.length - 2}` : agents.join(", "),
-        color: "bg-violet-50 text-violet-600",
+        color: "bg-royal-azure-50 text-royal-azure-700",
       });
     }
 
@@ -261,9 +264,9 @@ function MCIterationList({ batchId, live }: { batchId: string; live?: boolean })
     if (timingMatch) {
       const shiftMatch = timingMatch[1].match(/'event_round':\s*(\d+).*?'shifted_to':\s*(\d+)/);
       if (shiftMatch) {
-        items.push({ label: "Timing shift", detail: `inject moved R${shiftMatch[1]} to R${shiftMatch[2]}`, color: "bg-sky-50 text-sky-600" });
+        items.push({ label: "Timing shift", detail: `inject R${shiftMatch[1]} → R${shiftMatch[2]}`, color: "bg-muted text-foreground/70" });
       } else {
-        items.push({ label: "Timing shift", detail: "events rescheduled", color: "bg-sky-50 text-sky-600" });
+        items.push({ label: "Timing shift", detail: "events rescheduled", color: "bg-muted text-foreground/70" });
       }
     }
 
@@ -272,9 +275,9 @@ function MCIterationList({ batchId, live }: { batchId: string; live?: boolean })
       const first = orderMatch[1].split(", ")[0]?.split(" ").pop() || "";
       const hasAttackerFirst = orderMatch[1].toLowerCase().includes("threat") || orderMatch[1].toLowerCase().includes("attack") || orderMatch[1].toLowerCase().includes("operator");
       items.push({
-        label: hasAttackerFirst ? "Attacker responds first" : "Response reordered",
+        label: hasAttackerFirst ? "Attacker first" : "Reordered",
         detail: `leads: ${first}`,
-        color: hasAttackerFirst ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-600",
+        color: hasAttackerFirst ? "bg-tuscan-sun-100 text-tuscan-sun-700" : "bg-muted text-foreground/70",
       });
     }
 
@@ -283,14 +286,14 @@ function MCIterationList({ batchId, live }: { batchId: string; live?: boolean })
 
   function outcomeLabel(outcome?: string): { text: string; color: string } | null {
     if (!outcome) return null;
-    if (outcome.includes("contained") || outcome.includes("resolved")) return { text: "Contained", color: "text-emerald-600" };
-    if (outcome.includes("critical") || outcome.includes("failure")) return { text: "Escalated", color: "text-red-600" };
-    if (outcome.includes("max_round") || outcome.includes("limit")) return { text: "Max rounds", color: "text-amber-600" };
+    if (outcome.includes("contained") || outcome.includes("resolved")) return { text: "Contained", color: "text-verdigris-700" };
+    if (outcome.includes("critical") || outcome.includes("failure") || outcome.includes("catastrophic") || outcome.includes("escalat")) return { text: "Escalated", color: "text-tuscan-sun-700" };
+    if (outcome.includes("max_round") || outcome.includes("limit") || outcome.includes("stagnant")) return { text: "Stagnant", color: "text-muted-foreground" };
     return { text: outcome.split("_").join(" "), color: "text-muted-foreground" };
   }
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <span className="text-2xs font-mono text-muted-foreground/60 uppercase tracking-wider">
         Completed Variations ({iterations.length})
       </span>
@@ -298,24 +301,31 @@ function MCIterationList({ batchId, live }: { batchId: string; live?: boolean })
         const changes = parseVariation(iter.variation_description || "");
         const outcome = outcomeLabel(iter.outcome);
         return (
-          <div key={iter.iteration_id} className="bg-muted/30 rounded-md px-3 py-2 space-y-1.5">
+          <div key={iter.iteration_id} className="border border-border/40 rounded-lg px-3 py-2.5 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-mono text-foreground/80">
-                <span className="text-verdigris-600">✓</span>
-                <span>Variation {idx + 1}</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-verdigris-500 shrink-0" />
+                <span className="font-medium">Variation {idx + 1}</span>
+                {outcome && <span className={`text-2xs ${outcome.color}`}>{outcome.text}</span>}
               </div>
               <div className="flex items-center gap-2 text-2xs font-mono text-muted-foreground">
-                {outcome && <span className={`font-medium ${outcome.color}`}>{outcome.text}</span>}
                 <span>{iter.stopped_at_round || iter.total_rounds}R</span>
+                <span className="text-muted-foreground/40">·</span>
                 <span>{iter.total_actions} actions</span>
-                {iter.cost_usd > 0 && <span>${iter.cost_usd.toFixed(2)}</span>}
+                {iter.cost_usd > 0 && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span>${iter.cost_usd.toFixed(2)}</span>
+                  </>
+                )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
               {changes.map((c, i) => (
-                <span key={i} className={`text-2xs font-mono px-1.5 py-0.5 rounded ${c.color}`} title={c.detail}>
+                <span key={i} className={`text-2xs font-mono px-2 py-1 rounded-md ${c.color}`} title={c.detail}>
                   {c.label}
-                  <span className="opacity-60 ml-1">{c.detail}</span>
+                  <span className="opacity-50 mx-1">·</span>
+                  <span className="opacity-70">{c.detail}</span>
                 </span>
               ))}
             </div>
@@ -575,6 +585,7 @@ function StageDetail({
   cfSimActions,
   cfSimStatus,
   researchProgress,
+  mcLiveProgress,
 }: {
   stageId: string;
   state: StepState | undefined;
@@ -590,6 +601,7 @@ function StageDetail({
   cfSimActions?: AgentAction[];
   cfSimStatus?: SimulationStatus | null;
   researchProgress?: ResearchProgress;
+  mcLiveProgress?: { completed: number; total: number } | null;
 }) {
   // Research — live activity or entity summary
   if (stageId === "research") {
@@ -953,9 +965,12 @@ function StageDetail({
           }
         }
 
+        const mcCompleted = mcLiveProgress?.completed ?? parsed?.completed ?? 0;
+        const mcTotal = mcLiveProgress?.total ?? parsed?.iterations ?? 1;
+
         return (
           <div className="flex flex-col h-full">
-            {parsed?.batchId && (parsed?.completed || 0) > 0 && (
+            {parsed?.batchId && mcCompleted > 0 && (
               <div className="px-3 py-2 border-b border-border/10 max-h-[40%] overflow-y-auto shrink-0">
                 <MCIterationList batchId={parsed.batchId} live />
               </div>
@@ -970,7 +985,7 @@ function StageDetail({
                 scenarioTitle={title}
                 contextHeader={{
                   title: `Stress Test: ${parsed?.scenarioTitle || "scenario"}`,
-                  subtitle: `Variation ${(parsed?.completed || 0) + 1}/${parsed?.iterations || 1}`,
+                  subtitle: `Variation ${mcCompleted + 1}/${mcTotal}`,
                   changes: mcChanges.length > 0 ? mcChanges : ["Testing with controlled variations"],
                 }}
               />
@@ -979,8 +994,8 @@ function StageDetail({
         );
       }
 
-      const completed = parsed?.completed || 0;
-      const total = parsed?.iterations || 1;
+      const completed = mcLiveProgress?.completed ?? parsed?.completed ?? 0;
+      const total = mcLiveProgress?.total ?? parsed?.iterations ?? 1;
       const pct = Math.round((completed / total) * 100);
 
       return (
@@ -988,7 +1003,7 @@ function StageDetail({
           <div className="flex items-center gap-3">
             <div className="w-5 h-5 border-2 border-tuscan-sun-500 border-t-transparent rounded-full animate-spin shrink-0" />
             <span className="text-sm font-mono text-foreground/80">
-              Variation {completed}/{total}
+              Variation {completed + 1}/{total}
             </span>
           </div>
           <div className="h-1.5 bg-muted rounded-full overflow-hidden">

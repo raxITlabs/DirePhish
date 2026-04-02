@@ -125,7 +125,7 @@ def list_all_simulations() -> list[dict]:
     return result
 
 
-def launch_simulation(config: dict) -> str:
+def launch_simulation(config: dict, callback_token: str | None = None) -> str:
     """Save config and launch run_crucible_simulation.py as subprocess."""
     sim_id = config.get("simulation_id") or f"crucible_{uuid.uuid4().hex[:8]}"
     config["simulation_id"] = sim_id
@@ -187,14 +187,22 @@ def launch_simulation(config: dict) -> str:
         if sim_id in _simulations:
             if proc.returncode == 0:
                 _simulations[sim_id]["status"] = "completed"
+                if callback_token:
+                    from .workflow_callback import resume_workflow_hook
+                    resume_workflow_hook(callback_token, {"status": "completed", "sim_id": sim_id})
             else:
                 _simulations[sim_id]["status"] = "failed"
+                error_msg = ""
                 try:
                     stderr_text = stderr_log.read_text()[-2000:]
                     if stderr_text:
+                        error_msg = stderr_text
                         logger.error(f"Simulation {sim_id} failed (exit {proc.returncode}):\n{stderr_text}")
                 except Exception:
                     logger.error(f"Simulation {sim_id} failed (exit {proc.returncode})")
+                if callback_token:
+                    from .workflow_callback import resume_workflow_hook
+                    resume_workflow_hook(callback_token, {"status": "failed", "sim_id": sim_id, "error": error_msg[:500]})
 
     threading.Thread(target=_monitor, daemon=True).start()
     return sim_id

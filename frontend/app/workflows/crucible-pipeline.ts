@@ -5,9 +5,10 @@
  *       launch sims → generate reports → comparative report
  *
  * Uses Vercel WDK for durable execution. Each step calls Flask API endpoints.
+ * Backend resumes hooks when phases complete (no polling).
  * Progress streamed via getWritable() inside step functions (WDK requirement).
  */
-import { getWritable, createHook, sleep } from "workflow";
+import { getWritable, createHook } from "workflow";
 
 const API_BASE = process.env.FLASK_API_URL || "http://localhost:5001";
 
@@ -35,6 +36,17 @@ interface ScenarioInfo {
 interface DossierConfirmation {
   confirmed: boolean;
   scenarioOverrides?: string[];
+}
+
+interface PhaseResult {
+  status: string;
+  error?: string;
+  project_id?: string;
+  graph_id?: string;
+  sim_id?: string;
+  batch_id?: string;
+  iterations_completed?: number;
+  iterations_failed?: number;
 }
 
 // --- Step: write progress (must be "use step" for getWritable) ---
@@ -83,167 +95,6 @@ async function flaskApi<T>(path: string, options?: RequestInit): Promise<T> {
   return json.data as T;
 }
 
-// --- Durable polling ---
-//
-// Each polling function is split into:
-//   1. A "use step" function that does ONE status check (has Node.js/fetch access)
-//   2. A loop at the workflow level using sleep() from "workflow" (durable, survives restarts)
-//
-// Why: setTimeout inside "use step" is ephemeral. If the dev server restarts (Turbopack HMR),
-// the setTimeout callback dies but the WDK step stays "running" on disk → permanent deadlock.
-// With durable sleep, the WDK persists each sleep and check as separate event log entries,
-// so after a restart, the workflow replays completed entries and resumes at the right point.
-
-async function checkProjectStatus(projectId: string): Promise<Record<string, unknown>> {
-  "use step";
-  const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/status`);
-  if (!res.ok) console.warn(`[PIPELINE] checkProjectStatus HTTP ${res.status} for ${projectId}`);
-  const json = await res.json();
-  return json.data as Record<string, unknown>;
-}
-
-async function pollStatus(
-  projectId: string,
-  targetStatuses: string[],
-  failStatuses: string[] = ["failed"],
-): Promise<Record<string, unknown>> {
-  for (let i = 0; i < 120; i++) {
-    const data = await checkProjectStatus(projectId);
-    const status = data?.status as string;
-    if (targetStatuses.includes(status)) return data;
-    if (failStatuses.includes(status)) {
-      throw new Error(`Pipeline failed: ${(data?.error_message as string) || status}`);
-    }
-    await sleep("5s");
-  }
-  throw new Error("Pipeline timed out waiting for status: " + targetStatuses.join(", "));
-}
-
-async function checkSimStatus(simId: string): Promise<string> {
-  "use step";
-  const res = await fetch(`${API_BASE}/api/crucible/simulations/${simId}/status`);
-  if (!res.ok) console.warn(`[PIPELINE] checkSimStatus HTTP ${res.status} for ${simId}`);
-  const json = await res.json();
-  return (json.data?.status as string) || "unknown";
-}
-
-async function pollSimulation(simId: string): Promise<void> {
-  for (let i = 0; i < 180; i++) {
-    const status = await checkSimStatus(simId);
-    if (status === "completed") {
-      console.log(`[PIPELINE] pollSimulation: ${simId} completed (poll ${i})`);
-      return;
-    }
-    if (status === "failed") throw new Error(`Simulation ${simId} failed`);
-    if (status === "unknown") {
-      console.warn(`[PIPELINE] pollSimulation: ${simId} status unknown (poll ${i})`);
-    }
-    await sleep("5s");
-  }
-  throw new Error(`Simulation ${simId} timed out`);
-}
-
-async function checkReportStatus(simId: string): Promise<string> {
-  "use step";
-  const res = await fetch(`${API_BASE}/api/crucible/simulations/${simId}/report`);
-  if (!res.ok) console.warn(`[PIPELINE] checkReportStatus HTTP ${res.status} for ${simId}`);
-  const json = await res.json();
-  return (json.data?.status as string) || "pending";
-}
-
-async function pollReport(simId: string): Promise<void> {
-  for (let i = 0; i < 60; i++) {
-    const status = await checkReportStatus(simId);
-    if (status === "complete") return;
-    await sleep("5s");
-  }
-  throw new Error(`Report for ${simId} timed out`);
-}
-
-async function checkComparativeReportStatus(projectId: string): Promise<string> {
-  "use step";
-  const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/comparative-report`);
-  const json = await res.json();
-  return (json.data?.status as string) || "pending";
-}
-
-async function pollComparativeReport(projectId: string): Promise<void> {
-  for (let i = 0; i < 60; i++) {
-    const status = await checkComparativeReportStatus(projectId);
-    if (status === "complete") return;
-    await sleep("5s");
-  }
-  throw new Error("Comparative report timed out");
-}
-
-async function checkExerciseReportStatus(projectId: string): Promise<{ status: string; error?: string }> {
-  "use step";
-  const res = await fetch(`${API_BASE}/api/crucible/projects/${projectId}/exercise-report`);
-  if (!res.ok) console.warn(`[PIPELINE] checkExerciseReportStatus HTTP ${res.status} for ${projectId}`);
-  const json = await res.json();
-  return { status: (json.data?.status as string) || "pending", error: json.data?.error };
-}
-
-async function pollExerciseReport(projectId: string): Promise<void> {
-  for (let i = 0; i < 120; i++) {
-    const result = await checkExerciseReportStatus(projectId);
-    if (result.status === "complete") {
-      console.log(`[PIPELINE] Exercise report complete (poll ${i})`);
-      return;
-    }
-    if (result.status === "failed") throw new Error(`Exercise report failed: ${result.error || "unknown"}`);
-    await sleep("5s");
-  }
-  throw new Error("Exercise report timed out");
-}
-
-interface MCStatusResult {
-  status: string;
-  error?: string;
-  completedIterations: number;
-  totalIterations: number;
-}
-
-async function checkMCStatus(batchId: string): Promise<MCStatusResult> {
-  "use step";
-  const res = await fetch(`${API_BASE}/api/crucible/monte-carlo/${batchId}/status`);
-  if (!res.ok) console.warn(`[PIPELINE] checkMCStatus HTTP ${res.status} for ${batchId}`);
-  const json = await res.json();
-  return {
-    status: (json.data?.status as string) || "unknown",
-    error: json.data?.error,
-    completedIterations: (json.data?.completed_iterations as number) || 0,
-    totalIterations: (json.data?.total_iterations as number) || 10,
-  };
-}
-
-async function pollMonteCarlo(batchId: string): Promise<void> {
-  let lastReportedIteration = 0;
-  for (let i = 0; i < 360; i++) {
-    const mc = await checkMCStatus(batchId);
-    if (mc.status === "completed") {
-      console.log(`[PIPELINE] pollMonteCarlo: batch ${batchId} completed (poll ${i})`);
-      return;
-    }
-    if (["failed", "cost_exceeded", "stopped"].includes(mc.status)) {
-      throw new Error(`Monte Carlo batch ${batchId} ${mc.status}: ${mc.error || ""}`);
-    }
-    if (mc.status === "unknown") {
-      console.warn(`[PIPELINE] pollMonteCarlo: batch ${batchId} status unknown (poll ${i})`);
-    }
-    if (mc.completedIterations > lastReportedIteration) {
-      lastReportedIteration = mc.completedIterations;
-      const runningIterIndex = mc.completedIterations;
-      const currentSimId = `${batchId}_iter_${String(runningIterIndex).padStart(4, '0')}`;
-      await emitProgress("monte_carlo", "running",
-        `Stress testing — ${mc.completedIterations}/${mc.totalIterations} variation${mc.totalIterations !== 1 ? 's' : ''} complete...`,
-        JSON.stringify({ batchId, iterations: mc.totalIterations, completed: mc.completedIterations, currentSimId }));
-    }
-    await sleep("5s");
-  }
-  throw new Error(`Monte Carlo batch ${batchId} timed out`);
-}
-
 // ============================================================
 // THE PIPELINE WORKFLOW
 // ============================================================
@@ -286,6 +137,10 @@ export async function cruciblePipeline(input: {
     await emitProgress("research", "running",
       `Starting company research (${pipelineMode} mode)...`);
 
+    const researchHook = createHook<PhaseResult>({
+      token: `research-done-${Date.now()}`,
+    });
+
     const createResult = await flaskApi<{ projectId: string }>(
       "/api/crucible/projects",
       {
@@ -294,6 +149,7 @@ export async function cruciblePipeline(input: {
         body: new URLSearchParams({
           company_url: input.companyUrl,
           user_context: input.userContext || "",
+          callback_token: researchHook.token,
         }),
       },
     );
@@ -301,12 +157,10 @@ export async function cruciblePipeline(input: {
 
     await emitProgress("research", "running", "Researching company...", `Project: ${projectId}`);
 
-    // Poll until research completes (which auto-chains to analyzing_threats)
-    await pollStatus(projectId, [
-      "research_complete",
-      "analyzing_threats",
-      "scenarios_ready",
-    ]);
+    const researchResult = await researchHook;
+    if (researchResult.status === "failed") {
+      throw new Error(`Research failed: ${researchResult.error || "unknown"}`);
+    }
 
     stageDurations.research = Date.now() - stageStart;
     await emitProgress("research", "completed", "Research complete", undefined, stageDurations.research);
@@ -323,17 +177,17 @@ export async function cruciblePipeline(input: {
 
     // ─── STEP 2: Wait for dossier confirmation ───
     stageStart = Date.now();
-    const hook = createHook<DossierConfirmation>({
+    const dossierHook = createHook<DossierConfirmation>({
       token: `dossier-confirm-${projectId}`,
     });
 
     await emitProgress(
       "dossier_review", "running",
       "Waiting for dossier confirmation...",
-      JSON.stringify({ hookToken: hook.token, projectId }),
+      JSON.stringify({ hookToken: dossierHook.token, projectId }),
     );
 
-    const confirmation = await hook;
+    const confirmation = await dossierHook;
 
     if (!confirmation.confirmed) {
       stageDurations.dossier_review = Date.now() - stageStart;
@@ -349,13 +203,20 @@ export async function cruciblePipeline(input: {
     stageStart = Date.now();
     await emitProgress("threat_analysis", "running", "Analyzing threats...");
 
+    const threatHook = createHook<PhaseResult>({
+      token: `threats-done-${projectId}`,
+    });
+
     await flaskApi<{ status: string }>(
       `/api/crucible/projects/${projectId}/analyze-threats`,
-      { method: "POST" },
+      { method: "POST", body: JSON.stringify({ callback_token: threatHook.token }) },
     );
 
     await emitProgress("threat_analysis", "running", "Mapping vulnerabilities...");
-    await pollStatus(projectId, ["scenarios_ready"]);
+    const threatResult = await threatHook;
+    if (threatResult.status === "failed") {
+      throw new Error(`Threat analysis failed: ${threatResult.error || "unknown"}`);
+    }
 
     stageDurations.threat_analysis = Date.now() - stageStart;
     await emitProgress("threat_analysis", "completed", "Threat analysis complete", undefined, stageDurations.threat_analysis);
@@ -399,12 +260,19 @@ export async function cruciblePipeline(input: {
     stageStart = Date.now();
     await emitProgress("config_expansion", "running", "Generating simulation configs...");
 
+    const configHook = createHook<PhaseResult>({
+      token: `configs-done-${projectId}`,
+    });
+
     await flaskApi<{ status: string }>(
       `/api/crucible/projects/${projectId}/generate-configs`,
-      { method: "POST", body: JSON.stringify({ scenario_ids: selectedIds, mode: pipelineMode }) },
+      { method: "POST", body: JSON.stringify({ scenario_ids: selectedIds, mode: pipelineMode, callback_token: configHook.token }) },
     );
 
-    await pollStatus(projectId, ["configs_ready"]);
+    const configResult = await configHook;
+    if (configResult.status === "failed") {
+      throw new Error(`Config expansion failed: ${configResult.error || "unknown"}`);
+    }
 
     stageDurations.config_expansion = Date.now() - stageStart;
     await emitProgress("config_expansion", "completed", "Configs generated",
@@ -414,22 +282,42 @@ export async function cruciblePipeline(input: {
     stageStart = Date.now();
     await emitProgress("simulations", "running", "Launching simulations...");
 
+    // Get configs to know sim IDs for hook tokens
+    const configs = await flaskApi<Array<{ simulation_id: string }>>(
+      `/api/crucible/projects/${projectId}/configs`,
+    );
+    const expectedSimIds = (configs || []).map(c => c.simulation_id);
+
+    // Create hooks for each sim before launching
+    const simHooks: Array<{ simId: string; hook: ReturnType<typeof createHook<PhaseResult>> }> = [];
+    const callbackTokens: Record<string, string> = {};
+    for (const simId of expectedSimIds) {
+      const hook = createHook<PhaseResult>({ token: `sim-done-${simId}` });
+      simHooks.push({ simId, hook });
+      callbackTokens[simId] = hook.token;
+    }
+
     const launchResult = await flaskApi<{ sim_ids: string[] }>(
       `/api/crucible/projects/${projectId}/launch`,
-      { method: "POST" },
+      { method: "POST", body: JSON.stringify({ callback_tokens: callbackTokens }) },
     );
     simIds = launchResult.sim_ids;
 
     await emitProgress("simulations", "running",
       `Running ${simIds.length} simulations...`, simIds.join(", "));
 
-    await Promise.all(simIds.map((id, i) =>
-      (async () => {
-        await emitProgress("simulations", "running",
-          `Simulation ${i + 1}/${simIds.length} running...`, id);
-        await pollSimulation(id);
-      })()
-    ));
+    // Await each sim sequentially (deterministic for WDK replay)
+    for (let i = 0; i < simHooks.length; i++) {
+      const { simId, hook } = simHooks[i];
+      await emitProgress("simulations", "running",
+        `Simulation ${i + 1}/${simHooks.length} running...`, simId);
+      const result = await hook;
+      if (result.status === "failed") {
+        throw new Error(`Simulation ${simId} failed: ${result.error || ""}`);
+      }
+      await emitProgress("simulations", "running",
+        `Simulation ${i + 1}/${simHooks.length} complete`, simId);
+    }
 
     stageDurations.simulations = Date.now() - stageStart;
     await emitProgress("simulations", "completed",
@@ -444,12 +332,15 @@ export async function cruciblePipeline(input: {
       "Stress testing — re-running with variations...");
 
     let mcBatchId = "";
-    let mcResults: Record<string, unknown> = {};
     try {
       // Get config from first sim for MC reuse
       const simConfig = await flaskApi<Record<string, unknown>>(
         `/api/crucible/simulations/${simIds[0]}/config`,
       );
+
+      const mcHook = createHook<PhaseResult>({
+        token: `mc-done-${projectId}`,
+      });
 
       const mcLaunch = await flaskApi<{ batchId: string }>(
         "/api/crucible/monte-carlo/launch",
@@ -459,34 +350,29 @@ export async function cruciblePipeline(input: {
           mode: mcMode,
           cost_limit_usd: mcCostLimit,
           skip_gating: true,
+          callback_token: mcHook.token,
         })},
       );
       mcBatchId = mcLaunch.batchId;
-
-      // Get actual iteration count from MC status (engine controls this via MODE_CONFIGS)
-      const mcInitial = await checkMCStatus(mcBatchId);
 
       await emitProgress("monte_carlo", "running",
         `Stress testing — re-running with variations...`,
         JSON.stringify({
           batchId: mcBatchId,
-          iterations: mcInitial.totalIterations,
-          completed: 0,
-          currentSimId: `${mcBatchId}_iter_0000`,
           scenarioTitle: scenarioTitles[0] || "scenario"
         }));
-      await pollMonteCarlo(mcBatchId);
-      console.log(`[PIPELINE] pollMonteCarlo returned for ${mcBatchId}, fetching results...`);
 
-      mcResults = await flaskApi<Record<string, unknown>>(
-        `/api/crucible/monte-carlo/${mcBatchId}/results`,
-      );
-      console.log(`[PIPELINE] MC results fetched, emitting completed...`);
+      const mcResult = await mcHook;
+      console.log(`[PIPELINE] MC hook resumed for ${mcBatchId}, status=${mcResult.status}`);
+
+      if (mcResult.status === "failed" || mcResult.status === "cost_exceeded") {
+        throw new Error(`Monte Carlo ${mcResult.status}: ${mcResult.error || ""}`);
+      }
 
       stageDurations.monte_carlo = Date.now() - stageStart;
       await emitProgress("monte_carlo", "completed",
         "Stress testing complete",
-        JSON.stringify({ batchId: mcBatchId, iterations: mcInitial.totalIterations }),
+        JSON.stringify({ batchId: mcBatchId, iterations: mcResult.iterations_completed }),
         stageDurations.monte_carlo);
       console.log(`[PIPELINE] MC completed emitted, moving to counterfactual`);
     } catch (mcError) {
@@ -527,14 +413,20 @@ export async function cruciblePipeline(input: {
           forkRound: topDecisions[0]?.round,
         }));
 
-      // Fork and launch top 2
+      // Fork and launch sequentially with hooks
       for (const decision of topDecisions) {
         try {
+          // Create hook before forking so we can pass the token
+          const branchToken = `sim-done-cf-${simIds[0]}-r${decision.round}`;
+          const branchHook = createHook<PhaseResult>({
+            token: branchToken,
+          });
           const fork = await flaskApi<{ branch_id: string; sim_id?: string }>(
             `/api/crucible/simulations/${simIds[0]}/fork`,
             { method: "POST", body: JSON.stringify({
               fork_round: decision.round,
               modifications: decision.suggested_modification || {},
+              callback_token: branchToken,
             })},
           );
           if (fork.sim_id) {
@@ -542,8 +434,11 @@ export async function cruciblePipeline(input: {
               `Testing alternate timeline from round ${decision.round}...`,
               JSON.stringify({ forkSimId: fork.sim_id, forkAgent: decision.agent, forkRound: decision.round }));
             branchIds.push(fork.sim_id);
-            console.log(`[PIPELINE] Counterfactual: polling branch sim ${fork.sim_id}...`);
-            await pollSimulation(fork.sim_id);
+            console.log(`[PIPELINE] Counterfactual: waiting for branch sim ${fork.sim_id}...`);
+            const branchResult = await branchHook;
+            if (branchResult.status === "failed") {
+              console.warn(`[PIPELINE] Branch sim ${fork.sim_id} failed: ${branchResult.error}`);
+            }
             console.log(`[PIPELINE] Counterfactual: branch sim ${fork.sim_id} done`);
           }
         } catch (forkErr) {
@@ -572,6 +467,10 @@ export async function cruciblePipeline(input: {
     await emitProgress("exercise_report", "running", "Generating exercise report...");
 
     try {
+      const reportHook = createHook<PhaseResult>({
+        token: `report-done-${projectId}`,
+      });
+
       await flaskApi<{ status: string }>(
         `/api/crucible/projects/${projectId}/exercise-report`,
         {
@@ -579,10 +478,16 @@ export async function cruciblePipeline(input: {
           body: JSON.stringify({
             batch_id: mcBatchId || undefined,
             branch_ids: branchIds.length > 0 ? branchIds : undefined,
+            callback_token: reportHook.token,
           }),
         },
       );
-      await pollExerciseReport(projectId);
+
+      const reportResult = await reportHook;
+      if (reportResult.status === "failed") {
+        throw new Error(`Exercise report failed: ${reportResult.error || "unknown"}`);
+      }
+
       stageDurations.exercise_report = Date.now() - stageStart;
       await emitProgress("exercise_report", "completed", "Exercise report complete", undefined, stageDurations.exercise_report);
     } catch (reportError) {

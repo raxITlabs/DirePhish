@@ -1055,12 +1055,13 @@ def run_exercise_report(
     project_id: str,
     batch_id: str | None = None,
     branch_ids: list[str] | None = None,
+    callback_token: str | None = None,
 ) -> None:
     """Generate unified exercise report in a background thread."""
     thread = threading.Thread(
         target=_generate_exercise_report,
         args=(project_id,),
-        kwargs={"batch_id": batch_id, "branch_ids": branch_ids},
+        kwargs={"batch_id": batch_id, "branch_ids": branch_ids, "callback_token": callback_token},
         daemon=True,
     )
     thread.start()
@@ -1070,6 +1071,7 @@ def _generate_exercise_report(
     project_id: str,
     batch_id: str | None = None,
     branch_ids: list[str] | None = None,
+    callback_token: str | None = None,
 ) -> None:
     """Full exercise report generation pipeline with multiple focused LLM calls."""
     out_dir = SIMULATIONS_DIR / f"exercise_{project_id}"
@@ -1355,11 +1357,17 @@ def _generate_exercise_report(
         cost_tracker.save(str(out_dir))
 
         logger.info(f"Exercise report generated for {project_id}")
+        if callback_token:
+            from .workflow_callback import resume_workflow_hook
+            resume_workflow_hook(callback_token, {"status": "complete", "project_id": project_id})
 
     except Exception as e:
         logger.error(f"Exercise report failed for {project_id}: {e}")
         with open(report_path, "w") as f:
             json.dump({"projectId": project_id, "status": "failed", "error": str(e)}, f)
+        if callback_token:
+            from .workflow_callback import resume_workflow_hook
+            resume_workflow_hook(callback_token, {"status": "failed", "error": str(e), "project_id": project_id})
 
 
 # ─── Cost aggregation ───

@@ -217,7 +217,7 @@ Return ONLY a JSON object: {{"decision_points": [...]}}"""
     # ------------------------------------------------------------------
 
     @staticmethod
-    def launch_fork(fork_info: dict) -> str:
+    def launch_fork(fork_info: dict, callback_token: str | None = None) -> str:
         """Launch a forked simulation. Returns the new sim_id."""
         from . import crucible_manager
 
@@ -227,7 +227,7 @@ Return ONLY a JSON object: {{"decision_points": [...]}}"""
         config["simulation_id"] = sim_id
         config["_resume_from_round"] = fork_info["fork_round"]
         config["_checkpoint_state"] = fork_info.get("checkpoint")
-        return crucible_manager.launch_simulation(config)
+        return crucible_manager.launch_simulation(config, callback_token=callback_token)
 
     # ------------------------------------------------------------------
     # Compare branches

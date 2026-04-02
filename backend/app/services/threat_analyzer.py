@@ -28,13 +28,13 @@ def _extract_list(result) -> list:
     return []
 
 
-def run_threat_analysis(project_id: str) -> None:
+def run_threat_analysis(project_id: str, callback_token: str | None = None) -> None:
     """Run threat analysis in a background thread."""
-    thread = threading.Thread(target=_analysis_pipeline, args=(project_id,), daemon=True)
+    thread = threading.Thread(target=_analysis_pipeline, args=(project_id,), kwargs={"callback_token": callback_token}, daemon=True)
     thread.start()
 
 
-def _analysis_pipeline(project_id: str) -> None:
+def _analysis_pipeline(project_id: str, callback_token: str | None = None) -> None:
     """Execute the 4-step threat intelligence pipeline."""
     try:
         project_manager.update_project(project_id,
@@ -103,12 +103,18 @@ def _analysis_pipeline(project_id: str) -> None:
         project_manager.update_project(project_id,
             status="scenarios_ready", progress=100,
             progress_message="Scenarios ready for review.")
+        if callback_token:
+            from .workflow_callback import resume_workflow_hook
+            resume_workflow_hook(callback_token, {"status": "scenarios_ready", "project_id": project_id})
 
     except Exception as e:
         logger.error(f"Threat analysis failed for {project_id}: {e}")
         project_manager.update_project(project_id,
             status="failed", error_message=f"Threat analysis failed: {e}",
             progress_message="Threat analysis failed.")
+        if callback_token:
+            from .workflow_callback import resume_workflow_hook
+            resume_workflow_hook(callback_token, {"status": "failed", "error": str(e), "project_id": project_id})
 
 
 def _format_company_context(dossier: dict) -> str:
