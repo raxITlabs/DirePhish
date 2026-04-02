@@ -407,36 +407,77 @@ function SlackMessage({ action, expanded, onToggle }: {
   const name = getAgentName(action);
   const initials = getInitials(name);
 
-  const wrapper = isThread ? "ml-10 border-l-2 border-pitch-black-700 pl-3" : "";
-  const threatBg = isThreatActor ? "bg-[rgba(200,50,50,0.08)] border-l-[3px] border-l-burnt-peach-500 rounded-r-lg" : "";
+  const wrapper = isThread ? "ml-10 border-l-2 border-border/40 pl-3" : "";
 
   return (
-    <div className={`${wrapper} ${threatBg}`}>
+    <div className={wrapper}>
       {isThread && (
-        <div className="text-[10px] font-mono text-pitch-black-500 mb-1">↳ Thread reply</div>
+        <div className="text-[10px] font-mono text-muted-foreground/50 mb-1">↳ Thread reply</div>
       )}
       <div className={`flex gap-2.5 ${isThread ? "py-1" : "py-2"}`}>
-        <div className={`${isThread ? "w-6 h-6 text-[9px]" : "w-8 h-8 text-[11px]"} rounded-md flex-shrink-0 flex items-center justify-center font-bold text-white ${isThreatActor ? "bg-burnt-peach-500" : ""}`}
-          style={!isThreatActor ? { backgroundColor: getRoleHex(action.role) } : undefined}
+        <div className={`${isThread ? "w-6 h-6 text-[9px]" : "w-8 h-8 text-[11px]"} rounded-md flex-shrink-0 flex items-center justify-center font-bold text-white`}
+          style={{ backgroundColor: getRoleHex(action.role) }}
         >
           {initials}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-1.5 mb-0.5">
-            <span className={`font-semibold ${isThread ? "text-xs" : "text-sm"} ${isThreatActor ? "text-burnt-peach-400" : "text-pitch-black-100"}`}>
+            <span className={`font-semibold ${isThread ? "text-xs" : "text-sm"} text-foreground`}>
               {name}
             </span>
-            <span className="text-[10px] font-mono text-pitch-black-500 bg-pitch-black-800 px-1.5 py-0 rounded">{action.role}</span>
-            <span className="text-[10px] font-mono text-pitch-black-600 ml-auto tabular-nums">{time}</span>
+            <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0 rounded">{action.role}</span>
+            <span className="text-[10px] font-mono text-muted-foreground/50 ml-auto tabular-nums">{time}</span>
           </div>
-          <div className={`${isThread ? "text-xs text-pitch-black-400" : "text-sm text-pitch-black-300"} leading-relaxed whitespace-pre-wrap ${isThreatActor ? "italic" : ""}`}>
+          <div className={`${isThread ? "text-xs" : "text-sm"} text-foreground/80 leading-relaxed whitespace-pre-wrap`}>
             {displayContent}
             {isLong && (
-              <button onClick={onToggle} className="text-[10px] font-mono text-royal-azure-400 hover:text-royal-azure-300 ml-1">
+              <button onClick={onToggle} className="text-[10px] font-mono text-royal-azure-600 hover:text-royal-azure-500 ml-1">
                 {expanded ? "Show less" : "Show more"}
               </button>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Threat Actor Message ── */
+
+function ThreatActorMessage({ action, expanded, onToggle }: {
+  action: AgentAction; expanded: boolean; onToggle: () => void;
+}) {
+  const { content } = getActionContent(action);
+  const isLong = content.length > 300;
+  const displayContent = isLong && !expanded ? content.slice(0, 300) + "..." : content;
+  const time = formatTime(action.timestamp);
+  const name = getAgentName(action);
+  const initials = getInitials(name);
+  const channel = action.world || "c2-channel";
+
+  return (
+    <div className="bg-burnt-peach-50 border border-burnt-peach-200 border-l-[3px] border-l-burnt-peach-500 rounded-lg overflow-hidden my-1.5">
+      <div className="px-3 py-2.5">
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="w-8 h-8 rounded-md flex-shrink-0 flex items-center justify-center text-[11px] font-bold text-white bg-burnt-peach-500">
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-sm font-semibold text-burnt-peach-700">{name}</span>
+              <span className="text-[10px] font-mono text-burnt-peach-500 bg-burnt-peach-100 px-1.5 py-0 rounded">threat_actor</span>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono text-burnt-peach-400 tabular-nums">{time}</span>
+        </div>
+        <div className="text-[10px] font-mono text-burnt-peach-400 mb-1">{channel}</div>
+        <div className="text-sm text-burnt-peach-800 leading-relaxed whitespace-pre-wrap">
+          {displayContent}
+          {isLong && (
+            <button onClick={onToggle} className="text-[10px] font-mono text-burnt-peach-600 hover:text-burnt-peach-500 ml-1">
+              {expanded ? "Show less" : "Show more"}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -568,10 +609,12 @@ function TimelineView({ actions }: { actions: AgentAction[] }) {
                 <InjectBanner action={action} />
               ) : isArbiter ? (
                 <ArbiterBanner action={action} />
+              ) : isThreatActor ? (
+                <ThreatActorMessage action={action} expanded={expandedSet.has(i)} onToggle={() => toggleExpand(i)} />
               ) : isEmail ? (
                 <EmailCard action={action} expanded={expandedSet.has(i)} onToggle={() => toggleExpand(i)} />
               ) : (
-                <div className="bg-[#1a1a2e] rounded-lg px-3 py-2">
+                <div className="bg-royal-azure-50/30 border border-royal-azure-100 rounded-lg px-3 py-1">
                   <SlackMessage action={action} expanded={expandedSet.has(i)} onToggle={() => toggleExpand(i)} />
                 </div>
               )}
@@ -629,16 +672,18 @@ function ActionFeed({
               <InjectBanner action={action} />
             ) : isArbiter ? (
               <ArbiterBanner action={action} />
+            ) : (action.role === "threat_actor" || action.type === "threat_actor") ? (
+              <ThreatActorMessage action={action} expanded={expandedActions.has(i)} onToggle={() => onToggleExpand(i)} />
             ) : isEmail ? (
               <EmailCard action={action} expanded={expandedActions.has(i)} onToggle={() => onToggleExpand(i)} />
             ) : isSlack ? (
               <>
                 {showChannelHeader && (
                   <div className="mt-2 mb-1 px-2">
-                    <span className="text-[10px] font-mono text-pitch-black-500 bg-pitch-black-800 px-2 py-0.5 rounded"># {channel}</span>
+                    <span className="text-[10px] font-mono text-muted-foreground bg-royal-azure-50 border border-royal-azure-100 px-2 py-0.5 rounded"># {channel}</span>
                   </div>
                 )}
-                <div className="bg-[#1a1a2e] rounded-lg px-3">
+                <div className="bg-royal-azure-50/30 border border-royal-azure-100 rounded-lg px-3">
                   <SlackMessage action={action} expanded={expandedActions.has(i)} onToggle={() => onToggleExpand(i)} />
                 </div>
               </>
