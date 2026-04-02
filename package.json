@@ -10,8 +10,7 @@
     "backend": "cd backend && portless api.direphish --app-port 5001 --force -- uv run python run.py",
     "frontend": "cd frontend && portless direphish --force -- pnpm run dev",
     "frontend:wait": "wait-on -t 120000 http-get://127.0.0.1:5001/health && cd frontend && portless direphish --force -- pnpm run dev",
-    "build": "cd frontend && pnpm run build",
-    "docker:alias": "portless alias direphish 3000 --force && portless alias api.direphish 5001 --force"
+    "build": "cd frontend && pnpm run build"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

@@ -1,0 +1,28 @@
+# Production stack: `next build` + `next start`, Flask via Gunicorn (see Dockerfile.prod).
+# Usage: docker compose -f docker-compose.prod.yml up --build
+#
+# Same container layout as dev: Next calls Flask at 127.0.0.1:5001 for server-side code.
+# Map host ports with HOST_PORT_FRONTEND / HOST_PORT_BACKEND in `.env` if defaults conflict.
+services:
+  direphish:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    image: ghcr.io/raxitlabs/direphish:prod
+    container_name: direphish-prod
+    env_file:
+      - .env
+    environment:
+      FLASK_DEBUG: "false"
+      FLASK_API_URL: http://127.0.0.1:5001
+      NODE_ENV: production
+    ports:
+      - "${HOST_PORT_FRONTEND:-3000}:3000"
+      - "${HOST_PORT_BACKEND:-5001}:5001"
+    restart: unless-stopped
+    volumes:
+      - ./backend/uploads:/app/backend/uploads
+      - workflow-data:/app/frontend/.next/workflow-data
+
+volumes:
+  workflow-data:

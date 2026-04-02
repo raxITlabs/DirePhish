@@ -4,7 +4,104 @@
 
 ---
 
-## Simulation Stage (working)
+## Research Stage
+
+```
+FRONTEND (Next.js)                    BACKEND (Flask)                     FIRESTORE
+─────────────────                    ───────────────                     ─────────
+
+┌─────────────────┐                 ┌──────────────────┐
+│ POST /projects   │───{url,files}─►│ create_project()  │
+│ (HomeClient)     │◄──{projectId}──│ proj_xxxx/        │
+│                  │                 │                   │
+│ useResearchPoll  │───GET /status─►│ research_agent.py │
+│ every 2.5s       │◄──{progress}───│ (background thread│
+│                  │                 │  5-min watchdog)  │
+│                  │                 │                   │
+│                  │                 │  1. _scrape_website│──Cloudflare /crawl
+│                  │                 │  2. _web_search    │──Gemini grounded
+│                  │                 │  3. _process_docs  │──PDF/TXT parsing
+│                  │                 │  4. _synthesize    │──LLM call
+│                  │                 │     → dossier.json │
+│                  │                 │                   │
+│ GET /dossier     │───────────────►│ reads dossier.json│
+│ DossierEditor    │◄──{dossier}────│                   │
+│                  │                 │  push_dossier()───│──►sim_episodes
+│ GET /graph       │───────────────►│ reads Firestore───│──►graph_nodes
+│ D3 force graph   │◄──{nodes,edges}│                   │   graph_edges
+└─────────────────┘                 └──────────────────┘
+
+Flow: POST creates project → background thread runs 4-step research pipeline
+      → frontend polls status until research_complete → fetches dossier + graph
+```
+
+---
+
+## Threat Analysis Stage
+
+```
+FRONTEND                             BACKEND                              FIRESTORE
+────────                             ───────                              ─────────
+
+┌─────────────────┐                 ┌──────────────────┐
+│ Auto-triggered   │                 │ threat_analyzer.py│
+│ after research   │                 │ (background thread│
+│ completes        │                 │  4 sequential LLM │
+│                  │                 │  calls):          │
+│ useResearchPoll  │───GET /status─►│                   │
+│ watches for      │◄──{status}─────│  1. analyze_threat│
+│ scenarios_ready  │                 │     _landscape    │
+│                  │                 │  2. map_vulns     │
+│ GET /scenarios   │───────────────►│  3. generate      │
+│ ScenarioCards    │◄──{scenarios}───│     _attack_paths │
+│                  │                 │  4. frame         │
+│                  │                 │     _scenarios    │
+│                  │                 │                   │
+│                  │                 │  → threat_analysis│
+│                  │                 │    .json (disk)   │
+└─────────────────┘                 └──────────────────┘
+
+Flow: auto-starts after research_complete → 4 LLM calls → threat_analysis.json
+      → status becomes scenarios_ready → frontend fetches scenarios for selection
+```
+
+---
+
+## Config Expansion Stage
+
+```
+FRONTEND                             BACKEND                              FIRESTORE
+────────                             ───────                              ─────────
+
+┌─────────────────┐                 ┌──────────────────┐
+│ POST /generate-  │───{scenarioIds}►│ config_expander.py│
+│ configs          │                 │ (background thread│
+│ (LaunchBar)      │                 │  per scenario):   │
+│                  │                 │                   │
+│ polls /status    │───GET /status─►│  5 LLM calls:     │
+│ watches for      │◄──{status}─────│  1. agent_profiles│
+│ configs_ready    │                 │  2. worlds        │
+│                  │                 │  3. events        │
+│ GET /configs     │───────────────►│  4. adaptive_depth│
+│ multi-tab view   │◄──{configs}────│  5. time_config   │
+│ AgentCards       │                 │                   │
+│ WorldList        │                 │  Mode caps applied│
+│ EventTimeline    │                 │  (test: 7ag/3w/10r│
+│                  │                 │   std: LLM decides│
+│                  │                 │                   │
+│                  │                 │  → scenarios/     │
+│                  │                 │    <id>.json (disk│
+└─────────────────┘                 └──────────────────┘
+
+Flow: user selects scenarios → POST triggers expansion → 5 LLM calls per scenario
+      → configs saved to scenarios/ dir → frontend fetches for review before launch
+```
+
+---
+
+## Simulation Stage
+
+
 
 ```
 FRONTEND (Next.js)                    BACKEND (Flask)                     FIRESTORE
@@ -130,6 +227,42 @@ Graph reads from FIRESTORE (polled by frontend)
 
 ---
 
+## Exercise Report Stage
+
+```
+FRONTEND                             BACKEND                              FIRESTORE
+────────                             ───────                              ─────────
+
+┌─────────────────┐                 ┌──────────────────┐
+│ POST /report     │───{simId}─────►│ report_agent.py   │
+│ (auto or manual) │                 │ (background thread│
+│                  │                 │  ReACT pattern):  │
+│ polls report     │───GET /report─►│                   │
+│ status           │◄──{status}─────│  1. Plan outline  │
+│                  │                 │  2. Per-section:  │
+│                  │                 │     ReACT loop    │
+│ /report/exercise │                 │     (max 5 rounds)│
+│ /[projectId]     │                 │     ├─ LLM thinks│
+│                  │                 │     ├─ calls tools│──►search()
+│ 5 tab views:     │                 │     │  (vector   │   insight_forge()
+│ ├─ Board         │                 │     │   search)  │   panorama_search()
+│ ├─ CISO          │                 │     └─ synthesize│   interview_agents()
+│ ├─ Security Team │                 │                   │
+│ ├─ Playbook      │                 │  → report.json   │
+│ └─ Risk Score    │                 │    (disk)         │──►risk_scores
+│                  │                 │                   │
+│ RiskScoreView    │───POST /compute►│ risk_score_engine │
+│ (on-demand)      │◄──{score}──────│ FAIR methodology  │──►risk_scores
+└─────────────────┘                 └──────────────────┘
+
+Flow: report agent uses ReACT loop with Firestore vector search tools
+      → generates sections iteratively → saves report.json
+      → frontend renders across 5 specialized views
+      → risk score computed on-demand via separate endpoint
+```
+
+---
+
 ## Stage-by-Stage Data Stores
 
 ```
@@ -139,9 +272,9 @@ Research           dossier.json                  sim_episodes (28 chunks)
                    research_log.json             graph_nodes (~28)
                                                  graph_edges (~30)
 
-Threat Analysis    scenarios.json                —
+Threat Analysis    threat_analysis.json          —
 
-Config Expansion   config.json                   —
+Config Expansion   scenarios/<id>.json           —
 
 Simulation         actions.jsonl                 sim_episodes (batch/round)
                    checkpoints/round_N.json      graph_nodes (incremental +)
@@ -156,6 +289,5 @@ What-If Analysis   branch_dir/                   sim_episodes (per branch)
                      actions.jsonl
                      config.json
 
-Exercise Report    exercise_dir/                 —
-                     report.json
+Exercise Report    report.json                   risk_scores
 ```

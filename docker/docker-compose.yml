@@ -1,0 +1,25 @@
+# Host ports default to 3000 and 5001. If those are already in use (other dev servers,
+# another compose stack, etc.), set HOST_PORT_FRONTEND / HOST_PORT_BACKEND in `.env`, e.g.:
+#   HOST_PORT_FRONTEND=3010
+#   HOST_PORT_BACKEND=5010
+# Inside the container the app still listens on 3000 and 5001; only the published host ports change.
+services:
+  direphish:
+    build: .
+    image: ghcr.io/raxitlabs/direphish:latest
+    container_name: direphish
+    env_file:
+      - .env
+    environment:
+      # Server-side Next.js / workflows call Flask inside the same container.
+      FLASK_API_URL: http://127.0.0.1:5001
+    ports:
+      - "${HOST_PORT_FRONTEND:-3000}:3000"
+      - "${HOST_PORT_BACKEND:-5001}:5001"
+    restart: unless-stopped
+    volumes:
+      - ./backend/uploads:/app/backend/uploads
+      - workflow-data:/app/frontend/.next/workflow-data
+
+volumes:
+  workflow-data:
