@@ -12,6 +12,10 @@ import type { ExerciseReport } from "@/app/actions/report";
 import OutcomeDistributionBar from "./OutcomeDistributionBar";
 import ReadinessGauge from "./ReadinessGauge";
 import StressTestResults from "./StressTestResults";
+import RiskScoreRing from "./RiskScoreRing";
+import FAIRLossCard from "./FAIRLossCard";
+import RiskDrivers from "./RiskDrivers";
+import ScoreDimensions from "./ScoreDimensions";
 
 interface Props {
   report: ExerciseReport;
@@ -117,42 +121,29 @@ export default function ExecutiveSummaryView({ report }: Props) {
         />
       </div>
 
-      {/* 2.5. Risk Score + FAIR — inline from report data */}
+      {/* 2.5. Risk Score — full detail inline */}
       {report.riskScore && (
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-4">
-              <div className={`w-14 h-14 rounded-full border-[3px] flex items-center justify-center text-lg font-bold shrink-0 ${
-                report.riskScore.composite_score < 40
-                  ? "border-verdigris-400 text-verdigris-600"
-                  : report.riskScore.composite_score < 70
-                    ? "border-tuscan-sun-400 text-tuscan-sun-600"
-                    : "border-burnt-peach-400 text-burnt-peach-600"
-              }`}>
-                {report.riskScore.composite_score.toFixed(0)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">
-                  {report.riskScore.interpretation?.label || "Risk Score"}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {report.riskScore.interpretation?.description || ""}
-                </p>
-              </div>
-              {report.riskScore.fair_estimates && (
-                <div className="text-right shrink-0">
-                  <p className="text-xs text-muted-foreground">Est. Annual Loss</p>
-                  <p className="text-sm font-mono font-semibold text-foreground">
-                    ${(report.riskScore.fair_estimates.ale || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground/60 font-mono">
-                    ${(report.riskScore.fair_estimates.p10_loss || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} — ${(report.riskScore.fair_estimates.p90_loss || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} range
-                  </p>
-                </div>
+        <div className="space-y-3">
+          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+            Risk Assessment
+          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
+            <div className="space-y-3">
+              <RiskScoreRing
+                score={report.riskScore.composite_score}
+                ci={report.riskScore.confidence_interval}
+                interpretation={report.riskScore.interpretation}
+              />
+              <FAIRLossCard estimates={report.riskScore.fair_estimates} />
+            </div>
+            <div className="space-y-3">
+              <ScoreDimensions dimensions={report.riskScore.dimensions} />
+              {report.riskScore.drivers && report.riskScore.drivers.length > 0 && (
+                <RiskDrivers drivers={report.riskScore.drivers} />
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* 3. Outcome Distribution + Readiness side by side */}

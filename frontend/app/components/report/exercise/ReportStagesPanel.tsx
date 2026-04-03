@@ -14,12 +14,11 @@ interface KillChainStep {
   description: string;
 }
 
-type ViewId = "playbook" | "executive" | "security" | "risk-score" | "crisis-comms";
+type ViewId = "playbook" | "executive" | "security" | "crisis-comms";
 
 const VIEWS: { id: ViewId; label: string }[] = [
   { id: "executive", label: "Executive Summary" },
   { id: "security", label: "Security Team" },
-  { id: "risk-score", label: "Risk Score" },
   { id: "crisis-comms", label: "Crisis Comms" },
 ];
 
