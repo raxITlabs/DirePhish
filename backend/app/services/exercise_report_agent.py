@@ -1176,8 +1176,8 @@ REQUIREMENTS:
 - Regulatory filing: Based on {', '.join(compliance[:3]) if compliance else 'applicable'} frameworks. Include 72-hour notification language if GDPR applies. Reference the actual timeline.
 - Employee comms: Plain language. What happened, what it means for them, what to tell customers who ask, what's changing internally."""
 
-    with _track_call(llm, cost_tracker, "crisis_comms"):
-        result = llm.chat_json([{"role": "user", "content": prompt}])
+    result = llm.chat_json([{"role": "user", "content": prompt}])
+    _track_call(llm, cost_tracker, "crisis_comms")
 
     if isinstance(result, list):
         return result
