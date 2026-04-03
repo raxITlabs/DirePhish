@@ -1963,30 +1963,40 @@ def _generate_executive_summary(llm: LLMClient, company: str, conclusions: dict,
             if t:
                 techniques.append(f"{step.get('description', '')[:80]} ({t}, {step.get('tactic', '')})")
 
+    # Build plain-language technique descriptions (no IDs)
+    technique_descriptions = []
+    for sd in sim_data_list:
+        for step in sd.get("attackPath", {}).get("kill_chain", []):
+            desc = step.get("description", "")[:100]
+            if desc:
+                technique_descriptions.append(desc)
+
     prompt = f"""{LEGAL_PREAMBLE}
 
-Write a 2-3 paragraph EXECUTIVE SUMMARY for a board-ready simulation exercise report for {company}.
+Write a 2-paragraph EXECUTIVE SUMMARY for a board-ready simulation exercise report for {company}.
 
-An executive should understand in 60 seconds:
-- What was simulated (scenarios: {scenario_list})
-- What the model predicts would happen
-- The top risks (headline: {headline})
-- What decisions need to be made ({action_count} action items proposed)
+A board member should understand in 30 seconds:
+1. What threat was simulated and what business impact it could cause
+2. Whether the organization is prepared and what needs to change
 
-Key data points:
-- {len(sim_data_list)} attack scenarios simulated
-- {finding_count} key findings ({critical_count} critical)
+Context:
+- Scenarios simulated: {scenario_list}
+- Headline finding: {headline}
+- {finding_count} findings ({critical_count} critical), {action_count} recommended actions
 - {root_cause_count} organizational root causes identified
-- {len(team_scores)} functional teams assessed
-- Attack techniques simulated (explain each in plain language, cite MITRE reference in parentheses):
-{chr(10).join(f'  - {t}' for t in techniques[:6])}
 
-IMPORTANT: This summary is for a CEO/board audience. Every technical concept must be explained in plain business language FIRST, with the technical reference in parentheses after. For example:
-- "attackers exploiting a trusted law firm's credentials to access cloud infrastructure (a technique known as Trusted Relationship abuse, MITRE ref: T1199)"
-- NOT: "T1199 initial access via trusted relationship"
+Attack progression (describe in plain English):
+{chr(10).join(f'  - {d}' for d in technique_descriptions[:4])}
 
-Write in predictive language. Be specific about predicted business impact. Do NOT name individuals.
-Keep it to 2-3 short paragraphs. No bullet points — this is prose for a board deck.
+STRICT RULES:
+- Do NOT include ANY MITRE technique IDs (no T1199, no T1078, no MITRE references at all)
+- Do NOT include technical jargon — no "lateral movement", "credential harvesting", "C2 channel"
+- Use business language: "unauthorized access", "stolen credentials", "data theft"
+- First paragraph: what was tested and what would happen (business impact in dollars if possible)
+- Second paragraph: what leadership should do about it (2-3 specific decisions)
+- Maximum 150 words total
+- Write for someone who has never seen a security report before
+- Predictive language ("our model predicts..." not "the simulation showed...")
 
 Return the summary as a plain text string (not JSON)."""
 
