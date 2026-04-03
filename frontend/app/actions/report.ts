@@ -492,6 +492,16 @@ export interface ExerciseReport {
   // Attack-path playbook (per-step with MC evidence)
   attackPathPlaybook?: AttackPathStep[];
 
+  // Crisis communications drafts (scenario-specific)
+  crisisComms?: Array<{
+    audience: string;
+    audienceLabel: string;
+    subject: string;
+    body: string;
+    tone: string;
+    urgency: string;
+  }>;
+
   appendix?: {
     scenarioDetails: Array<{
       scenarioId: string;
