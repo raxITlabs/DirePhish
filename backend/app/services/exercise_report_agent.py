@@ -1432,7 +1432,7 @@ def _generate_exercise_report(
             from .risk_explainer import compute_drivers
 
             if mc_aggregation:
-                per_iteration_data = mc_aggregation.get("per_iteration_data", [])
+                per_iteration_data = mc_aggregation.get("per_iteration_results", [])
                 rs = compute_composite_score(mc_aggregation, resilience, per_iteration_data, batch_id or "")
                 fair = compute_fair_loss(mc_aggregation, {}, per_iteration_data)
                 drivers = []

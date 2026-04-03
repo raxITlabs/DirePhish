@@ -64,9 +64,17 @@ def compute_fair_loss(
             "calibration_inputs": cal,
         }
 
-    # LEF = annual_threat_frequency × (1 - contained_early_rate)
+    # LEF = annual_threat_frequency × loss_probability
+    # Even contained incidents have a cost (team mobilization, investigation, regulatory overhead).
+    # Full containment reduces severity but doesn't eliminate the event.
     contained_early_rate = outcome.get("contained_early", 0) / total
-    lef = cal["annual_threat_frequency"] * (1 - contained_early_rate)
+    contained_late_rate = outcome.get("contained_late", 0) / total
+    escalated_rate = outcome.get("escalated", 0) / total
+    # Weight: early containment = 0.15 loss event, late = 0.5, escalated = 1.0
+    loss_probability = (contained_early_rate * 0.15) + (contained_late_rate * 0.5) + (escalated_rate * 1.0)
+    # Ensure a minimum — any incident attempt has some cost
+    loss_probability = max(loss_probability, 0.1)
+    lef = cal["annual_threat_frequency"] * loss_probability
 
     # Compute LM per iteration if we have per-iteration data
     if per_iteration_data and len(per_iteration_data) > 0:
@@ -111,41 +119,58 @@ def compute_fair_loss(
 def _compute_iteration_lm(iteration: dict, cal: dict) -> float:
     """Compute Loss Magnitude for a single MC iteration.
 
-    LM = productivity_loss + response_cost + regulatory_fines + reputation_damage
+    Even successful containment has real costs:
+    - The IR team is pulled off normal business tasks for the duration
+    - Systems may be isolated, deployments frozen, access revoked
+    - Post-incident forensics, report writing, and policy updates
+    - Opportunity cost of engineering time spent on incident
+
+    LM = defender_cost + response_cost + business_disruption + regulatory + reputation
     """
     containment_rounds = iteration.get("containment_round") or iteration.get("total_rounds", 10)
     total_rounds = iteration.get("total_rounds", 10) or 10
+    total_actions = iteration.get("total_actions", 0)
     outcome = iteration.get("outcome", "not_contained")
     compliance_round = iteration.get("first_compliance_notification_round")
 
-    # Productivity loss = rounds to contain × hourly_cost × team_size
-    productivity = containment_rounds * cal["hourly_cost"] * cal["team_size"]
+    # 1. Defender productivity loss — team is working the incident, not their normal jobs
+    #    Every round of response = team × hourly cost pulled from BAU
+    defender_cost = total_rounds * cal["hourly_cost"] * cal["team_size"]
 
-    # Response cost — scales with outcome severity
+    # 2. Business disruption — systems isolated, deployments frozen during response
+    #    Proportional to how many rounds the incident ran (even if contained)
+    #    Baseline: 2x hourly cost per round for broader org impact
+    disruption_multiplier = 2.0 if outcome == "escalated" else 1.0 if outcome == "contained_late" else 0.5
+    business_disruption = total_rounds * cal["hourly_cost"] * disruption_multiplier
+
+    # 3. IR response cost — formal incident response engagement
     if outcome == "escalated":
         response = cal["incident_response_retainer"] * 1.0
     elif outcome == "contained_late":
         response = cal["incident_response_retainer"] * 0.3
     elif outcome == "contained_early":
-        response = cal["incident_response_retainer"] * 0.0
+        response = cal["incident_response_retainer"] * 0.1  # mobilization + triage
     else:  # not_contained
         response = cal["incident_response_retainer"] * 0.5
 
-    # Regulatory fines — based on notification delay
+    # 4. Post-incident overhead — forensics, lessons learned, policy updates
+    #    Always incurred regardless of outcome. Scales with action count.
+    post_incident = cal["hourly_cost"] * cal["team_size"] * max(2, total_actions / 20)
+
+    # 5. Regulatory — based on notification timing
     regulatory_window = cal["regulatory_window_rounds"]
     if compliance_round is not None:
         delay_ratio = max(0, (compliance_round - regulatory_window) / total_rounds)
         regulatory = cal["regulatory_penalty"] * delay_ratio
     else:
-        # Never notified compliance — worst case
         regulatory = cal["regulatory_penalty"] * 0.5
 
-    # Reputation damage — proportional to escalation
+    # 6. Reputation damage — proportional to escalation
     if outcome == "escalated":
         reputation = cal["estimated_customer_impact"]
     elif outcome in ("not_contained", "contained_late"):
         reputation = cal["estimated_customer_impact"] * 0.2
     else:
-        reputation = 0.0
+        reputation = 0.0  # contained early = no public impact
 
-    return productivity + response + regulatory + reputation
+    return defender_cost + business_disruption + response + post_incident + regulatory + reputation
