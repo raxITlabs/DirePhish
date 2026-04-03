@@ -8,12 +8,13 @@ import StepDetail from "./StepDetail";
 import ExecutiveSummaryView from "./ExecutiveSummaryView";
 import SecurityTeamView from "./SecurityTeamView";
 import RiskScoreView from "./RiskScoreView";
+import CrisisCommsView from "./CrisisCommsView";
 
 function formatTactic(t: string): string {
   return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-type ViewId = "playbook" | "executive" | "security" | "risk-score";
+type ViewId = "playbook" | "executive" | "security" | "risk-score" | "crisis-comms";
 
 interface PlaybookFirstLayoutProps {
   report: ExerciseReport;
@@ -78,6 +79,8 @@ export default function PlaybookFirstLayout({
             <SecurityTeamView report={report} />
           ) : activeView === "risk-score" ? (
             <RiskScoreView report={report} projectId={projectId} />
+          ) : activeView === "crisis-comms" ? (
+            <CrisisCommsView report={report} />
           ) : null}
         </div>
       </div>

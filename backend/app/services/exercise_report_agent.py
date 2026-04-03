@@ -1049,6 +1049,143 @@ def _generate_attack_path_playbook(
         return None
 
 
+# ─── Crisis Communications ───
+
+def _generate_crisis_comms(
+    llm: LLMClient,
+    company_name: str,
+    sim_data_list: list[dict],
+    graph_data: dict,
+    exec_summary: str,
+    conclusions: dict,
+    risk_score: dict | None,
+    cost_tracker: CostTracker,
+) -> list[dict]:
+    """Generate 5 audience-specific crisis communication drafts from simulation data."""
+
+    # Build context from simulation data
+    scenario = sim_data_list[0].get("scenario", "") if sim_data_list else ""
+    techniques = []
+    for sd in sim_data_list:
+        for ap in sd.get("attack_paths", []):
+            for step in ap.get("kill_chain", []):
+                tid = step.get("technique_id", "")
+                tactic = step.get("tactic", "")
+                if tid and tid not in [t["id"] for t in techniques]:
+                    techniques.append({"id": tid, "tactic": tactic, "target": step.get("target", "")})
+
+    systems = [s.get("name", "") for s in graph_data.get("systems", [])[:10]]
+    compliance = graph_data.get("compliance", [])
+    first_sim = sim_data_list[0] if sim_data_list else {}
+    containment = first_sim.get("summary", {}).get("total_rounds", "?")
+    actions_count = first_sim.get("actionCount", 0)
+
+    fair_summary = ""
+    if risk_score and risk_score.get("fair_estimates"):
+        fe = risk_score["fair_estimates"]
+        fair_summary = f"Estimated annual loss expectancy: ${fe.get('ale', 0):,.0f}. Per-incident range: ${fe.get('p10_loss', 0):,.0f} (best case) to ${fe.get('p90_loss', 0):,.0f} (worst case)."
+
+    risk_summary = ""
+    if risk_score:
+        rs = risk_score.get("composite_score", 0)
+        interp = risk_score.get("interpretation", {})
+        risk_summary = f"Composite risk score: {rs:.1f}/100 ({interp.get('label', 'N/A')}). {interp.get('description', '')}"
+
+    key_findings = ""
+    if conclusions:
+        findings = conclusions.get("keyFindings", [])
+        if findings:
+            key_findings = "\n".join(f"- {f}" for f in findings[:5])
+
+    action_items = ""
+    if conclusions:
+        items = conclusions.get("actionItems", [])
+        if items:
+            action_items = "\n".join(f"- {a.get('title', a) if isinstance(a, dict) else a}" for a in items[:5])
+
+    prompt = f"""You are a crisis communications specialist. Generate 5 audience-specific communication drafts based on a predictive incident response simulation for {company_name}.
+
+## Simulation Context
+Scenario: {scenario}
+MITRE ATT&CK Techniques: {json.dumps(techniques[:6])}
+Systems involved: {', '.join(systems[:8])}
+Compliance frameworks: {', '.join(compliance[:5]) if compliance else 'Not specified'}
+Containment: {containment} rounds, {actions_count} response actions
+{risk_summary}
+{fair_summary}
+
+## Key Findings
+{key_findings}
+
+## Priority Actions
+{action_items}
+
+## Executive Summary (for context)
+{exec_summary[:500] if exec_summary else 'N/A'}
+
+Generate 5 communication drafts, each tailored to a specific audience. Each draft should reference SPECIFIC details from the simulation (system names, techniques, timelines). Do NOT use generic placeholders like [COMPANY] or [DATE] — use the actual data provided.
+
+Return ONLY valid JSON — an array of 5 objects:
+[
+  {{
+    "audience": "board_executive",
+    "audienceLabel": "Board & Executive Leadership",
+    "subject": "Incident Response Exercise Results — [specific subject]",
+    "body": "Full draft text...",
+    "tone": "formal",
+    "urgency": "high"
+  }},
+  {{
+    "audience": "technical_team",
+    "audienceLabel": "Internal Security & Engineering Team",
+    "subject": "...",
+    "body": "...",
+    "tone": "technical",
+    "urgency": "immediate"
+  }},
+  {{
+    "audience": "customer_notification",
+    "audienceLabel": "Customer Notification",
+    "subject": "...",
+    "body": "...",
+    "tone": "transparent",
+    "urgency": "high"
+  }},
+  {{
+    "audience": "regulatory_filing",
+    "audienceLabel": "Regulatory Filing",
+    "subject": "...",
+    "body": "...",
+    "tone": "formal_legal",
+    "urgency": "time_sensitive"
+  }},
+  {{
+    "audience": "employee_comms",
+    "audienceLabel": "Employee Communications",
+    "subject": "...",
+    "body": "...",
+    "tone": "reassuring",
+    "urgency": "moderate"
+  }}
+]
+
+REQUIREMENTS:
+- Board brief: 1 page max. Lead with financial exposure, then what happened, then what we're changing. No technical jargon.
+- Technical team: Full IR details. Reference MITRE techniques by ID. What the attacker did step by step. What worked, what didn't.
+- Customer notification: GDPR/CCPA compliant language. What data was at risk, what we did, what customers should do. Include a timeline.
+- Regulatory filing: Based on {', '.join(compliance[:3]) if compliance else 'applicable'} frameworks. Include 72-hour notification language if GDPR applies. Reference the actual timeline.
+- Employee comms: Plain language. What happened, what it means for them, what to tell customers who ask, what's changing internally."""
+
+    with _track_call(llm, cost_tracker, "crisis_comms"):
+        result = llm.chat_json([{"role": "user", "content": prompt}])
+
+    if isinstance(result, list):
+        return result
+    if isinstance(result, dict) and "communications" in result:
+        return result["communications"]
+    return []
+
+
 # ─── Main pipeline ───
 
 def run_exercise_report(
@@ -1095,7 +1232,8 @@ def _generate_exercise_report(
 
         logger.info(f"Starting exercise report for {project_id} with {len(sim_ids)} simulations")
 
-        llm = LLMClient()
+        llm = LLMClient(model=Config.LLM_PRO_MODEL)
+        logger.info(f"Using model: {Config.LLM_PRO_MODEL}")
         cost_tracker = CostTracker(f"exercise_{project_id}")
 
         # ─── Step 1: Collect all raw data ───
@@ -1286,6 +1424,47 @@ def _generate_exercise_report(
             except Exception as e:
                 logger.warning(f"Counterfactual comparison failed: {e}")
 
+        # ─── Step 13.5: Compute risk score inline ───
+        risk_score = None
+        try:
+            from .risk_score_engine import compute_composite_score, interpret_score
+            from .fair_loss_mapper import compute_fair_loss
+            from .risk_explainer import compute_drivers
+
+            if mc_aggregation:
+                per_iteration_data = mc_aggregation.get("per_iteration_data", [])
+                rs = compute_composite_score(mc_aggregation, resilience, per_iteration_data, batch_id or "")
+                fair = compute_fair_loss(mc_aggregation, {}, per_iteration_data)
+                drivers = []
+                if per_iteration_data:
+                    from .risk_score_engine import _compute_per_iteration_score
+                    per_iter_scores = [_compute_per_iteration_score(it, mc_aggregation) for it in per_iteration_data]
+                    divergence_points = mc_aggregation.get("decision_divergence_points", [])
+                    drivers = compute_drivers(per_iter_scores, per_iteration_data, divergence_points)
+                risk_score = {
+                    "project_id": project_id,
+                    "batch_id": batch_id,
+                    "composite_score": rs["composite_score"],
+                    "dimensions": rs["dimensions"],
+                    "confidence_interval": rs.get("confidence_interval"),
+                    "confidence_flag": rs.get("confidence_flag", "low"),
+                    "interpretation": interpret_score(rs["composite_score"]),
+                    "fair_estimates": fair,
+                    "drivers": drivers,
+                }
+                logger.info(f"Risk score computed inline: {rs['composite_score']:.1f}")
+                # Also store to Firestore so existing risk score UI works
+                try:
+                    from .firestore_memory import FirestoreMemory
+                    mem = FirestoreMemory()
+                    mem.store_risk_score(risk_score)
+                except Exception as e:
+                    logger.warning(f"Risk score Firestore store failed (non-fatal): {e}")
+            else:
+                logger.info("No MC aggregation — skipping inline risk score")
+        except Exception as e:
+            logger.warning(f"Inline risk score computation failed (non-fatal): {e}")
+
         # ─── Step 14: Generate playbook ───
         logger.info("Step 14: Generating incident response playbook...")
         playbook = _generate_playbook(
@@ -1306,6 +1485,18 @@ def _generate_exercise_report(
                 logger.warning("Attack-path playbook returned None — will fall back to generic playbook in frontend")
         except Exception as e:
             logger.warning(f"Attack-path playbook generation failed: {e} — frontend will use generic playbook")
+
+        # ─── Step 15.5: Generate crisis communications drafts ───
+        crisis_comms = []
+        try:
+            logger.info("Step 15.5: Generating crisis communications drafts...")
+            crisis_comms = _generate_crisis_comms(
+                llm, company_name, sim_data_list, graph_data,
+                exec_summary, conclusions, risk_score, cost_tracker,
+            )
+            logger.info(f"Generated {len(crisis_comms)} crisis comms drafts")
+        except Exception as e:
+            logger.warning(f"Crisis comms generation failed (non-fatal): {e}")
 
         # ─── Step 16: Collect pipeline costs ───
         # Save exercise report costs first so _collect_pipeline_costs can read them
@@ -1350,6 +1541,8 @@ def _generate_exercise_report(
             "counterfactualComparison": cf_comparison,
             "playbook": playbook,
             "attackPathPlaybook": attack_path_playbook,
+            "riskScore": risk_score,
+            "crisisComms": crisis_comms if crisis_comms else None,
         }
 
         with open(report_path, "w") as f:
