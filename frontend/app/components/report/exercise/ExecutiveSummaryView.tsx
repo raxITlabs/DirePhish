@@ -121,29 +121,81 @@ export default function ExecutiveSummaryView({ report }: Props) {
         />
       </div>
 
-      {/* 2.5. Risk Score — full detail inline */}
+      {/* 2.5. Risk & Financial Impact */}
       {report.riskScore && (
-        <div className="space-y-3">
-          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-            Risk Assessment
-          </p>
-          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
-            <div className="space-y-3">
+        <Card>
+          <CardContent className="p-5 space-y-4">
+            <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+              Risk & Financial Impact (FAIR)
+            </p>
+
+            {/* Score + headline interpretation */}
+            <div className="flex items-start gap-4">
               <RiskScoreRing
                 score={report.riskScore.composite_score}
                 ci={report.riskScore.confidence_interval}
                 interpretation={report.riskScore.interpretation}
               />
-              <FAIRLossCard estimates={report.riskScore.fair_estimates} />
+              <div className="flex-1 min-w-0 pt-1">
+                <p className="text-sm text-foreground leading-relaxed">
+                  <FAIRExplanation
+                    riskScore={report.riskScore}
+                    mc={mc}
+                  />
+                </p>
+              </div>
             </div>
-            <div className="space-y-3">
+
+            {/* FAIR numbers — clean row */}
+            {report.riskScore.fair_estimates && (
+              <div className="grid grid-cols-3 gap-3 border-t border-border/20 pt-3">
+                <div>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase">Annual Loss (ALE)</p>
+                  <p className="text-lg font-mono font-semibold text-foreground">
+                    {formatFairDollars(report.riskScore.fair_estimates.ale)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase">Best Case (P10)</p>
+                  <p className="text-lg font-mono font-semibold text-verdigris-600">
+                    {formatFairDollars(report.riskScore.fair_estimates.p10_loss)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase">Worst Case (P90)</p>
+                  <p className="text-lg font-mono font-semibold text-burnt-peach-600">
+                    {formatFairDollars(report.riskScore.fair_estimates.p90_loss)}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Cost breakdown explanation */}
+            {report.riskScore.fair_estimates && (
+              <div className="bg-muted/20 rounded-lg p-3">
+                <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">
+                  What drives this cost
+                </p>
+                <FAIRBreakdown
+                  estimates={report.riskScore.fair_estimates}
+                  mc={mc}
+                />
+              </div>
+            )}
+
+            {/* Dimension bars — compact */}
+            <div className="border-t border-border/20 pt-3">
               <ScoreDimensions dimensions={report.riskScore.dimensions} />
-              {report.riskScore.drivers && report.riskScore.drivers.length > 0 && (
-                <RiskDrivers drivers={report.riskScore.drivers} />
-              )}
             </div>
-          </div>
-        </div>
+
+            {/* Drivers if available */}
+            {report.riskScore.drivers && report.riskScore.drivers.length > 0 && (
+              <div className="border-t border-border/20 pt-3">
+                <RiskDrivers drivers={report.riskScore.drivers} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* 3. Outcome Distribution + Readiness side by side */}
@@ -351,6 +403,107 @@ export default function ExecutiveSummaryView({ report }: Props) {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+function formatFairDollars(value: number): string {
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
+  return `$${Math.round(value).toLocaleString()}`;
+}
+
+function FAIRExplanation({ riskScore, mc }: {
+  riskScore: NonNullable<ExerciseReport["riskScore"]>;
+  mc: ExerciseReport["monteCarloStats"];
+}) {
+  const score = riskScore.composite_score;
+  const dims = riskScore.dimensions;
+  const interp = riskScore.interpretation;
+  const fe = riskScore.fair_estimates;
+  const iterations = mc?.iteration_count ?? 0;
+
+  // Find weakest dimension
+  const dimEntries = Object.entries(dims || {}) as [string, number][];
+  const weakest = dimEntries.length > 0
+    ? dimEntries.reduce((a, b) => a[1] < b[1] ? a : b)
+    : null;
+  const strongest = dimEntries.length > 0
+    ? dimEntries.reduce((a, b) => a[1] > b[1] ? a : b)
+    : null;
+
+  const dimLabel = (key: string) => key.replace(/_/g, " ");
+
+  const parts: string[] = [];
+
+  parts.push(
+    `Your organization scored ${score.toFixed(0)}/100 (${interp?.label || "N/A"}) across ${iterations} simulation variations.`
+  );
+
+  if (strongest && weakest && strongest[0] !== weakest[0]) {
+    parts.push(
+      `${dimLabel(strongest[0])} is your strongest area at ${strongest[1].toFixed(0)}%. ${dimLabel(weakest[0])} is the most exposed at ${weakest[1].toFixed(0)}%.`
+    );
+  }
+
+  if (fe && fe.ale > 0) {
+    const cal = fe.calibration_inputs || {};
+    const teamSize = cal.team_size || 8;
+    const hourlyCost = cal.hourly_cost || 150;
+    parts.push(
+      `Even with successful containment, each incident costs approximately ${formatFairDollars(fe.p90_loss / (riskScore.fair_estimates ? 0.045 : 1))} in defender time (${teamSize} responders at $${hourlyCost}/hr), business disruption, and post-incident overhead. At a ${(cal.annual_threat_frequency || 0.3).toFixed(1)} annual threat frequency, the estimated yearly exposure is ${formatFairDollars(fe.ale)}.`
+    );
+  }
+
+  return <>{parts.join(" ")}</>;
+}
+
+function FAIRBreakdown({ estimates, mc }: {
+  estimates: NonNullable<ExerciseReport["riskScore"]>["fair_estimates"];
+  mc: ExerciseReport["monteCarloStats"];
+}) {
+  const cal = estimates?.calibration_inputs || {};
+  const teamSize = cal.team_size || 8;
+  const hourlyCost = cal.hourly_cost || 150;
+  const iterations = mc?.iteration_count ?? 0;
+  const avgRounds = mc?.containment_round_stats?.mean ?? 10;
+
+  const items = [
+    {
+      label: "Defender productivity",
+      detail: `${teamSize} responders at $${hourlyCost}/hr for ~${avgRounds.toFixed(0)} rounds`,
+      value: teamSize * hourlyCost * avgRounds,
+    },
+    {
+      label: "Business disruption",
+      detail: "Systems isolated, deployments frozen during response",
+      value: avgRounds * hourlyCost * 0.5,
+    },
+    {
+      label: "IR mobilization",
+      detail: `${Math.round((cal.incident_response_retainer || 250000) * 0.1 / 1000)}K of ${formatFairDollars(cal.incident_response_retainer || 250000)} retainer`,
+      value: (cal.incident_response_retainer || 250000) * 0.1,
+    },
+    {
+      label: "Post-incident overhead",
+      detail: "Forensics, lessons learned, policy updates",
+      value: teamSize * hourlyCost * Math.max(2, (iterations > 0 ? 90 / 20 : 5)),
+    },
+  ];
+
+  return (
+    <div className="space-y-1.5">
+      {items.map((item) => (
+        <div key={item.label} className="flex items-baseline justify-between gap-2">
+          <div className="min-w-0">
+            <span className="text-xs text-foreground/70">{item.label}</span>
+            <span className="text-[10px] text-muted-foreground ml-1.5">{item.detail}</span>
+          </div>
+          <span className="text-xs font-mono text-foreground/60 shrink-0">
+            ~{formatFairDollars(item.value)}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
