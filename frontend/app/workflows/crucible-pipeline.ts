@@ -100,10 +100,10 @@ async function flaskApi<T>(path: string, options?: RequestInit): Promise<T> {
 // ============================================================
 
 // Pipeline mode configuration — controls simulation depth across the entire pipeline.
-// test: fast dev (~16 min, 3 MC iterations)
-// quick: demo (~25 min, 10 MC iterations)
-// standard: client engagement (~45 min, 50 MC iterations)
-// deep: full assessment (~90+ min, 100 MC iterations)
+// test: fast dev (~25 min, 3 MC iterations)
+// quick: demo (~40 min, 10 MC iterations)
+// standard: client engagement (~75 min, 50 MC iterations)
+// deep: full assessment (~120+ min, 100 MC iterations)
 const PIPELINE_MODES = {
   test:     { scenarios: 1, mcMode: "test",     mcCostLimit: 3,   maxForks: 1 },
   quick:    { scenarios: 1, mcMode: "quick",    mcCostLimit: 25,  maxForks: 2 },

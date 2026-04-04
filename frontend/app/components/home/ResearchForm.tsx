@@ -81,10 +81,10 @@ export default function ResearchForm() {
           <Label>Simulation Depth</Label>
           <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-0.5 w-fit">
             {([
-              { key: "test", label: "Test", sub: "~15 min" },
-              { key: "quick", label: "Quick", sub: "~25 min" },
-              { key: "standard", label: "Standard", sub: "~45 min" },
-              { key: "deep", label: "Deep", sub: "~90 min" },
+              { key: "test", label: "Test", sub: "~25 min" },
+              { key: "quick", label: "Quick", sub: "~40 min" },
+              { key: "standard", label: "Standard", sub: "~75 min" },
+              { key: "deep", label: "Deep", sub: "~120 min" },
             ] as const).map((m) => (
               <button
                 key={m.key}
