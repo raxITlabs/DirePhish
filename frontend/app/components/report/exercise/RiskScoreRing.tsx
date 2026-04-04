@@ -1,5 +1,7 @@
 "use client";
 
+import { Badge } from "@/app/components/ui/badge";
+
 interface Props {
   score: number;
   ci: { lower: number; upper: number };
@@ -18,10 +20,10 @@ function strokeColor(score: number): string {
   return "stroke-burnt-peach-500";
 }
 
-function tierBgColor(tier: string): string {
-  if (tier === "excellent" || tier === "good") return "bg-verdigris-50 text-verdigris-700 ring-1 ring-verdigris-200";
-  if (tier === "moderate") return "bg-tuscan-sun-50 text-tuscan-sun-700 ring-1 ring-tuscan-sun-200";
-  return "bg-burnt-peach-50 text-burnt-peach-700 ring-1 ring-burnt-peach-200";
+function tierVariant(tier: string) {
+  if (tier === "excellent" || tier === "good") return "success" as const;
+  if (tier === "moderate") return "warning" as const;
+  return "destructive" as const;
 }
 
 export default function RiskScoreRing({ score, ci, interpretation }: Props) {
@@ -46,12 +48,16 @@ export default function RiskScoreRing({ score, ci, interpretation }: Props) {
         </div>
       </div>
       <p className="text-sm font-medium text-pitch-black-700">DirePhish Risk Score</p>
-      <div className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${tierBgColor(interpretation.tier)}`}>
-        {interpretation.label}
+      <div className="mt-2">
+        <Badge variant={tierVariant(interpretation.tier)}>
+          {interpretation.label}
+        </Badge>
       </div>
       <p className="text-[11px] text-pitch-black-500 mt-1">{interpretation.description}</p>
-      <div className="mt-3 inline-block px-3 py-1 bg-pitch-black-200 rounded-full text-[11px] text-pitch-black-500">
-        95% CI: {ci.lower.toFixed(0)} — {ci.upper.toFixed(0)}
+      <div className="mt-3">
+        <Badge variant="ghost">
+          95% CI: {ci.lower.toFixed(0)} — {ci.upper.toFixed(0)}
+        </Badge>
       </div>
     </div>
   );

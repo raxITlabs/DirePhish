@@ -16,6 +16,7 @@ import Breadcrumbs from "@/app/components/layout/Breadcrumbs";
 import { getProjectStatus, getProjectConfig, linkSimToProject } from "@/app/actions/project";
 import { launchSimulation } from "@/app/actions/simulation";
 import { getScenarios, generateConfigs, getConfigs, launchScenarios } from "@/app/actions/scenarios";
+import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
 import type { SimulationConfig, Project, ScenarioVariant } from "@/app/types";
 
 export default function ConfigureProjectPage({
@@ -200,7 +201,7 @@ export default function ConfigureProjectPage({
             <h2 className="text-lg font-semibold mb-4">Threat Analysis</h2>
             <div className="rounded-lg border p-6">
               <div className="flex items-center gap-3 mb-3">
-                <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <AsciiSpinner className="text-primary" />
                 <span className="text-sm font-medium">{project.progressMessage}</span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
@@ -231,7 +232,7 @@ export default function ConfigureProjectPage({
             <h2 className="text-lg font-semibold mb-4">Generating Configs</h2>
             <div className="rounded-lg border p-6">
               <div className="flex items-center gap-3 mb-3">
-                <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <AsciiSpinner className="text-primary" />
                 <span className="text-sm font-medium">{project.progressMessage}</span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
@@ -309,7 +310,7 @@ export default function ConfigureProjectPage({
                 onClick={project?.status === "configs_ready" ? handleLaunchAll : handleLaunch}
                 disabled={launching || config.agents.length === 0}
               >
-                {launching ? "Launching..." : configs.length > 1 ? `Launch All (${configs.length} scenarios)` : "Launch Simulation"}
+                {launching ? "Launching\u2026" : configs.length > 1 ? `Launch All (${configs.length} scenarios)` : "Launch Simulation"}
               </Button>
             </div>
           </>

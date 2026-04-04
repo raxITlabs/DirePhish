@@ -70,7 +70,7 @@ export default function VendorsSection({ form }: { form: DossierForm }) {
                         <div className="flex items-center gap-1 shrink-0">
                           <Switch checked={field.state.value ?? false} onCheckedChange={field.handleChange} />
                           {field.state.value && (
-                            <Badge variant="outline" className="text-[9px] bg-burnt-peach-50 text-burnt-peach-700 border-burnt-peach-200">SPoF</Badge>
+                            <Badge variant="destructive" className="text-[9px]">SPoF</Badge>
                           )}
                         </div>
                       )}

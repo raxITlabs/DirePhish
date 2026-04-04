@@ -1,13 +1,13 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Badge } from "@/app/components/ui/badge";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/app/components/ui/card";
+import { AsciiBadge, AsciiEmptyState } from "@/app/components/ascii/DesignSystem";
 
 interface FiveWhysTreeProps {
   rootCauses: Array<{
@@ -23,19 +23,11 @@ interface FiveWhysTreeProps {
   }>;
 }
 
-function severityVariant(severity: string) {
+function severityBadgeVariant(severity: string): "destructive" | "default" | "muted" {
   const s = severity.toLowerCase();
-  if (s === "critical") return "destructive" as const;
-  return "outline" as const;
-}
-
-function severityClassName(severity: string) {
-  const s = severity.toLowerCase();
-  if (s === "high")
-    return "border-sandy-brown-300 bg-sandy-brown-50 text-sandy-brown-700 hover:bg-sandy-brown-50";
-  if (s === "medium")
-    return "border-tuscan-sun-300 bg-tuscan-sun-50 text-tuscan-sun-700 hover:bg-tuscan-sun-50";
-  return "";
+  if (s === "critical") return "destructive";
+  if (s === "high") return "default";
+  return "muted";
 }
 
 function SingleTree({ item, index }: { item: FiveWhysTreeProps["rootCauses"][number]; index: number }) {
@@ -48,12 +40,9 @@ function SingleTree({ item, index }: { item: FiveWhysTreeProps["rootCauses"][num
           <CardTitle className="text-base font-semibold leading-snug">
             {item.issue}
           </CardTitle>
-          <Badge
-            variant={severityVariant(item.severity)}
-            className={`shrink-0 ${severityClassName(item.severity)}`}
-          >
+          <AsciiBadge variant={severityBadgeVariant(item.severity)} bracket="square">
             {item.severity}
-          </Badge>
+          </AsciiBadge>
         </div>
         {item.scenariosAffected.length > 0 && (
           <p className="text-xs text-muted-foreground mt-2">
@@ -125,9 +114,10 @@ function SingleTree({ item, index }: { item: FiveWhysTreeProps["rootCauses"][num
 export default function FiveWhysTree({ rootCauses }: FiveWhysTreeProps) {
   if (!rootCauses || rootCauses.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        No root cause analysis data available.
-      </p>
+      <AsciiEmptyState
+        title="No root cause analysis data available"
+        description="Run the full pipeline to generate 5 Whys analysis."
+      />
     );
   }
 

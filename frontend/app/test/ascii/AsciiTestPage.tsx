@@ -8,6 +8,10 @@ import ParticleField from "@/app/components/ascii/ParticleField"
 import AsciiRiskScore from "@/app/components/ascii/AsciiRiskScore"
 import BackgroundGrain from "@/app/components/ascii/BackgroundGrain"
 import AsciiSpinner from "@/app/components/ascii/AsciiSpinner"
+import BackgroundHook from "@/app/components/ascii/BackgroundHook"
+import KillChainBackground from "@/app/components/ascii/KillChainBackground"
+import EmailRain from "@/app/components/ascii/EmailRain"
+import LogoAlive from "@/app/components/ascii/LogoAlive"
 import AsciiWatermark from "@/app/components/ascii/AsciiWatermark"
 import EmailViewportSim from "@/app/components/ascii/EmailViewportSim"
 import MCVariationHeatmap from "@/app/components/ascii/MCVariationHeatmap"
@@ -621,6 +625,193 @@ export default function AsciiTestPage() {
           <AsciiRiskScore />
         </div>
       </TerminalFrame>
+
+      <AsciiDivider variant="labeled" label="HOMEPAGE BACKGROUND — LOGO ALIVE" />
+
+      {/* ── Logo Alive ── */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold tracking-tight text-foreground">
+          Logo Alive — Forking Attack Path
+        </h2>
+        <p className="text-xs text-muted-foreground font-mono">
+          The DirePhish logo as a living canvas. Characters stream from origin through a fork —
+          red path (threats) shatters, teal path (predictions) settles. Move mouse to scatter.
+          Click for shockwave. Mouse near fork influences the split ratio.
+        </p>
+      </div>
+
+      {/* Logo Alive on light background — simulated homepage */}
+      <div className="space-y-2">
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-xs font-semibold text-foreground">Homepage Preview</span>
+          <span className="font-mono text-[10px] text-muted-foreground">— move mouse &amp; click to interact</span>
+        </div>
+        <div className="relative rounded-xl border border-border/30 overflow-hidden bg-background" style={{ height: "520px" }}>
+          <LogoAlive />
+          {/* Mock composer card at the fork point */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ paddingLeft: "10%" }}>
+            <div className="bg-card/80 backdrop-blur-sm rounded-xl border border-border/30 overflow-hidden w-full max-w-md shadow-sm pointer-events-none">
+              <div className="text-center py-4 px-6">
+                <p className="text-lg font-bold tracking-tight text-foreground">Predict what breaks next.</p>
+                <p className="text-xs text-muted-foreground font-mono mt-1">Predictive incident response simulation.</p>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 border-t border-border/20">
+                <div className="flex gap-1 rounded-lg bg-muted/50 p-0.5">
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono bg-card text-foreground shadow-sm">Test</span>
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono text-muted-foreground">Quick</span>
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono text-muted-foreground">Standard</span>
+                </div>
+                <span className="bg-primary text-primary-foreground px-4 py-1.5 rounded-lg font-mono text-xs">Analyze</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Logo Alive on dark background */}
+      <div className="space-y-2">
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-xs font-semibold text-foreground">Dark Variant</span>
+          <span className="font-mono text-[10px] text-muted-foreground">— same animation, dark bg for contrast</span>
+        </div>
+        <div className="rounded-xl overflow-hidden border border-border/30" style={{ height: "520px", background: "rgb(15,14,13)" }}>
+          <LogoAlive bg="15,14,13" />
+        </div>
+      </div>
+
+      <AsciiDivider variant="labeled" label="EARLIER PROTOTYPES" />
+
+      {/* ── Earlier Options ── */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold tracking-tight text-foreground">
+          Earlier Prototypes
+        </h2>
+        <p className="text-xs text-muted-foreground font-mono">
+          Previous canvas experiments — Hook, Kill Chain, Email Rain.
+        </p>
+      </div>
+
+      {/* Option 1: The Hook — Royal Azure on light bg */}
+      <div className="space-y-2">
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-xs font-semibold text-foreground">Option 1: The Hook</span>
+          <span className="font-mono text-[10px] text-muted-foreground">— Royal Azure blue, no extra container opacity</span>
+        </div>
+        <div className="relative rounded-xl border border-border/30 overflow-hidden bg-background" style={{ height: "520px" }}>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <BackgroundHook cols={70} rows={35} colorClass="text-royal-azure-500" glow={false} />
+          </div>
+          <div className="relative z-10 flex flex-col items-center justify-center h-full px-6">
+            <div className="text-center space-y-2 mb-6">
+              <h3 className="text-2xl font-bold tracking-tight text-foreground">Predict what breaks next.</h3>
+              <p className="text-sm text-muted-foreground font-mono">Predictive incident response simulation.</p>
+            </div>
+            <div className="bg-card rounded-xl border border-border/30 overflow-hidden w-full max-w-md shadow-sm">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <span className="text-muted-foreground/50 text-sm">🔗</span>
+                <span className="text-sm font-mono text-muted-foreground/40">company.com</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 border-t border-border/20">
+                <div className="flex gap-1 rounded-lg bg-muted/50 p-0.5">
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono bg-card text-foreground shadow-sm">Test</span>
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono text-muted-foreground">Quick</span>
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono text-muted-foreground">Standard</span>
+                </div>
+                <span className="bg-primary text-primary-foreground px-4 py-1.5 rounded-lg font-mono text-xs">Analyze</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Option 2: Kill Chain — warm neutral on light bg */}
+      <div className="space-y-2">
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-xs font-semibold text-foreground">Option 2: Network Breach</span>
+          <span className="font-mono text-[10px] text-muted-foreground">— Pitch Black warm neutral, structural watermark feel</span>
+        </div>
+        <div className="relative rounded-xl border border-border/30 overflow-hidden bg-background" style={{ height: "520px" }}>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <KillChainBackground cols={70} rows={35} colorClass="text-pitch-black-700" glow={false} />
+          </div>
+          <div className="relative z-10 flex flex-col items-center justify-center h-full px-6">
+            <div className="text-center space-y-2 mb-6">
+              <h3 className="text-2xl font-bold tracking-tight text-foreground">Predict what breaks next.</h3>
+              <p className="text-sm text-muted-foreground font-mono">Predictive incident response simulation.</p>
+            </div>
+            <div className="bg-card rounded-xl border border-border/30 overflow-hidden w-full max-w-md shadow-sm">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <span className="text-muted-foreground/50 text-sm">🔗</span>
+                <span className="text-sm font-mono text-muted-foreground/40">company.com</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 border-t border-border/20">
+                <div className="flex gap-1 rounded-lg bg-muted/50 p-0.5">
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono bg-card text-foreground shadow-sm">Test</span>
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono text-muted-foreground">Quick</span>
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono text-muted-foreground">Standard</span>
+                </div>
+                <span className="bg-primary text-primary-foreground px-4 py-1.5 rounded-lg font-mono text-xs">Analyze</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Option 3: Email Rain — Tuscan Sun gold on light bg */}
+      <div className="space-y-2">
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-xs font-semibold text-foreground">Option 3: Email Rain</span>
+          <span className="font-mono text-[10px] text-muted-foreground">— Tuscan Sun gold, phishing text fragments raining down</span>
+        </div>
+        <div className="relative rounded-xl border border-border/30 overflow-hidden bg-background" style={{ height: "520px" }}>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <EmailRain cols={70} rows={35} colorClass="text-tuscan-sun-500" glow={false} />
+          </div>
+          <div className="relative z-10 flex flex-col items-center justify-center h-full px-6">
+            <div className="text-center space-y-2 mb-6">
+              <h3 className="text-2xl font-bold tracking-tight text-foreground">Predict what breaks next.</h3>
+              <p className="text-sm text-muted-foreground font-mono">Predictive incident response simulation.</p>
+            </div>
+            <div className="bg-card rounded-xl border border-border/30 overflow-hidden w-full max-w-md shadow-sm">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <span className="text-muted-foreground/50 text-sm">🔗</span>
+                <span className="text-sm font-mono text-muted-foreground/40">company.com</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 border-t border-border/20">
+                <div className="flex gap-1 rounded-lg bg-muted/50 p-0.5">
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono bg-card text-foreground shadow-sm">Test</span>
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono text-muted-foreground">Quick</span>
+                  <span className="px-2.5 py-1 rounded-md text-xs font-mono text-muted-foreground">Standard</span>
+                </div>
+                <span className="bg-primary text-primary-foreground px-4 py-1.5 rounded-lg font-mono text-xs">Analyze</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Raw engine demos on dark backgrounds for contrast */}
+      <AsciiDivider variant="labeled" label="DARK BACKGROUND VARIANTS" />
+      <p className="text-xs text-muted-foreground font-mono">
+        Same canvas animations on dark backgrounds — shows the full trail/glow effect.
+      </p>
+      <div className="space-y-4">
+        <TerminalFrame title="the-hook :: dark">
+          <div style={{ height: "400px", background: "rgb(20,18,16)" }}>
+            <BackgroundHook color="rgba(196,163,90," />
+          </div>
+        </TerminalFrame>
+        <TerminalFrame title="kill-chain :: dark">
+          <div style={{ height: "400px", background: "rgb(20,18,16)" }}>
+            <KillChainBackground color="rgba(196,163,90," />
+          </div>
+        </TerminalFrame>
+        <TerminalFrame title="email-rain :: dark">
+          <div style={{ height: "400px", background: "rgb(20,18,16)" }}>
+            <EmailRain color="rgba(196,163,90," />
+          </div>
+        </TerminalFrame>
+      </div>
     </div>
   )
 }

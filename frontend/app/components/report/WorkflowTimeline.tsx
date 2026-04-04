@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { Separator } from "@/app/components/ui/separator";
+import { AsciiDivider } from "@/app/components/ascii/DesignSystem";
 import MetricsBar from "./MetricsBar";
 import ToolCallEntry from "./ToolCallEntry";
 import type { AgentLogEntry, ReportProgress, ReportStatus } from "@/app/types";
@@ -48,7 +48,7 @@ export default function WorkflowTimeline({
         toolCallCount={toolCallCount}
         status={status}
       />
-      <Separator />
+      <AsciiDivider variant="dots" />
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-2 py-1">
         {entries.map((entry, i) => {
           const showSeparator =
@@ -58,7 +58,7 @@ export default function WorkflowTimeline({
           lastSectionIndex = entry.section_index ?? lastSectionIndex;
           return (
             <div key={i}>
-              {showSeparator && <Separator className="my-2" />}
+              {showSeparator && <AsciiDivider variant="dashed" />}
               <ToolCallEntry entry={entry} />
             </div>
           );

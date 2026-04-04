@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SimulationStatus, ThreatAnalysisResponse } from "@/app/types";
 import { formatDuration } from "@/app/lib/utils";
+import { AsciiStatus, AsciiProgressBar, AsciiSectionHeader } from "@/app/components/ascii/DesignSystem";
 
 type StepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
 
@@ -29,12 +30,12 @@ interface PipelineStagesPanelProps {
   threatData?: ThreatAnalysisResponse | null;
 }
 
-const STATUS_ICON: Record<StepStatus, string> = {
-  completed: "\u2713",
-  running: "\u25C9",
-  failed: "\u2717",
-  pending: "\u25CB",
-  skipped: "\u25CB",
+const STATUS_TO_ASCII: Record<StepStatus, "complete" | "running" | "failed" | "pending"> = {
+  completed: "complete",
+  running: "running",
+  failed: "failed",
+  pending: "pending",
+  skipped: "pending",
 };
 
 function getInlineSummary(
@@ -140,45 +141,30 @@ export default function PipelineStagesPanel({
     <div className="w-64 sm:w-[280px] shrink-0 flex flex-col overflow-hidden m-2 bg-card rounded-xl border border-border/20 shadow-sm">
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-border/10">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="font-mono text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-            Pipeline
-          </h2>
-          {!pipelineComplete && runningStep && (
-            <span className="flex items-center gap-1.5 text-[10px] font-mono text-primary">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-dot" />
-              Live
-            </span>
-          )}
-          {pipelineComplete && (
-            <span className="text-[10px] font-mono text-verdigris-600">
-              Done
-            </span>
-          )}
-        </div>
-        <p className="text-[11px] font-mono text-muted-foreground truncate">{statusLabel}</p>
-        {/* Progress bar */}
-        <div
-          className="mt-2 h-1 bg-muted rounded-full overflow-hidden"
-          role="progressbar"
-          aria-valuenow={Math.round(progress)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
-          <div
-            className="h-full bg-primary rounded-full transition-all duration-700 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <div className="flex items-center justify-between mt-1">
-          <span className="text-[10px] font-mono text-muted-foreground/40">
-            {Math.round(progress)}% complete
+        <AsciiSectionHeader as="h2">Simulation Pipeline</AsciiSectionHeader>
+        <p className="text-[11px] font-mono text-muted-foreground truncate mt-2">{statusLabel}</p>
+        {/* Progress bar + elapsed + status on one line */}
+        <div className="flex items-center gap-2 mt-2">
+          <AsciiProgressBar value={progress} width={10} showPercent={false} />
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
+            {Math.round(progress)}%
           </span>
           {totalDurationMs > 0 && (
-            <span className="text-[10px] font-mono text-muted-foreground/40 tabular-nums">
+            <span className="font-mono text-[10px] text-muted-foreground/60 tabular-nums">
               {formatDuration(totalDurationMs)}
             </span>
           )}
+          <span className="ml-auto">
+            {!pipelineComplete && runningStep && (
+              <span className="flex items-center gap-1 text-[10px] font-mono text-primary">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-dot" />
+                Live
+              </span>
+            )}
+            {pipelineComplete && (
+              <span className="text-[10px] font-mono text-verdigris-600">Done</span>
+            )}
+          </span>
         </div>
       </div>
 
@@ -207,19 +193,8 @@ export default function PipelineStagesPanel({
                   }`}
                 >
                   {/* Status indicator */}
-                  <span
-                    className={`text-[13px] shrink-0 mt-0.5 ${
-                      status === "completed"
-                        ? "text-verdigris-600"
-                        : isActive
-                          ? "text-primary"
-                          : status === "failed"
-                            ? "text-destructive"
-                            : "text-muted-foreground/30"
-                    }`}
-                  >
-                    <span aria-hidden="true">{STATUS_ICON[status]}</span>
-                    <span className="sr-only">{status}</span>
+                  <span className="shrink-0 mt-0.5">
+                    <AsciiStatus status={STATUS_TO_ASCII[status]} showLabel={false} />
                   </span>
 
                   {/* Label + inline summary */}

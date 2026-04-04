@@ -1,5 +1,7 @@
 "use client";
 
+import { AsciiProgressBar } from "@/app/components/ascii/DesignSystem";
+
 type StepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
 
 interface StepState {
@@ -31,6 +33,8 @@ const STATUS_COLORS: Record<StepStatus, string> = {
 export default function PipelineProgressBar({ steps, stepOrder }: PipelineProgressBarProps) {
   const activeStep = stepOrder.find((s) => steps[s.id]?.status === "running");
   const activeState = activeStep ? steps[activeStep.id] : null;
+  const completedCount = stepOrder.filter((s) => steps[s.id]?.status === "completed").length;
+  const progressPct = stepOrder.length > 0 ? (completedCount / stepOrder.length) * 100 : 0;
 
   return (
     <div className="px-4 py-3 border-b border-border bg-card">
@@ -45,21 +49,24 @@ export default function PipelineProgressBar({ steps, stepOrder }: PipelineProgre
           );
         })}
       </div>
-      <div className="mt-2 text-sm">
-        {activeStep ? (
-          <span>
-            <span className="font-medium">{activeStep.label}</span>
-            {activeState?.message && (
-              <span className="text-muted-foreground"> — {activeState.message}</span>
-            )}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">
-            {stepOrder.every((s) => steps[s.id]?.status === "completed")
-              ? "Pipeline complete"
-              : "Starting pipeline..."}
-          </span>
-        )}
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <div className="text-sm">
+          {activeStep ? (
+            <span>
+              <span className="font-medium">{activeStep.label}</span>
+              {activeState?.message && (
+                <span className="text-muted-foreground"> — {activeState.message}</span>
+              )}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              {stepOrder.every((s) => steps[s.id]?.status === "completed")
+                ? "Pipeline complete"
+                : "Starting pipeline..."}
+            </span>
+          )}
+        </div>
+        <AsciiProgressBar value={progressPct} width={14} label="Pipeline progress" />
       </div>
     </div>
   );

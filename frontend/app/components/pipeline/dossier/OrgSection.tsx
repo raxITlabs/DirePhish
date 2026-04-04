@@ -9,10 +9,9 @@ import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
 } from "@/app/components/ui/card";
+import { AsciiSectionHeader } from "@/app/components/ascii/DesignSystem";
 
 interface OrgSectionProps {
   form: DossierForm;
@@ -23,9 +22,9 @@ export default function OrgSection({ form }: OrgSectionProps) {
 
   return (
     <Card className="rounded-xl">
-      <CardHeader>
-        <CardTitle>Organization Structure</CardTitle>
-      </CardHeader>
+      <div className="px-4 pt-4 pb-1">
+        <AsciiSectionHeader>Organization Structure</AsciiSectionHeader>
+      </div>
       <CardContent className="space-y-4">
         {/* Departments */}
         <form.Field name="org.departments" mode="array">

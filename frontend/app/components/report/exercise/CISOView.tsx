@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
+import { AsciiSectionHeader } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 import OutcomeDistributionBar from "./OutcomeDistributionBar";
 import ReadinessGauge from "./ReadinessGauge";
@@ -36,9 +37,7 @@ export default function CISOView({ report }: CISOViewProps) {
       {divergencePoints.length > 0 && (
         <Card>
           <CardContent className="p-5 space-y-3">
-            <p className="text-sm font-medium text-pitch-black-600">
-              Decision Divergence Analysis
-            </p>
+            <AsciiSectionHeader as="h3" sigil="↕">Decision Divergence Analysis</AsciiSectionHeader>
             <p className="text-xs text-pitch-black-400">
               Decisions with highest outcome impact across Monte Carlo variations
             </p>
@@ -76,7 +75,7 @@ export default function CISOView({ report }: CISOViewProps) {
                             <Badge
                               key={action}
                               variant="outline"
-                              className="text-[10px] bg-pitch-black-50"
+                              className="text-[10px]"
                             >
                               {action}: {count}
                             </Badge>
@@ -96,9 +95,7 @@ export default function CISOView({ report }: CISOViewProps) {
       {report.teamPerformance?.heatmapData && report.teamPerformance.heatmapData.length > 0 && (
         <Card>
           <CardContent className="p-5 space-y-3">
-            <p className="text-sm font-medium text-pitch-black-600">
-              Team Performance Heatmap
-            </p>
+            <AsciiSectionHeader as="h3" sigil="▣">Team Performance Heatmap</AsciiSectionHeader>
             <HeatmapChart data={report.teamPerformance.heatmapData} />
           </CardContent>
         </Card>
@@ -108,9 +105,7 @@ export default function CISOView({ report }: CISOViewProps) {
       {mc?.agent_consistency && Object.keys(mc.agent_consistency).length > 0 && (
         <Card>
           <CardContent className="p-5 space-y-3">
-            <p className="text-sm font-medium text-pitch-black-600">
-              Agent Consistency
-            </p>
+            <AsciiSectionHeader as="h3" sigil="●">Agent Consistency</AsciiSectionHeader>
             <p className="text-xs text-pitch-black-400">
               Predictability of agent decisions across Monte Carlo variations (higher = more consistent)
             </p>
@@ -160,9 +155,7 @@ export default function CISOView({ report }: CISOViewProps) {
       {report.rootCauseAnalysis && report.rootCauseAnalysis.length > 0 && (
         <Card>
           <CardContent className="p-5 space-y-3">
-            <p className="text-sm font-medium text-pitch-black-600">
-              Root Cause Analysis (5 Whys)
-            </p>
+            <AsciiSectionHeader as="h3" sigil="├">Root Cause Analysis (5 Whys)</AsciiSectionHeader>
             <FiveWhysTree rootCauses={report.rootCauseAnalysis} />
           </CardContent>
         </Card>
@@ -181,9 +174,7 @@ export default function CISOView({ report }: CISOViewProps) {
       {cfComparison && (
         <Card>
           <CardContent className="p-5 space-y-3">
-            <p className="text-sm font-medium text-pitch-black-600">
-              Counterfactual Comparison
-            </p>
+            <AsciiSectionHeader as="h3" sigil="↔">Counterfactual Comparison</AsciiSectionHeader>
             <p className="text-xs text-pitch-black-400">
               Original vs. alternate timeline outcomes
             </p>
@@ -236,9 +227,7 @@ export default function CISOView({ report }: CISOViewProps) {
       {actions.length > 0 && (
         <Card>
           <CardContent className="p-5 space-y-3">
-            <p className="text-sm font-medium text-pitch-black-600">
-              Priority Actions
-            </p>
+            <AsciiSectionHeader as="h3" sigil="»">Priority Actions</AsciiSectionHeader>
             <div className="space-y-2">
               {actions.map((a, i) => (
                 <div
@@ -267,13 +256,12 @@ export default function CISOView({ report }: CISOViewProps) {
                       <span>{a.suggestedOwner}</span>
                       <span>{a.suggestedTimeline}</span>
                       <Badge
-                        variant="outline"
-                        className={
+                        variant={
                           a.investmentLevel === "High"
-                            ? "bg-burnt-peach-50 text-burnt-peach-700 border-burnt-peach-200"
+                            ? "destructive"
                             : a.investmentLevel === "Medium"
-                              ? "bg-tuscan-sun-50 text-tuscan-sun-700 border-tuscan-sun-200"
-                              : "bg-verdigris-50 text-verdigris-700 border-verdigris-200"
+                              ? "warning"
+                              : "success"
                         }
                       >
                         {a.investmentLevel}
@@ -291,9 +279,7 @@ export default function CISOView({ report }: CISOViewProps) {
       {report.executiveSummary && (
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm font-medium text-pitch-black-600 mb-2">
-              Executive Summary
-            </p>
+            <AsciiSectionHeader as="h3" sigil="§">Executive Summary</AsciiSectionHeader>
             <p className="text-sm text-pitch-black-700 leading-relaxed whitespace-pre-line">
               {report.executiveSummary}
             </p>

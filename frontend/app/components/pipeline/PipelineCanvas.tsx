@@ -24,6 +24,7 @@ import KnowledgeEdge from "./edges/KnowledgeEdge";
 import type { GraphData, GraphNode as GNode, AgentAction } from "@/app/types";
 import { useGraphLayout } from "./useGraphLayout";
 import { useForceLayout } from "./useForceLayout";
+import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
 
 export interface PipelineCanvasProps {
   graphData: GraphData;
@@ -348,8 +349,8 @@ function PipelineCanvasInner({
         {!hasGraphNodes && (
           <Panel position="top-center">
             <div className="mt-20 text-center space-y-3">
-              <div className="w-10 h-10 mx-auto rounded-full border-2 border-primary/30 border-t-transparent animate-spin" />
-              <p className="text-sm font-mono text-muted-foreground/60">Building knowledge graph...</p>
+              <AsciiSpinner className="text-4xl text-primary mx-auto block" />
+              <p className="text-sm font-mono text-muted-foreground/60">Building knowledge graph{"\u2026"}</p>
             </div>
           </Panel>
         )}

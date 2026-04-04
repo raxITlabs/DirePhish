@@ -1,5 +1,7 @@
 "use client";
 
+import { Card, CardContent } from "@/app/components/ui/card";
+
 interface Props {
   score: number;
   description: string;
@@ -17,25 +19,27 @@ export default function StepRiskMini({ score, description, fairIncrement }: Prop
         : "border-burnt-peach-400 text-burnt-peach-600";
 
   return (
-    <div className="flex items-center gap-3 p-4 rounded-lg border border-border/40 bg-card">
-      <div
-        className={`w-11 h-11 rounded-full border-[3px] flex items-center justify-center text-sm font-bold shrink-0 ${ringColor}`}
-      >
-        {score % 1 === 0 ? score : score.toFixed(1)}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-0.5">
-          Risk at this phase
-        </p>
-        <p className="text-xs text-foreground/80 leading-snug">
-          {description}
-        </p>
-        {fairIncrement && fairIncrement !== "N/A" && (
-          <p className="text-[10px] text-muted-foreground mt-1 font-mono">
-            FAIR: {fairIncrement}
+    <Card>
+      <CardContent className="flex items-center gap-3">
+        <div
+          className={`w-11 h-11 rounded-full border-[3px] flex items-center justify-center text-sm font-bold shrink-0 ${ringColor}`}
+        >
+          {score % 1 === 0 ? score : score.toFixed(1)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-0.5">
+            Risk at this phase
           </p>
-        )}
-      </div>
-    </div>
+          <p className="text-xs text-foreground/80 leading-snug">
+            {description}
+          </p>
+          {fairIncrement && fairIncrement !== "N/A" && (
+            <p className="text-[10px] text-muted-foreground mt-1 font-mono">
+              FAIR: {fairIncrement}
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

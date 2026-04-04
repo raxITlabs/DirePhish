@@ -22,7 +22,10 @@ export default function OutcomeDistributionBar({ distribution }: OutcomeDistribu
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-pitch-black-600">Outcome Distribution</p>
+      <p className="font-mono text-xs font-semibold uppercase tracking-wider text-foreground">
+        <span className="text-primary select-none" aria-hidden="true">{"§ "}</span>
+        Outcome Distribution
+      </p>
 
       {/* Bar */}
       <div className="flex h-10 rounded-lg overflow-hidden">

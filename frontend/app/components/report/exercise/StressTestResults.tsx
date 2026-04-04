@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@/app/components/ui/badge";
+import { AsciiStatus } from "@/app/components/ascii/DesignSystem";
 
 interface StressTestResult {
   label: string;
@@ -40,7 +40,8 @@ export default function StressTestResults({ results, mode = "compact" }: StressT
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-pitch-black-600">
+      <p className="font-mono text-xs font-semibold uppercase tracking-wider text-foreground">
+        <span className="text-primary select-none" aria-hidden="true">{"§ "}</span>
         Stress Test {mode === "compact" ? "Highlights" : "Results"}
       </p>
 
@@ -63,9 +64,12 @@ export default function StressTestResults({ results, mode = "compact" }: StressT
                     : "Not contained"}
                 </p>
               </div>
-              <Badge variant="outline" className={`shrink-0 ml-2 ${config.badge}`}>
-                {config.text}
-              </Badge>
+              <span className="shrink-0 ml-2">
+                <AsciiStatus
+                  status={status === "pass" ? "complete" : status === "fail" ? "failed" : "pending"}
+                  label={config.text}
+                />
+              </span>
             </div>
           );
         })}

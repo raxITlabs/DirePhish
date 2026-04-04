@@ -3,12 +3,28 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Link2 } from "lucide-react";
+import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
+import LogoAlive from "@/app/components/ascii/LogoAlive";
+import { Card } from "@/app/components/ui/card";
+import {
+  AsciiTabBar,
+  AsciiBadge,
+  AsciiDivider,
+  AsciiAlert,
+} from "@/app/components/ascii/DesignSystem";
 
 const EXAMPLES = [
   "Ransomware hitting finance systems",
   "Cloud credentials leaked on GitHub",
   "Supply chain compromise via vendor",
 ];
+
+const MODE_TABS = [
+  { key: "test", label: "Test ~25m" },
+  { key: "quick", label: "Quick ~40m" },
+  { key: "standard", label: "Standard ~75m" },
+  { key: "deep", label: "Deep ~120m" },
+] as const;
 
 export default function HomeClient() {
   const router = useRouter();
@@ -48,11 +64,16 @@ export default function HomeClient() {
 
   return (
     <div
-      className="flex flex-col items-center justify-center px-6 md:px-12"
+      className="relative flex flex-col items-center justify-center px-6 md:px-12"
       style={{ minHeight: "calc(100svh - 3rem)" }}
     >
-      <div className="w-full max-w-xl space-y-8">
-        {/* Hero — tight, minimal */}
+      {/* Logo Alive background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <LogoAlive />
+      </div>
+
+      <div className="relative z-10 w-full max-w-xl space-y-6">
+        {/* Hero */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
             Predict what breaks next.
@@ -62,10 +83,10 @@ export default function HomeClient() {
           </p>
         </div>
 
-        {/* Composer */}
-        <div
-          className="bg-card rounded-xl border border-border/30 overflow-hidden"
-        >
+        <AsciiDivider variant="dots" />
+
+        {/* Composer — Card with corner marks */}
+        <Card>
           {/* URL input */}
           <div className="flex items-center gap-3 px-4 py-3">
             <Link2 className="size-4 shrink-0 text-muted-foreground/50" />
@@ -100,57 +121,37 @@ export default function HomeClient() {
             />
           </div>
 
-          {/* Bottom bar */}
+          {/* Bottom bar — mode tabs + submit */}
           <div className="flex items-center justify-between px-3 py-2 border-t border-border/20">
-            <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-0.5">
-              {([
-                { key: "test", label: "Test", sub: "~25 min" },
-                { key: "quick", label: "Quick", sub: "~40 min" },
-                { key: "standard", label: "Standard", sub: "~75 min" },
-                { key: "deep", label: "Deep", sub: "~120 min" },
-              ] as const).map((m) => (
-                <button
-                  key={m.key}
-                  type="button"
-                  onClick={() => setMode(m.key)}
-                  disabled={loading}
-                  className={`px-2.5 py-1 rounded-md text-xs font-mono transition-all disabled:opacity-40 disabled:cursor-not-allowed flex flex-col items-center leading-tight ${
-                    mode === m.key
-                      ? "bg-card text-foreground shadow-sm font-medium"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <span>{m.label}</span>
-                  <span className="text-[9px] opacity-60">{m.sub}</span>
-                </button>
-              ))}
-            </div>
+            <AsciiTabBar
+              tabs={MODE_TABS.map((m) => ({ key: m.key, label: m.label }))}
+              activeTab={mode}
+              onTabChange={(key) => setMode(key as typeof mode)}
+            />
             <button
               onClick={handleSubmit}
               disabled={!url.trim() || loading}
-              className="bg-primary text-primary-foreground px-4 py-1.5 rounded-lg font-mono text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="bg-primary text-primary-foreground px-4 py-1.5 rounded-lg font-mono text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-w-[110px]"
             >
-              {loading ? "Starting..." : "Analyze"}
+              {loading ? <><AsciiSpinner /> Analyzing</> : "Analyze"}
             </button>
           </div>
-        </div>
+        </Card>
 
         {/* Error */}
         {error && (
-          <div role="alert" className="text-xs font-mono text-destructive text-center">
-            {error}
-          </div>
+          <AsciiAlert variant="error">{error}</AsciiAlert>
         )}
 
-        {/* Examples — quiet, below */}
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+        {/* Examples */}
+        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1.5">
           {EXAMPLES.map((ex) => (
             <button
               key={ex}
               onClick={() => setContext(ex)}
-              className="text-xs font-mono text-muted-foreground/60 hover:text-foreground transition-colors"
+              className="hover:opacity-80 transition-opacity"
             >
-              {ex}
+              <AsciiBadge variant="muted" bracket="angle">{ex}</AsciiBadge>
             </button>
           ))}
         </div>

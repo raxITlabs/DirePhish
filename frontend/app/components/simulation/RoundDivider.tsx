@@ -1,13 +1,11 @@
-import { Separator } from "@/app/components/ui/separator";
+import { AsciiDivider } from "@/app/components/ascii/DesignSystem";
 
 export default function RoundDivider({ round, timestamp }: { round: number; timestamp?: string }) {
+  const label = `Round ${round}${timestamp ? ` — ${new Date(timestamp).toLocaleTimeString()}` : ""}`;
+
   return (
-    <div className="flex items-center gap-3 my-4">
-      <Separator className="flex-1" />
-      <span className="text-xs text-muted-foreground bg-background px-3 py-1 rounded">
-        Round {round}{timestamp ? ` — ${new Date(timestamp).toLocaleTimeString()}` : ""}
-      </span>
-      <Separator className="flex-1" />
+    <div className="my-4">
+      <AsciiDivider variant="labeled" label={label} />
     </div>
   );
 }

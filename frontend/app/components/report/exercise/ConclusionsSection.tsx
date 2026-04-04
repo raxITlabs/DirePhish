@@ -7,7 +7,8 @@ import {
   CardTitle,
 } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { AsciiSectionHeader, AsciiBadge } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 
 interface ConclusionsSectionProps {
@@ -37,14 +38,14 @@ function severityColor(severity: string) {
   }
 }
 
-function investmentColor(level: string) {
+function investmentVariant(level: string) {
   switch (level) {
     case "High":
-      return "bg-burnt-peach-100 text-burnt-peach-700";
+      return "destructive" as const;
     case "Medium":
-      return "bg-tuscan-sun-100 text-tuscan-sun-700";
+      return "warning" as const;
     default:
-      return "bg-verdigris-100 text-verdigris-700";
+      return "success" as const;
   }
 }
 
@@ -69,10 +70,7 @@ export default function ConclusionsSection({ conclusions, hideHeadline }: Conclu
       {/* Key Findings */}
       {conclusions.keyFindings.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-            <AlertTriangle size={14} />
-            Key Findings
-          </h3>
+          <AsciiSectionHeader as="h3" sigil="⚑">Key Findings</AsciiSectionHeader>
           <div className="space-y-3">
             {conclusions.keyFindings.map((finding) => (
               <Card
@@ -129,9 +127,7 @@ export default function ConclusionsSection({ conclusions, hideHeadline }: Conclu
       {/* Action Items Table (new) */}
       {actionItems && actionItems.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Recommended Actions
-          </h3>
+          <AsciiSectionHeader as="h3" sigil="»">Recommended Actions</AsciiSectionHeader>
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -159,7 +155,7 @@ export default function ConclusionsSection({ conclusions, hideHeadline }: Conclu
                         </td>
                         <td className="p-3 text-xs">{item.suggestedTimeline}</td>
                         <td className="p-3">
-                          <Badge className={`text-xs ${investmentColor(item.investmentLevel)}`}>
+                          <Badge variant={investmentVariant(item.investmentLevel)} className="text-xs">
                             {item.investmentLevel}
                           </Badge>
                         </td>
@@ -182,9 +178,7 @@ export default function ConclusionsSection({ conclusions, hideHeadline }: Conclu
       {/* Legacy recommendations fallback */}
       {!actionItems?.length && legacyRecs && legacyRecs.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Priority Recommendations
-          </h3>
+          <AsciiSectionHeader as="h3" sigil="»">Priority Recommendations</AsciiSectionHeader>
           <div className="space-y-2">
             {legacyRecs.map((rec) => (
               <Card key={rec.priority}>

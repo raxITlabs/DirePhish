@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/app/components/ui/button";
 import SimulationLivePanel from "./SimulationLivePanel";
+import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
+import { AsciiSectionHeader, AsciiStatus } from "@/app/components/ascii/DesignSystem";
 import type { CompanyDossier, SimulationStatus, AgentAction, GraphData } from "@/app/types";
 
 type StepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
@@ -141,7 +143,7 @@ export default function PipelineContextPanel({
         </div>
         <div className="flex gap-3 shrink-0">
           <Button onClick={onConfirmDossier} disabled={confirming} className="flex-1">
-            {confirming ? "Confirming..." : "Confirm & Continue"}
+            {confirming ? <><AsciiSpinner /> Confirming</> : "Confirm & Continue"}
           </Button>
           <Button
             variant="outline"
@@ -172,7 +174,7 @@ export default function PipelineContextPanel({
               Threat Analysis
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <AsciiSpinner className="text-primary" />
               <span className="text-sm">{steps["threat_analysis"]?.message || "Analyzing threats..."}</span>
             </div>
           </div>
@@ -202,7 +204,7 @@ export default function PipelineContextPanel({
         {activeStepId === "config_expansion" && steps["config_expansion"]?.status === "running" && (
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <AsciiSpinner className="text-primary" />
               <span className="text-sm">{steps["config_expansion"]?.message || "Generating configs..."}</span>
             </div>
           </div>
@@ -227,7 +229,7 @@ export default function PipelineContextPanel({
           <div className="flex items-center gap-2">
             {steps[activeStepId]?.status === "running" ? (
               <>
-                <span className="inline-block h-3 w-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <AsciiSpinner className="text-primary" />
                 <span className="text-sm">{steps[activeStepId]?.message}</span>
               </>
             ) : (
@@ -251,7 +253,7 @@ export default function PipelineContextPanel({
         ) : null}
         {steps["research"]?.status === "running" && (
           <div className="flex items-center gap-2 mt-2">
-            <span className="inline-block h-3 w-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <AsciiSpinner className="text-primary" />
             <span className="text-sm text-muted-foreground">{steps["research"]?.message}</span>
           </div>
         )}

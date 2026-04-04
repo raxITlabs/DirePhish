@@ -17,6 +17,7 @@ import {
   AlertDialogAction,
 } from "@/app/components/ui/alert-dialog";
 import { cn } from "@/app/lib/utils";
+import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
 import type { SimulationConfig } from "@/app/types";
 import type { MonteCarloMode, MonteCarloEstimate } from "@/app/types/monte-carlo";
 import { MODE_CONFIG } from "@/app/types/monte-carlo";
@@ -134,7 +135,7 @@ export default function MonteCarloLauncher({
               Cost Estimate
             </div>
             {estimateLoading && (
-              <div className="h-3 w-3 rounded-full border-2 border-verdigris-500 border-t-transparent animate-spin" />
+              <AsciiSpinner className="text-verdigris-500" />
             )}
           </div>
 
@@ -193,8 +194,8 @@ export default function MonteCarloLauncher({
       {needsTestGate && (
         <div className="flex items-center gap-2 rounded-lg border border-tuscan-sun-300 bg-tuscan-sun-50 px-3 py-2">
           <Badge
-            variant="outline"
-            className="border-tuscan-sun-400 bg-tuscan-sun-100 text-tuscan-sun-700 text-[11px]"
+            variant="warning"
+            className="text-[11px]"
           >
             No test run
           </Badge>
@@ -226,8 +227,8 @@ export default function MonteCarloLauncher({
               >
                 {launching ? (
                   <span className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                    Launching...
+                    <AsciiSpinner className="text-white" />
+                    Launching\u2026
                   </span>
                 ) : (
                   `Launch ${MODE_CONFIG[mode].label} Batch`

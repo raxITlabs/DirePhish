@@ -1,5 +1,7 @@
 "use client";
 
+import { AsciiProgressBar } from "@/app/components/ascii/DesignSystem";
+
 interface ReadinessGaugeProps {
   resilience: {
     overall: number;
@@ -39,7 +41,10 @@ export default function ReadinessGauge({ resilience }: ReadinessGaugeProps) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm font-medium text-pitch-black-600">Readiness Score</p>
+      <p className="font-mono text-xs font-semibold uppercase tracking-wider text-foreground">
+        <span className="text-primary select-none" aria-hidden="true">{"§ "}</span>
+        Readiness Score
+      </p>
 
       {/* Ring */}
       <div className="flex items-center gap-6">
@@ -79,21 +84,19 @@ export default function ReadinessGauge({ resilience }: ReadinessGaugeProps) {
             const isWeakest = weakest_link === dim.key;
             return (
               <div key={dim.key} className="space-y-0.5">
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs ${isWeakest ? "font-bold text-burnt-peach-700" : "text-pitch-black-600"}`}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className={`text-xs font-mono ${isWeakest ? "font-bold text-destructive" : "text-muted-foreground"}`}>
                     {dim.label}
                     {isWeakest && " (weakest)"}
                   </span>
-                  <span className={`text-xs font-semibold ${dimColors.text}`}>
-                    {Math.round(score)}
-                  </span>
                 </div>
-                <div className="h-1.5 bg-pitch-black-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${dimColors.bar} transition-all duration-700`}
-                    style={{ width: `${score}%` }}
-                  />
-                </div>
+                <AsciiProgressBar
+                  value={score}
+                  max={100}
+                  width={16}
+                  color={dimColors.ring.replace("stroke-", "text-")}
+                  label={`${dim.label}: ${Math.round(score)}%`}
+                />
               </div>
             );
           })}

@@ -7,6 +7,7 @@ import Breadcrumbs from "@/app/components/layout/Breadcrumbs";
 import { Button } from "@/app/components/ui/button";
 import { generateComparativeReport, getComparativeReport } from "@/app/actions/report";
 import type { ComparativeReportResponse } from "@/app/actions/report";
+import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
 import ReactMarkdown from "react-markdown";
 
 export default function ComparativeReportPage({
@@ -82,8 +83,8 @@ export default function ComparativeReportPage({
 
         {generating && (
           <div className="rounded-lg border p-6 flex items-center gap-3">
-            <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm">Generating comparative analysis...</span>
+            <AsciiSpinner className="text-primary" />
+            <span className="text-sm">Generating comparative analysis\u2026</span>
           </div>
         )}
 

@@ -8,6 +8,7 @@ import {
 } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
 import { Users } from "lucide-react";
+import { AsciiSectionHeader, AsciiProgressBar } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 import HeatmapChart from "./HeatmapChart";
 
@@ -105,7 +106,7 @@ export default function TeamPerformanceSection({
 }: TeamPerformanceSectionProps) {
   return (
     <section id="team-performance" className="space-y-6">
-      <h2 className="text-lg font-semibold">Team Performance</h2>
+      <AsciiSectionHeader as="h2" sigil="●">Team Performance</AsciiSectionHeader>
 
       {/* Team cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

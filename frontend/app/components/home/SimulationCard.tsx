@@ -2,23 +2,23 @@
 
 import Link from "next/link";
 import { Card, CardContent } from "@/app/components/ui/card";
-import { Badge } from "@/app/components/ui/badge";
+import { AsciiBadge } from "@/app/components/ascii/DesignSystem";
 import type { SimulationSummary } from "@/app/types";
 
 function statusBadge(status: string) {
   switch (status) {
     case "running":
-      return <Badge variant="default" className="animate-pulse">running</Badge>;
+      return <AsciiBadge variant="default">running</AsciiBadge>;
     case "starting":
-      return <Badge variant="default" className="animate-pulse">starting</Badge>;
+      return <AsciiBadge variant="default">starting</AsciiBadge>;
     case "completed":
-      return <Badge variant="secondary">completed</Badge>;
+      return <AsciiBadge variant="success">completed</AsciiBadge>;
     case "stopped":
-      return <Badge variant="outline">stopped</Badge>;
+      return <AsciiBadge variant="muted">stopped</AsciiBadge>;
     case "failed":
-      return <Badge variant="destructive">failed</Badge>;
+      return <AsciiBadge variant="destructive">failed</AsciiBadge>;
     default:
-      return <Badge variant="secondary">{status}</Badge>;
+      return <AsciiBadge variant="secondary">{status}</AsciiBadge>;
   }
 }
 

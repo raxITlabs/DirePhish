@@ -1,7 +1,6 @@
 "use client";
 
-import { Card, CardContent } from "@/app/components/ui/card";
-import { Shield, Users, Search, TrendingUp, DollarSign } from "lucide-react";
+import { AsciiMetricCard } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 
 interface ExerciseKPIStripProps {
@@ -33,27 +32,23 @@ export default function ExerciseKPIStrip({ report }: ExerciseKPIStripProps) {
     : "—";
 
   const metrics = [
-    { label: "Scenarios", value: String(scenarioCount), icon: Shield },
-    { label: "Teams Assessed", value: String(teamCount), icon: Users },
-    { label: "Root Causes", value: String(rootCauseCount), icon: Search },
-    { label: "Readiness", value: `${readiness}/10`, icon: TrendingUp, className: readinessColor },
-    { label: "Exercise Cost", value: costDisplay, icon: DollarSign, className: "text-muted-foreground" },
+    { label: "Scenarios", value: String(scenarioCount), icon: "◆" },
+    { label: "Teams Assessed", value: String(teamCount), icon: "●" },
+    { label: "Root Causes", value: String(rootCauseCount), icon: "⚑" },
+    { label: "Readiness", value: `${readiness}/10`, icon: "▲", valueColor: readinessColor },
+    { label: "Exercise Cost", value: costDisplay, icon: "$", valueColor: "text-muted-foreground" },
   ];
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
       {metrics.map((m) => (
-        <Card key={m.label}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-muted-foreground mb-1">
-              <m.icon size={14} />
-              <span className="text-xs font-medium">{m.label}</span>
-            </div>
-            <p className={`text-2xl font-bold ${m.className ?? ""}`}>
-              {m.value}
-            </p>
-          </CardContent>
-        </Card>
+        <AsciiMetricCard
+          key={m.label}
+          label={m.label}
+          value={m.value}
+          icon={m.icon}
+          valueColor={m.valueColor}
+        />
       ))}
     </div>
   );

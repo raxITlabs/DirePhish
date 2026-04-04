@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AsciiEmptyState } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport, AttackPathStep } from "@/app/actions/report";
 import ReportStagesPanel from "./ReportStagesPanel";
 import KillChainNav from "./KillChainNav";
@@ -66,11 +67,10 @@ export default function PlaybookFirstLayout({
               {currentStep ? (
                 <StepDetail step={currentStep} />
               ) : (
-                <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-12 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Select a kill chain step to see response actions
-                  </p>
-                </div>
+                <AsciiEmptyState
+                  title="Select a kill chain step to see response actions"
+                  sigil="▶"
+                />
               )}
             </>
           ) : activeView === "executive" ? (

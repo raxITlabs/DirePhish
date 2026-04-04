@@ -10,10 +10,9 @@ import { Button } from "@/app/components/ui/button";
 import { Switch } from "@/app/components/ui/switch";
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
 } from "@/app/components/ui/card";
+import { AsciiSectionHeader } from "@/app/components/ascii/DesignSystem";
 import {
   Select,
   SelectTrigger,
@@ -33,9 +32,9 @@ export default function CompanySection({ form }: CompanySectionProps) {
 
   return (
     <Card className="rounded-xl">
-      <CardHeader>
-        <CardTitle>Company Profile</CardTitle>
-      </CardHeader>
+      <div className="px-4 pt-4 pb-1">
+        <AsciiSectionHeader>Company Profile</AsciiSectionHeader>
+      </div>
       <CardContent className="space-y-4">
         {/* Name + Industry */}
         <div className="grid grid-cols-2 gap-3">

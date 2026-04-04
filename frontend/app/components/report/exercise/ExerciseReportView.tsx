@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback } from "react";
-import { ArrowLeft, Download, Info } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/app/components/ui/button";
-import { Card, CardContent } from "@/app/components/ui/card";
+import { AsciiSectionHeader, AsciiDivider, AsciiAlert } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 import ExerciseKPIStrip from "./ExerciseKPIStrip";
 import ExerciseTOCSidebar from "./ExerciseTOCSidebar";
@@ -263,16 +263,15 @@ export default function ExerciseReportView({ report }: ExerciseReportViewProps) 
         <main className="flex-1 min-w-0 space-y-12 pb-24">
           {/* Disclaimer */}
           {report.disclaimer && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border/50 text-xs text-muted-foreground">
-              <Info size={14} className="shrink-0 mt-0.5" />
-              <p className="leading-relaxed">{report.disclaimer}</p>
-            </div>
+            <AsciiAlert variant="info" title="Disclaimer">
+              {report.disclaimer}
+            </AsciiAlert>
           )}
 
           {/* Executive Summary */}
           {report.executiveSummary && (
             <section id="executive-summary" className="space-y-3">
-              <h2 className="text-lg font-semibold">Executive Summary</h2>
+              <AsciiSectionHeader as="h2">Executive Summary</AsciiSectionHeader>
               <div className="prose prose-sm max-w-none leading-relaxed">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {report.executiveSummary}
@@ -280,6 +279,8 @@ export default function ExerciseReportView({ report }: ExerciseReportViewProps) 
               </div>
             </section>
           )}
+
+          {report.executiveSummary && report.conclusions && <AsciiDivider variant="dots" />}
 
           {/* Conclusions (hide headline if exec summary already shown — avoids duplication) */}
           {report.conclusions && (
@@ -291,22 +292,34 @@ export default function ExerciseReportView({ report }: ExerciseReportViewProps) 
 
           {/* Team Performance */}
           {report.teamPerformance && (
-            <TeamPerformanceSection teamPerformance={report.teamPerformance} />
+            <>
+              <AsciiDivider variant="dots" />
+              <TeamPerformanceSection teamPerformance={report.teamPerformance} />
+            </>
           )}
 
           {/* Root Cause Analysis */}
           {report.rootCauseAnalysis && report.rootCauseAnalysis.length > 0 && (
-            <RootCauseSection rootCauses={report.rootCauseAnalysis} />
+            <>
+              <AsciiDivider variant="dots" />
+              <RootCauseSection rootCauses={report.rootCauseAnalysis} />
+            </>
           )}
 
           {/* Methodology */}
           {report.methodology && (
-            <MethodologySection methodology={report.methodology} costs={report.costs} />
+            <>
+              <AsciiDivider variant="dots" />
+              <MethodologySection methodology={report.methodology} costs={report.costs} />
+            </>
           )}
 
           {/* Appendix */}
           {report.appendix && (
-            <AppendixSection appendix={report.appendix} />
+            <>
+              <AsciiDivider variant="labeled" label="APPENDIX" />
+              <AppendixSection appendix={report.appendix} />
+            </>
           )}
         </main>
       </div>

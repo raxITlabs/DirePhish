@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
+import { AsciiSectionHeader, AsciiEmptyState } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 import KillChainFlow from "./KillChainFlow";
 
@@ -53,9 +54,7 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
         {/* Systems Affected */}
         <Card>
           <CardContent className="p-5 space-y-3">
-            <p className="text-sm font-medium text-pitch-black-600">
-              Systems Affected
-            </p>
+            <AsciiSectionHeader as="h3" sigil="◆">Systems Affected</AsciiSectionHeader>
             {worlds.length > 0 ? (
               <div className="space-y-2">
                 {worlds.map((w, i) => (
@@ -76,13 +75,12 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
                         {w.actionCount} actions
                       </span>
                       <Badge
-                        variant="outline"
-                        className={
+                        variant={
                           w.actionCount > 15
-                            ? "bg-burnt-peach-50 text-burnt-peach-700 border-burnt-peach-200"
+                            ? "destructive"
                             : w.actionCount > 5
-                              ? "bg-tuscan-sun-50 text-tuscan-sun-700 border-tuscan-sun-200"
-                              : "bg-verdigris-50 text-verdigris-700 border-verdigris-200"
+                              ? "warning"
+                              : "success"
                         }
                       >
                         {w.actionCount > 15 ? "Critical" : w.actionCount > 5 ? "Active" : "Low"}
@@ -92,7 +90,7 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-pitch-black-400">No system data available</p>
+              <AsciiEmptyState title="No system data available" sigil="○" />
             )}
           </CardContent>
         </Card>
@@ -103,9 +101,7 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
       {iocs.length > 0 && (
         <Card>
           <CardContent className="p-5 space-y-3">
-            <p className="text-sm font-medium text-pitch-black-600">
-              Simulated Indicators of Compromise
-            </p>
+            <AsciiSectionHeader as="h3" sigil="⚑">Simulated Indicators of Compromise</AsciiSectionHeader>
             <p className="text-xs text-pitch-black-400">
               Based on attacker actions observed during simulation
             </p>
@@ -115,7 +111,7 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
                   key={i}
                   className="p-3 rounded-xl bg-pitch-black-50 ring-1 ring-foreground/10"
                 >
-                  <Badge variant="outline" className="text-[10px] mb-1.5 bg-burnt-peach-50 text-burnt-peach-700 border-burnt-peach-200">
+                  <Badge variant="destructive" className="text-[10px] mb-1.5">
                     {ioc.type}
                   </Badge>
                   <p className="text-xs text-pitch-black-700 font-mono">
@@ -132,9 +128,7 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
       {timeline.length > 0 && (
         <Card>
           <CardContent className="p-5 space-y-3">
-            <p className="text-sm font-medium text-pitch-black-600">
-              Incident Timeline
-            </p>
+            <AsciiSectionHeader as="h3" sigil="│">Incident Timeline</AsciiSectionHeader>
             <div className="flex gap-3 mb-2">
               {Object.entries(EVENT_COLORS).map(([key, config]) => (
                 <div key={key} className="flex items-center gap-1">
@@ -159,7 +153,7 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
                           {entry.agent}
                         </span>
                         {entry.significance === "critical" && (
-                          <Badge variant="outline" className="text-[9px] bg-burnt-peach-50 text-burnt-peach-700 border-burnt-peach-200">
+                          <Badge variant="destructive" className="text-[9px]">
                             Critical
                           </Badge>
                         )}
@@ -180,9 +174,7 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
       {actions.length > 0 && (
         <Card>
           <CardContent className="p-5 space-y-3">
-            <p className="text-sm font-medium text-pitch-black-600">
-              Remediation Checklist
-            </p>
+            <AsciiSectionHeader as="h3" sigil="☐">Remediation Checklist</AsciiSectionHeader>
             <div className="space-y-2">
               {actions.map((a, i) => (
                 <label
@@ -199,13 +191,12 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
                       <span>{a.suggestedOwner}</span>
                       <span>{a.suggestedTimeline}</span>
                       <Badge
-                        variant="outline"
-                        className={
+                        variant={
                           a.investmentLevel === "High"
-                            ? "bg-burnt-peach-50 text-burnt-peach-700 border-burnt-peach-200"
+                            ? "destructive"
                             : a.investmentLevel === "Medium"
-                              ? "bg-tuscan-sun-50 text-tuscan-sun-700 border-tuscan-sun-200"
-                              : "bg-verdigris-50 text-verdigris-700 border-verdigris-200"
+                              ? "warning"
+                              : "success"
                         }
                       >
                         {a.investmentLevel}

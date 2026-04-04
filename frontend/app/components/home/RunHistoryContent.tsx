@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import type { PipelineRun } from "@/app/types";
+import { AsciiStatus } from "@/app/components/ascii/DesignSystem";
+import AsciiWatermark from "@/app/components/ascii/AsciiWatermark";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,18 +52,18 @@ function getStatusLine(run: PipelineRun): string {
   }
 }
 
-function getStatusIndicator(status: PipelineRun["status"]): string {
+function getAsciiStatus(status: PipelineRun["status"]): "running" | "complete" | "failed" | "pending" {
   switch (status) {
     case "running":
     case "pending":
-      return "◉";
+      return "running";
     case "completed":
-      return "✓";
+      return "complete";
     case "failed":
     case "cancelled":
-      return "✗";
+      return "failed";
     default:
-      return "○";
+      return "pending";
   }
 }
 
@@ -93,6 +95,9 @@ export default function RunHistoryContent({ runs, onDelete, heading }: RunHistor
         <p className="text-xs text-sidebar-foreground/30 font-mono mt-1">
           Start an analysis to see history here
         </p>
+        <div className="mt-6">
+          <AsciiWatermark />
+        </div>
       </div>
     );
   }
@@ -139,8 +144,8 @@ export default function RunHistoryContent({ runs, onDelete, heading }: RunHistor
                 >
                   {/* Row 1: status indicator + company name */}
                   <span className="flex items-center gap-2.5">
-                    <span className={`text-[12px] shrink-0 ${isFailed ? "text-destructive/70" : ""}`}>
-                      {getStatusIndicator(run.status)}
+                    <span className="shrink-0">
+                      <AsciiStatus status={getAsciiStatus(run.status)} showLabel={false} />
                     </span>
                     <span className="font-mono text-[13px] tracking-tight truncate">
                       {getDisplayName(run)}

@@ -284,12 +284,16 @@ export default function PipelineSimulationPanel({
             {simStatus.pressures.map((pressure, i) => (
               <Badge
                 key={i}
-                variant="secondary"
-                className={`text-[10px] font-mono ${
-                  pressure.triggered
-                    ? getSeverityColor(pressure.severity)
-                    : "bg-pitch-black-50 text-pitch-black-400 opacity-40"
-                }`}
+                variant={
+                  !pressure.triggered
+                    ? "ghost"
+                    : pressure.severity === "critical"
+                      ? "destructive"
+                      : pressure.severity === "high"
+                        ? "warning"
+                        : "success"
+                }
+                className={`text-[10px] font-mono ${!pressure.triggered ? "opacity-40" : ""}`}
               >
                 {pressure.name}
                 {pressure.value != null && ` (${pressure.value}${pressure.unit || ""})`}
