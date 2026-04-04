@@ -1,5 +1,6 @@
 "use client";
 
+import { AsciiProgressBar, AsciiDivider } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 
 function formatTactic(t: string): string {
@@ -70,24 +71,19 @@ export default function ReportStagesPanel({
 
         {/* Readiness bar */}
         {resilience && (
-          <>
-            <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-tuscan-sun-500 rounded-full transition-all duration-700 ease-out"
-                style={{ width: `${resilience.overall}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-[10px] font-mono text-muted-foreground/40">
-                Readiness {resilience.overall}/100
-              </span>
-              {mc && (
-                <span className="text-[10px] font-mono text-muted-foreground/40">
-                  {containedPct}% contained
-                </span>
-              )}
-            </div>
-          </>
+          <div className="mt-2">
+            <AsciiProgressBar
+              value={resilience.overall}
+              max={100}
+              width={18}
+              label={`Readiness ${resilience.overall}/100`}
+            />
+            {mc && (
+              <p className="text-[10px] font-mono text-muted-foreground/40 mt-0.5 text-right">
+                {containedPct}% contained
+              </p>
+            )}
+          </div>
         )}
       </div>
 
@@ -150,7 +146,10 @@ export default function ReportStagesPanel({
         </ul>
 
         {/* View Switcher */}
-        <div className="mt-4 px-4">
+        <div className="mt-3 px-4">
+          <AsciiDivider variant="dots" />
+        </div>
+        <div className="mt-2 px-4">
           <p className="mb-1.5 font-mono text-[10px] text-muted-foreground/40 uppercase tracking-wider">
             Views
           </p>

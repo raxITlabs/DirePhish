@@ -448,6 +448,7 @@
     0 0 12px oklch(76.18% 0.149 83.92 / 0.3);
 }
 
+
 /* ── Print styles for PDF export ── */
 @media print {
   body {

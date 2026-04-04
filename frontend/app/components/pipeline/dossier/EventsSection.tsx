@@ -4,10 +4,9 @@ import type { DossierForm } from "@/app/lib/dossier-schema";
 import { Badge } from "@/app/components/ui/badge";
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
 } from "@/app/components/ui/card";
+import { AsciiSectionHeader } from "@/app/components/ascii/DesignSystem";
 
 interface EventsSectionProps {
   form: DossierForm;
@@ -16,9 +15,9 @@ interface EventsSectionProps {
 export default function EventsSection({ form }: EventsSectionProps) {
   return (
     <Card className="rounded-xl">
-      <CardHeader>
-        <CardTitle>Recent Events</CardTitle>
-      </CardHeader>
+      <div className="px-4 pt-4 pb-1">
+        <AsciiSectionHeader>Recent Events</AsciiSectionHeader>
+      </div>
       <CardContent>
         <form.Field name="recentEvents">
           {(field) => {

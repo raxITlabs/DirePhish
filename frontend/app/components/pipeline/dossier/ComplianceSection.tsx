@@ -8,10 +8,9 @@ import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
 } from "@/app/components/ui/card";
+import { AsciiSectionHeader } from "@/app/components/ascii/DesignSystem";
 
 interface ComplianceSectionProps {
   form: DossierForm;
@@ -22,9 +21,9 @@ export default function ComplianceSection({ form }: ComplianceSectionProps) {
 
   return (
     <Card className="rounded-xl">
-      <CardHeader>
-        <CardTitle>Compliance Frameworks</CardTitle>
-      </CardHeader>
+      <div className="px-4 pt-4 pb-1">
+        <AsciiSectionHeader>Compliance Frameworks</AsciiSectionHeader>
+      </div>
       <CardContent>
         <form.Field name="compliance" mode="array">
           {(field) => (

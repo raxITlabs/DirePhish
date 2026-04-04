@@ -1,5 +1,6 @@
 "use client";
 
+import { AsciiMetric } from "@/app/components/ascii/DesignSystem";
 import type { WhatIfScenario } from "@/app/actions/report";
 
 interface Props {
@@ -31,34 +32,25 @@ export default function WhatIfTimeline({ scenarios }: Props) {
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <p className={`text-lg font-bold ${isNegative ? "text-burnt-peach-600" : "text-verdigris-600"}`}>
-                  {s.containment_delta}
-                </p>
-                <p className="text-[10px] text-pitch-black-400 uppercase tracking-wider">
-                  Containment
-                </p>
-              </div>
-              <div>
-                <p className={`text-lg font-bold ${isNegative ? "text-burnt-peach-600" : "text-verdigris-600"}`}>
-                  {s.rounds_delta > 0 ? "+" : ""}{s.rounds_delta}
-                </p>
-                <p className="text-[10px] text-pitch-black-400 uppercase tracking-wider">
-                  Rounds
-                </p>
-              </div>
-              <div>
-                <p className={`text-lg font-bold ${isNegative ? "text-burnt-peach-600" : "text-verdigris-600"}`}>
-                  {s.exposure_delta}
-                </p>
-                <p className="text-[10px] text-pitch-black-400 uppercase tracking-wider">
-                  Exposure
-                </p>
-              </div>
+            <div className="space-y-1 mt-1">
+              <AsciiMetric
+                label="Containment"
+                value={s.containment_delta}
+                valueColor={isNegative ? "text-destructive" : "text-verdigris-600"}
+              />
+              <AsciiMetric
+                label="Rounds"
+                value={`${s.rounds_delta > 0 ? "+" : ""}${s.rounds_delta}`}
+                valueColor={isNegative ? "text-destructive" : "text-verdigris-600"}
+              />
+              <AsciiMetric
+                label="Exposure"
+                value={s.exposure_delta}
+                valueColor={isNegative ? "text-destructive" : "text-verdigris-600"}
+              />
             </div>
 
-            <p className="text-[10px] text-pitch-black-400 mt-2">
+            <p className="text-[10px] font-mono text-muted-foreground mt-2">
               {s.source === "counterfactual" ? "Counterfactual data" : "Modeled estimate"}
             </p>
           </div>

@@ -4,6 +4,8 @@ import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { SimulationStatus, AgentAction } from "@/app/types";
 import { formatDuration } from "@/app/lib/utils";
+import { AsciiStatus, AsciiMetric } from "@/app/components/ascii/DesignSystem";
+import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
 
 type StepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
 
@@ -25,20 +27,12 @@ export interface StageCardData {
   dossierSummary?: string;
 }
 
-const STATUS_ICON: Record<StepStatus, string> = {
-  completed: "\u2713",
-  running: "\u25C9",
-  failed: "\u2717",
-  pending: "\u25CB",
-  skipped: "\u25CB",
-};
-
-const STATUS_COLOR: Record<StepStatus, string> = {
-  completed: "text-verdigris-600",
-  running: "text-primary",
-  failed: "text-destructive",
-  pending: "text-muted-foreground/40",
-  skipped: "text-muted-foreground/30",
+const STATUS_TO_ASCII: Record<StepStatus, "complete" | "running" | "failed" | "pending"> = {
+  completed: "complete",
+  running: "running",
+  failed: "failed",
+  pending: "pending",
+  skipped: "pending",
 };
 
 function StageCardNode({ data }: NodeProps) {
@@ -53,11 +47,8 @@ function StageCardNode({ data }: NodeProps) {
         }`}
         onClick={() => d.onToggle(d.stageId)}
       >
-        <span className={STATUS_COLOR[d.status]}>{STATUS_ICON[d.status]}</span>
+        <AsciiStatus status={STATUS_TO_ASCII[d.status]} showLabel={false} />
         <span className="text-foreground/80">{d.label}</span>
-        {d.status === "running" && (
-          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-dot ml-1" />
-        )}
       </div>
     );
   }
@@ -73,7 +64,7 @@ function StageCardNode({ data }: NodeProps) {
           onClick={() => d.onToggle(d.stageId)}
         >
           <div className="flex items-center gap-2">
-            <span className={`text-sm ${STATUS_COLOR[d.status]}`}>{STATUS_ICON[d.status]}</span>
+            <AsciiStatus status={STATUS_TO_ASCII[d.status]} showLabel={false} />
             <span className="font-mono text-sm font-medium text-foreground">{d.label}</span>
           </div>
           {d.status === "running" && (
@@ -106,19 +97,10 @@ function StageContent({ data }: { data: StageCardData }) {
   if (d.stageId === "simulations" && d.simStatus) {
     return (
       <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-muted rounded-lg p-2 text-center">
-            <div className="text-lg font-bold font-mono">{d.simStatus.currentRound}/{d.simStatus.totalRounds}</div>
-            <div className="text-[9px] font-mono text-muted-foreground uppercase">Round</div>
-          </div>
-          <div className="bg-muted rounded-lg p-2 text-center">
-            <div className="text-lg font-bold font-mono">{d.simStatus.actionCount}</div>
-            <div className="text-[9px] font-mono text-muted-foreground uppercase">Actions</div>
-          </div>
-          <div className="bg-muted rounded-lg p-2 text-center">
-            <div className="text-lg font-bold font-mono">{d.simStatus.status === "running" ? "\u25C9" : "\u25CB"}</div>
-            <div className="text-[9px] font-mono text-muted-foreground uppercase">Status</div>
-          </div>
+        <div className="space-y-1">
+          <AsciiMetric label="Round" value={`${d.simStatus.currentRound}/${d.simStatus.totalRounds}`} />
+          <AsciiMetric label="Actions" value={String(d.simStatus.actionCount)} />
+          <AsciiMetric label="Status" value={d.simStatus.status === "running" ? "Live" : "Idle"} valueColor={d.simStatus.status === "running" ? "text-primary" : "text-muted-foreground"} />
         </div>
         {d.simActions && d.simActions.length > 0 && (
           <div className="space-y-1 max-h-[150px] overflow-y-auto">
@@ -149,7 +131,7 @@ function StageContent({ data }: { data: StageCardData }) {
             disabled={d.confirming}
             className="w-full bg-primary text-primary-foreground py-2 rounded-lg text-xs font-mono font-medium disabled:opacity-40"
           >
-            {d.confirming ? "Confirming..." : "Confirm & Continue"}
+            {d.confirming ? <><AsciiSpinner /> Confirming</> : "Confirm & Continue"}
           </button>
         )}
       </div>
@@ -160,8 +142,8 @@ function StageContent({ data }: { data: StageCardData }) {
   if (d.status === "running") {
     return (
       <div className="flex items-center gap-2">
-        <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-mono text-muted-foreground">{d.message || "Processing..."}</span>
+        <AsciiSpinner />
+        <span className="text-xs font-mono text-muted-foreground">{d.message || "Processing\u2026"}</span>
       </div>
     );
   }

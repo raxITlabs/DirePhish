@@ -8,6 +8,7 @@ import {
   Clock,
   TrendingUp,
 } from "lucide-react";
+import { AsciiSectionHeader, AsciiEmptyState, AsciiMetricCard, AsciiAlert } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 import OutcomeDistributionBar from "./OutcomeDistributionBar";
 import ReadinessGauge from "./ReadinessGauge";
@@ -156,8 +157,7 @@ export default function BoardView({ report }: BoardViewProps) {
                     ([action, count]) => (
                       <Badge
                         key={action}
-                        variant="outline"
-                        className="bg-tuscan-sun-100 border-tuscan-sun-300 text-tuscan-sun-800"
+                        variant="warning"
                       >
                         {action}: {count}x
                       </Badge>
@@ -183,9 +183,7 @@ export default function BoardView({ report }: BoardViewProps) {
       {actions.length > 0 && (
         <Card>
           <CardContent className="p-5 space-y-3">
-            <p className="text-sm font-medium text-pitch-black-600">
-              Priority Actions
-            </p>
+            <AsciiSectionHeader as="h3" sigil="»">Priority Actions</AsciiSectionHeader>
             <div className="space-y-2">
               {actions.map((a, i) => (
                 <div
@@ -211,13 +209,12 @@ export default function BoardView({ report }: BoardViewProps) {
                       <span>{a.suggestedOwner}</span>
                       <span>{a.suggestedTimeline}</span>
                       <Badge
-                        variant="outline"
-                        className={
+                        variant={
                           a.investmentLevel === "High"
-                            ? "bg-burnt-peach-50 text-burnt-peach-700 border-burnt-peach-200"
+                            ? "destructive"
                             : a.investmentLevel === "Medium"
-                              ? "bg-tuscan-sun-50 text-tuscan-sun-700 border-tuscan-sun-200"
-                              : "bg-verdigris-50 text-verdigris-700 border-verdigris-200"
+                              ? "warning"
+                              : "success"
                         }
                       >
                         {a.investmentLevel}
@@ -235,9 +232,7 @@ export default function BoardView({ report }: BoardViewProps) {
       {report.executiveSummary && (
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm font-medium text-pitch-black-600 mb-2">
-              Executive Summary
-            </p>
+            <AsciiSectionHeader as="h3" sigil="§">Executive Summary</AsciiSectionHeader>
             <p className="text-sm text-pitch-black-700 leading-relaxed whitespace-pre-line">
               {report.executiveSummary}
             </p>
@@ -282,9 +277,5 @@ function KPICard({
 }
 
 function EmptySection({ label }: { label: string }) {
-  return (
-    <div className="h-40 flex items-center justify-center">
-      <p className="text-xs text-pitch-black-400">{label}</p>
-    </div>
-  );
+  return <AsciiEmptyState title={label} />;
 }

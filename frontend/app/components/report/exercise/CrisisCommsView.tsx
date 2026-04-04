@@ -12,9 +12,9 @@ import {
   FileText,
   Copy,
   Check,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
+import { Card, CardContent } from "@/app/components/ui/card";
+import { AsciiSectionHeader, AsciiEmptyState } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 
 interface CrisisComm {
@@ -64,22 +64,19 @@ export default function CrisisCommsView({ report }: { report: ExerciseReport }) 
 
   if (!comms.length) {
     return (
-      <div className="rounded-lg border border-border/40 bg-card p-8 text-center">
-        <p className="text-sm text-muted-foreground">
-          Crisis communications were not generated for this report.
-        </p>
-        <p className="text-xs text-muted-foreground/60 mt-1">
-          Run a new pipeline to generate scenario-specific communication drafts.
-        </p>
-      </div>
+      <AsciiEmptyState
+        title="Crisis communications were not generated"
+        description="Run a new pipeline to generate scenario-specific communication drafts."
+        sigil="✉"
+      />
     );
   }
 
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Crisis Communications</h2>
-        <p className="text-xs text-muted-foreground mt-1">
+        <AsciiSectionHeader as="h2" sigil="✉">Crisis Communications</AsciiSectionHeader>
+        <p className="text-xs font-mono text-muted-foreground mt-1">
           Scenario-specific drafts pre-filled with simulation data. Ready to adapt for a real incident.
         </p>
       </div>
@@ -89,10 +86,7 @@ export default function CrisisCommsView({ report }: { report: ExerciseReport }) 
           const isExpanded = expandedId === comm.audience;
           const Icon = AUDIENCE_ICONS[comm.audience] || FileText;
           return (
-            <div
-              key={comm.audience}
-              className="rounded-lg border border-border/40 bg-card overflow-hidden"
-            >
+            <Card key={comm.audience} corners={false}>
               {/* Header */}
               <button
                 onClick={() => setExpandedId(isExpanded ? null : comm.audience)}
@@ -114,11 +108,9 @@ export default function CrisisCommsView({ report }: { report: ExerciseReport }) 
                     {comm.subject}
                   </p>
                 </div>
-                {isExpanded ? (
-                  <ChevronUp size={16} className="text-muted-foreground/40 shrink-0" />
-                ) : (
-                  <ChevronDown size={16} className="text-muted-foreground/40 shrink-0" />
-                )}
+                <span className="text-primary font-mono select-none shrink-0" aria-hidden="true">
+                  {isExpanded ? "▼" : "▶"}
+                </span>
               </button>
 
               {/* Body */}
@@ -150,7 +142,7 @@ export default function CrisisCommsView({ report }: { report: ExerciseReport }) 
                   </div>
                 </div>
               )}
-            </div>
+            </Card>
           );
         })}
       </div>

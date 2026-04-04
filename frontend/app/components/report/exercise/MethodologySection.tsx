@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/app/components/ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { AsciiSectionHeader, AsciiMetric, AsciiDivider } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 
 interface MethodologySectionProps {
@@ -25,7 +26,7 @@ function formatTokens(n: number): string {
 export default function MethodologySection({ methodology, costs }: MethodologySectionProps) {
   return (
     <section id="methodology" className="space-y-6">
-      <h2 className="text-lg font-semibold">Methodology</h2>
+      <AsciiSectionHeader as="h2" sigil="◆">Methodology</AsciiSectionHeader>
 
       <Card>
         <CardContent className="p-6 space-y-4">
@@ -35,23 +36,12 @@ export default function MethodologySection({ methodology, costs }: MethodologySe
             </ReactMarkdown>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm border-t pt-4">
-            <div>
-              <p className="text-muted-foreground text-xs">Scenarios</p>
-              <p className="font-bold text-lg">{methodology.scenarioCount}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">Agents</p>
-              <p className="font-bold text-lg">{methodology.agentCount}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">Total Rounds</p>
-              <p className="font-bold text-lg">{methodology.totalRounds}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">Total Actions</p>
-              <p className="font-bold text-lg">{methodology.totalActions}</p>
-            </div>
+          <AsciiDivider variant="dots" />
+          <div className="space-y-1.5 pt-2">
+            <AsciiMetric label="Scenarios" value={String(methodology.scenarioCount)} />
+            <AsciiMetric label="Agents" value={String(methodology.agentCount)} />
+            <AsciiMetric label="Total Rounds" value={String(methodology.totalRounds)} />
+            <AsciiMetric label="Total Actions" value={String(methodology.totalActions)} />
           </div>
 
           {/* Cost Breakdown */}
@@ -97,9 +87,7 @@ export default function MethodologySection({ methodology, costs }: MethodologySe
       {/* Attack Paths */}
       {methodology.attackPaths && methodology.attackPaths.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Simulated Attack Paths
-          </h3>
+          <AsciiSectionHeader as="h3" sigil="⚔">Simulated Attack Paths</AsciiSectionHeader>
           {methodology.attackPaths.map((path, i) => (
             <Card key={i}>
               <CardHeader className="pb-3">
@@ -122,7 +110,7 @@ export default function MethodologySection({ methodology, costs }: MethodologySe
                       {/* Step content */}
                       <div className="pb-4 flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <Badge variant="outline" className="text-xs font-mono bg-royal-azure-50 text-royal-azure-700 border-royal-azure-200">
+                          <Badge variant="default" className="text-xs font-mono">
                             {step.technique}
                           </Badge>
                           <span className="text-xs text-muted-foreground">{step.tactic.replace("_", " ")}</span>
@@ -144,9 +132,7 @@ export default function MethodologySection({ methodology, costs }: MethodologySe
       {/* Pipeline Lifecycle */}
       {methodology.pipelineSteps && methodology.pipelineSteps.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Analysis Pipeline
-          </h3>
+          <AsciiSectionHeader as="h3" sigil="│">Analysis Pipeline</AsciiSectionHeader>
           <Card>
             <CardContent className="pt-4">
               <div className="space-y-0">
@@ -175,9 +161,7 @@ export default function MethodologySection({ methodology, costs }: MethodologySe
       {/* Simulation Architecture */}
       {methodology.worldsPerScenario && methodology.worldsPerScenario.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Simulation Architecture
-          </h3>
+          <AsciiSectionHeader as="h3" sigil="◇">Simulation Architecture</AsciiSectionHeader>
           {methodology.worldsPerScenario.map((scenario, i) => (
             <Card key={i}>
               <CardHeader className="pb-2">
@@ -188,7 +172,7 @@ export default function MethodologySection({ methodology, costs }: MethodologySe
                 <div className="space-y-2">
                   {scenario.worlds.map((world, j) => (
                     <div key={j} className="flex items-center gap-3 text-xs">
-                      <Badge variant="outline" className={world.type === "slack" ? "bg-royal-azure-50 text-royal-azure-700 border-royal-azure-200" : "bg-sandy-brown-50 text-sandy-brown-700 border-sandy-brown-200"}>
+                      <Badge variant={world.type === "slack" ? "default" : "warning"}>
                         {world.type}
                       </Badge>
                       <span className="font-medium flex-1">{world.name}</span>

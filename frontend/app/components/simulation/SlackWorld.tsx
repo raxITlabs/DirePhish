@@ -79,7 +79,7 @@ export default function SlackWorld({ actions, scheduledEvents }: Props) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold">{action.agent}</span>
-                  <Badge variant="secondary" className={`text-[10px] font-mono ${getRoleColor(action.role)}`}>
+                  <Badge variant="outline" className="text-[10px] font-mono">
                     {action.role}
                   </Badge>
                   <Badge variant={action.action === "reply_in_thread" ? "secondary" : "outline"} className="text-[10px]">

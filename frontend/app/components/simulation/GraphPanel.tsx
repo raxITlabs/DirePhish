@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import * as d3 from "d3";
 import type { GraphData, GraphNode, GraphEdge } from "@/app/types";
+import { computeTruncation } from "@/app/lib/text-measure";
 import GraphNodeDetail from "./GraphNodeDetail";
 import GraphLegend, { TYPE_COLORS } from "./GraphLegend";
 import GraphToolbar from "./GraphToolbar";
@@ -56,8 +57,10 @@ function nodeInitials(d: SimNode): string {
     .toUpperCase();
 }
 
-function truncateName(name: string, maxLen = 14): string {
-  return name.length > maxLen ? name.substring(0, maxLen - 1) + "\u2026" : name;
+/** Pixel-based truncation using pretext measurement.
+ *  `maxPx` defaults match the old char-count heuristic at ~10px mono. */
+function truncateName(name: string, maxPx = 84, font = "500 10px Geist Mono, ui-monospace, monospace"): string {
+  return computeTruncation(name, maxPx, font);
 }
 
 /** Build edge key for grouping parallel edges */
@@ -329,7 +332,7 @@ export default function GraphPanel({ data, isLive, isPushing, onRefresh }: Props
       .selectAll<SVGTextElement, SimLink>("text")
       .data(links)
       .join("text")
-      .text((d) => truncateName(d.label, 20))
+      .text((d) => truncateName(d.label, 120, "10px Geist Mono, ui-monospace, monospace"))
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "central")
       .attr("fill", getCSSVar('--muted-foreground'))

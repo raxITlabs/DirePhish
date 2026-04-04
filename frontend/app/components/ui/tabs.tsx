@@ -53,7 +53,11 @@ function TabsList({
   )
 }
 
-function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
+function TabsTrigger({
+  className,
+  children,
+  ...props
+}: TabsPrimitive.Tab.Props) {
   return (
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
@@ -62,10 +66,19 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
         "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
         "data-active:bg-background data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground",
         "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
+        "[&:not(:first-child)]:border-l [&:not(:first-child)]:border-l-border/40 [&:not(:first-child)]:rounded-l-none [&:first-child]:rounded-r-none [&:only-child]:rounded-md",
         className
       )}
       {...props}
-    />
+    >
+      <span
+        aria-hidden="true"
+        className="text-primary opacity-0 transition-opacity [[data-active]>&]:opacity-100 select-none font-mono text-xs mr-0.5 motion-reduce:transition-none"
+      >
+        ▸
+      </span>
+      {children}
+    </TabsPrimitive.Tab>
   )
 }
 

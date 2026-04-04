@@ -9,10 +9,9 @@ import { Button } from "@/app/components/ui/button";
 import { Switch } from "@/app/components/ui/switch";
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
 } from "@/app/components/ui/card";
+import { AsciiSectionHeader } from "@/app/components/ascii/DesignSystem";
 
 interface SecuritySectionProps {
   form: DossierForm;
@@ -24,9 +23,9 @@ export default function SecuritySection({ form }: SecuritySectionProps) {
 
   return (
     <Card className="rounded-xl">
-      <CardHeader>
-        <CardTitle>Security Posture</CardTitle>
-      </CardHeader>
+      <div className="px-4 pt-4 pb-1">
+        <AsciiSectionHeader>Security Posture</AsciiSectionHeader>
+      </div>
       <CardContent className="space-y-4">
         {/* Team Size */}
         <form.Field name="securityPosture.securityTeamSize">

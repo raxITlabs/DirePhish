@@ -1,7 +1,6 @@
 "use client";
 
-import { Badge } from "@/app/components/ui/badge";
-import { Separator } from "@/app/components/ui/separator";
+import { AsciiStatus, AsciiMetric, AsciiDivider } from "@/app/components/ascii/DesignSystem";
 import type { ReportStatus } from "@/app/types";
 
 interface MetricsBarProps {
@@ -18,24 +17,12 @@ function formatElapsed(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function statusBadge(status: ReportStatus) {
-  switch (status) {
-    case "PLANNING":
-      return <Badge variant="secondary">Planning</Badge>;
-    case "GENERATING":
-      return (
-        <Badge variant="default" className="animate-pulse">
-          Generating
-        </Badge>
-      );
-    case "COMPLETED":
-      return <Badge variant="outline">Completed</Badge>;
-    case "FAILED":
-      return <Badge variant="destructive">Failed</Badge>;
-    default:
-      return <Badge variant="outline">Pending</Badge>;
-  }
-}
+const STATUS_MAP: Record<string, "pending" | "running" | "complete" | "failed"> = {
+  PLANNING: "running",
+  GENERATING: "running",
+  COMPLETED: "complete",
+  FAILED: "failed",
+};
 
 export default function MetricsBar({
   sectionsCompleted,
@@ -44,46 +31,26 @@ export default function MetricsBar({
   toolCallCount,
   status,
 }: MetricsBarProps) {
+  const progress = totalSections > 0
+    ? Math.round((sectionsCompleted / totalSections) * 100)
+    : 0;
+
   return (
-    <div className="flex items-center gap-3 py-2">
-      {statusBadge(status)}
-
-      <Separator orientation="vertical" className="h-4" />
-
-      <div className="flex flex-col">
-        <span className="text-xs text-muted-foreground">Sections</span>
-        <span className="text-sm font-semibold font-mono">
-          {sectionsCompleted}/{totalSections}
-        </span>
+    <div className="space-y-1.5 py-2">
+      <div className="flex items-center gap-4">
+        <AsciiStatus
+          status={STATUS_MAP[status] ?? "pending"}
+          label={status === "PLANNING" ? "Planning" : undefined}
+        />
+        <span className="font-mono text-muted-foreground/30 select-none" aria-hidden="true">│</span>
+        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1">
+          <AsciiMetric label="Sections" value={`${sectionsCompleted}/${totalSections}`} />
+          <AsciiMetric label="Elapsed" value={formatElapsed(elapsedSeconds)} />
+          <AsciiMetric label="Tool Calls" value={String(toolCallCount)} />
+          <AsciiMetric label="Progress" value={`${progress}%`} />
+        </div>
       </div>
-
-      <Separator orientation="vertical" className="h-4" />
-
-      <div className="flex flex-col">
-        <span className="text-xs text-muted-foreground">Elapsed</span>
-        <span className="text-sm font-semibold font-mono">
-          {formatElapsed(elapsedSeconds)}
-        </span>
-      </div>
-
-      <Separator orientation="vertical" className="h-4" />
-
-      <div className="flex flex-col">
-        <span className="text-xs text-muted-foreground">Tool Calls</span>
-        <span className="text-sm font-semibold font-mono">{toolCallCount}</span>
-      </div>
-
-      <Separator orientation="vertical" className="h-4" />
-
-      <div className="flex flex-col">
-        <span className="text-xs text-muted-foreground">Progress</span>
-        <span className="text-sm font-semibold font-mono">
-          {totalSections > 0
-            ? Math.round((sectionsCompleted / totalSections) * 100)
-            : 0}
-          %
-        </span>
-      </div>
+      <AsciiDivider variant="dots" />
     </div>
   );
 }

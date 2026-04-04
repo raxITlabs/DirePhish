@@ -1,5 +1,8 @@
 "use client";
 
+import { Card, CardContent } from "@/app/components/ui/card";
+import { AsciiSectionHeader, AsciiMetric } from "@/app/components/ascii/DesignSystem";
+
 interface Props {
   estimates: {
     ale: number;
@@ -23,23 +26,20 @@ export default function FAIRLossCard({ estimates }: Props) {
   ];
 
   return (
-    <div className="bg-card rounded-xl p-5 ring-1 ring-foreground/10">
-      <h3 className="text-sm font-medium text-pitch-black-600 mb-4">
-        FAIR Loss Estimation
-      </h3>
-      <div className="space-y-0">
-        {rows.map((row, i) => (
-          <div key={row.label} className={`flex justify-between items-center py-3 ${i < rows.length - 1 ? "border-b border-pitch-black-100" : ""}`}>
-            <div>
-              <p className="text-[13px] text-pitch-black-400">{row.label}</p>
-              <p className="text-[11px] text-pitch-black-600">{row.sub}</p>
-            </div>
-            <span className={`text-lg font-semibold ${row.color}`}>
-              {formatDollars(row.value)}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <Card>
+      <CardContent>
+        <AsciiSectionHeader as="h3" sigil="$">FAIR Loss Estimation</AsciiSectionHeader>
+        <div className="space-y-2 mt-4">
+          {rows.map((row) => (
+            <AsciiMetric
+              key={row.label}
+              label={row.label}
+              value={formatDollars(row.value)}
+              valueColor={row.color}
+            />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

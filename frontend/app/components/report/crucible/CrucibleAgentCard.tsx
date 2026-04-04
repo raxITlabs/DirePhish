@@ -75,8 +75,8 @@ export default function CrucibleAgentGrid({ agents }: CrucibleAgentCardProps) {
                     {agent.strengths.map((s, i) => (
                       <Badge
                         key={i}
-                        variant="outline"
-                        className="text-xs bg-green-500/10 text-green-700 border-green-500/20"
+                        variant="success"
+                        className="text-xs"
                       >
                         {s}
                       </Badge>
@@ -92,8 +92,8 @@ export default function CrucibleAgentGrid({ agents }: CrucibleAgentCardProps) {
                     {agent.weaknesses.map((w, i) => (
                       <Badge
                         key={i}
-                        variant="outline"
-                        className="text-xs bg-red-500/10 text-red-700 border-red-500/20"
+                        variant="destructive"
+                        className="text-xs"
                       >
                         {w}
                       </Badge>

@@ -8,9 +8,9 @@ import {
   CardTitle,
 } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
-import { ChevronDown, ChevronRight } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { AsciiSectionHeader, AsciiBadge } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 
 interface AppendixSectionProps {
@@ -30,12 +30,12 @@ function CollapsibleScenario({
         className="cursor-pointer select-none"
         onClick={() => setOpen(!open)}
       >
-        <CardTitle className="text-sm flex items-center gap-2">
-          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        <CardTitle className="text-sm flex items-center gap-2 font-mono">
+          <span className="text-primary select-none" aria-hidden="true">{open ? "▼" : "▶"}</span>
           {detail.title}
-          <Badge variant="outline" className="text-xs ml-auto">
+          <AsciiBadge variant="muted" bracket="square">
             {detail.timeline.length} events
-          </Badge>
+          </AsciiBadge>
         </CardTitle>
       </CardHeader>
       {open && (
@@ -131,7 +131,7 @@ function CollapsibleScenario({
 export default function AppendixSection({ appendix }: AppendixSectionProps) {
   return (
     <section id="appendix" className="space-y-6">
-      <h2 className="text-lg font-semibold">Appendix</h2>
+      <AsciiSectionHeader as="h2" sigil="┌">Appendix</AsciiSectionHeader>
 
       {/* Consistent Weaknesses */}
       {appendix.crossScenarioComparison.consistentWeaknesses.length > 0 && (
@@ -158,9 +158,7 @@ export default function AppendixSection({ appendix }: AppendixSectionProps) {
         (f) => f.strengths.length > 0 || f.weaknesses.length > 0 || f.notableMoments.length > 0
       ) && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Scenario Comparison
-          </h3>
+          <AsciiSectionHeader as="h3" sigil="◇">Scenario Comparison</AsciiSectionHeader>
           {appendix.crossScenarioComparison.scenarioFindings.map((finding, i) => (
             <Card key={i}>
               <CardHeader>
@@ -211,9 +209,7 @@ export default function AppendixSection({ appendix }: AppendixSectionProps) {
 
       {/* Per-scenario details (collapsible) */}
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Scenario Details
-        </h3>
+        <AsciiSectionHeader as="h3" sigil="»">Scenario Details</AsciiSectionHeader>
         {appendix.scenarioDetails.map((detail) => (
           <CollapsibleScenario
             key={detail.scenarioId}

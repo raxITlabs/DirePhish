@@ -105,7 +105,7 @@ export default function GraphToolbar({
         </Button>
 
         {focusNodeId && (
-          <Badge variant="outline" className="h-7 gap-1 text-xs font-mono border-primary/50 bg-primary/5">
+          <Badge variant="default" className="h-7 gap-1 text-xs font-mono">
             Focus: {focusNodeName || focusNodeId.slice(0, 8)}
             <button
               onClick={onClearFocus}

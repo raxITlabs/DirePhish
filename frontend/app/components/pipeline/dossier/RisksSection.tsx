@@ -9,10 +9,9 @@ import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
 } from "@/app/components/ui/card";
+import { AsciiSectionHeader } from "@/app/components/ascii/DesignSystem";
 import {
   Select,
   SelectTrigger,
@@ -38,9 +37,9 @@ export default function RisksSection({ form }: RisksSectionProps) {
 
   return (
     <Card className="rounded-xl">
-      <CardHeader>
-        <CardTitle>Risk Profile</CardTitle>
-      </CardHeader>
+      <div className="px-4 pt-4 pb-1">
+        <AsciiSectionHeader>Risk Profile</AsciiSectionHeader>
+      </div>
       <CardContent>
         <form.Field name="risks" mode="array">
           {(risksField) => (

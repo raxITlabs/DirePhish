@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { getRiskScore, computeRiskScore, type ExerciseReport } from "@/app/actions/report";
-import { Card, CardContent } from "@/app/components/ui/card";
-import { Loader2, AlertTriangle, Calculator } from "lucide-react";
+import { AsciiBadge, AsciiEmptyState, AsciiAlert } from "@/app/components/ascii/DesignSystem";
+import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
 import RiskScoreRing from "./RiskScoreRing";
 import FAIRLossCard from "./FAIRLossCard";
 import RiskDrivers from "./RiskDrivers";
@@ -51,30 +51,24 @@ export default function RiskScoreView({ report, projectId }: Props) {
   if (!riskScore && !loading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
-        <Card className="max-w-md">
-          <CardContent className="p-8 text-center space-y-4">
-            <Calculator className="mx-auto text-pitch-black-400" size={32} />
-            <div>
-              <p className="font-medium text-lg">Risk Score Not Computed</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Compute a risk score from your Monte Carlo simulation data.
-                Requires at least QUICK mode (10+ iterations).
-              </p>
-            </div>
-            {error && (
-              <div className="flex items-center gap-2 text-burnt-peach-500 text-sm">
-                <AlertTriangle size={14} />
-                <span>{error}</span>
-              </div>
-            )}
-            <button
-              onClick={handleCompute}
-              className="px-6 py-2 bg-royal-azure-600 hover:bg-royal-azure-700 text-white rounded-lg text-sm font-medium transition-colors"
-            >
-              Compute Risk Score
-            </button>
-          </CardContent>
-        </Card>
+        <div className="max-w-md space-y-4">
+          <AsciiEmptyState
+            title="Risk Score Not Computed"
+            description="Compute a risk score from your Monte Carlo simulation data. Requires at least QUICK mode (10+ iterations)."
+            sigil="◇"
+            action={
+              <button
+                onClick={handleCompute}
+                className="px-6 py-2 bg-royal-azure-600 hover:bg-royal-azure-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Compute Risk Score
+              </button>
+            }
+          />
+          {error && (
+            <AsciiAlert variant="error">{error}</AsciiAlert>
+          )}
+        </div>
       </div>
     );
   }
@@ -83,8 +77,8 @@ export default function RiskScoreView({ report, projectId }: Props) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
         <div className="flex items-center gap-3">
-          <Loader2 className="animate-spin text-muted-foreground" size={20} />
-          <span className="text-muted-foreground">Computing risk score...</span>
+          <AsciiSpinner className="text-lg text-muted-foreground" />
+          <span className="text-muted-foreground">Computing risk score\u2026</span>
         </div>
       </div>
     );
@@ -96,11 +90,11 @@ export default function RiskScoreView({ report, projectId }: Props) {
     <div className="space-y-6">
       {/* Methodology badges */}
       <div className="flex items-center gap-2">
-        <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-royal-azure-50 text-royal-azure-700 border border-royal-azure-200">FAIR</span>
-        <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-royal-azure-50 text-royal-azure-700 border border-royal-azure-200">ATT&CK</span>
-        <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-royal-azure-50 text-royal-azure-700 border border-royal-azure-200">Monte Carlo</span>
-        <span className="text-[11px] text-pitch-black-500 ml-2">
-          {riskScore.confidence_flag === "low" ? "⚠ Low confidence" : ""} · {(report.monteCarloStats?.iteration_count ?? 0)} iterations
+        <AsciiBadge variant="default" bracket="square">FAIR</AsciiBadge>
+        <AsciiBadge variant="default" bracket="square">ATT&CK</AsciiBadge>
+        <AsciiBadge variant="default" bracket="square">Monte Carlo</AsciiBadge>
+        <span className="text-[11px] text-muted-foreground ml-2 font-mono">
+          {riskScore.confidence_flag === "low" ? <span aria-hidden="true">{"⚠ "}</span> : ""}{riskScore.confidence_flag === "low" ? "Low confidence · " : ""}{(report.monteCarloStats?.iteration_count ?? 0)} iterations
         </span>
       </div>
 

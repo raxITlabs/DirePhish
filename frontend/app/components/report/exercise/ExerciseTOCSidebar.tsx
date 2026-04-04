@@ -50,19 +50,21 @@ export default function ExerciseTOCSidebar({ items }: ExerciseTOCSidebarProps) {
 
   return (
     <nav className="sticky top-24 space-y-1 text-sm">
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+      <p className="font-mono text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+        <span className="text-primary select-none" aria-hidden="true">{"§ "}</span>
         Contents
       </p>
       {items.map((item) => (
         <div key={item.id}>
           <button
             onClick={() => scrollTo(item.id)}
-            className={`block w-full text-left px-3 py-1.5 rounded-md transition-colors ${
+            className={`block w-full text-left px-3 py-1.5 rounded-md font-mono text-xs transition-colors ${
               activeId === item.id
                 ? "bg-accent text-accent-foreground font-medium"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
             }`}
           >
+            {activeId === item.id && <span className="text-primary select-none mr-1" aria-hidden="true">{"▸"}</span>}
             {item.label}
           </button>
           {item.children?.map((child) => (

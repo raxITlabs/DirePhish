@@ -63,8 +63,7 @@ export default function CrucibleHeroCard({
             </Badge>
           )}
           <Badge
-            variant="default"
-            className="bg-green-600 hover:bg-green-600"
+            variant="success"
           >
             Completed
           </Badge>

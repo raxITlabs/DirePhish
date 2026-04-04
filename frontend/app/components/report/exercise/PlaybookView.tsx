@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/app/components/ui/card";
-import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
-import { ChevronDown, ChevronRight, Download } from "lucide-react";
+import { Download } from "lucide-react";
+import { AsciiSectionHeader, AsciiEmptyState } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 
 interface PlaybookViewProps {
@@ -24,15 +24,11 @@ export default function PlaybookView({ report }: PlaybookViewProps) {
 
   if (!playbook) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <Card className="max-w-md">
-          <CardContent className="p-6 text-center">
-            <p className="text-sm text-pitch-black-600">
-              Playbook not available — run the full pipeline with Monte Carlo analysis to generate.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <AsciiEmptyState
+        title="Playbook not available"
+        description="Run the full pipeline with Monte Carlo analysis to generate."
+        sigil="□"
+      />
     );
   }
 
@@ -141,10 +137,8 @@ export default function PlaybookView({ report }: PlaybookViewProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-pitch-black-800">
-            Incident Response Playbook
-          </h2>
-          <p className="text-xs text-pitch-black-400">
+          <AsciiSectionHeader as="h2" sigil="☐">Incident Response Playbook</AsciiSectionHeader>
+          <p className="text-xs font-mono text-muted-foreground mt-1">
             NIST SP 800-61r2 format — scenario-specific procedures
           </p>
         </div>
@@ -179,11 +173,9 @@ function CollapsibleSection({ section }: { section: PlaybookSection }) {
         <span className="text-sm font-semibold text-pitch-black-800 flex-1">
           Part {section.number}: {section.title}
         </span>
-        {open ? (
-          <ChevronDown size={16} className="text-pitch-black-400" />
-        ) : (
-          <ChevronRight size={16} className="text-pitch-black-400" />
-        )}
+        <span className="text-primary font-mono select-none" aria-hidden="true">
+          {open ? "▼" : "▶"}
+        </span>
       </button>
 
       {open && (

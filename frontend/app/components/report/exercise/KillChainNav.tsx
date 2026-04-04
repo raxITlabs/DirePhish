@@ -1,5 +1,9 @@
 "use client";
 
+import { Card } from "@/app/components/ui/card";
+
+const cornerMark = "absolute font-mono text-[10px] text-muted-foreground/30 select-none leading-none pointer-events-none";
+
 function formatTactic(t: string): string {
   return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -39,13 +43,14 @@ export default function KillChainNav({
   if (!killChain || killChain.length === 0) return null;
 
   return (
-    <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-4">
+    <Card className="p-4">
       <div className="flex items-center gap-2 mb-3">
-        <p className="text-sm font-medium text-pitch-black-600">
+        <span className="text-primary font-mono text-xs select-none" aria-hidden="true">{"⚔"}</span>
+        <p className="font-mono text-xs font-semibold uppercase tracking-wider text-foreground">
           MITRE ATT&CK Kill Chain
         </p>
         {threatName && (
-          <span className="text-xs text-pitch-black-400">— {threatName}</span>
+          <span className="text-xs font-mono text-muted-foreground">— {threatName}</span>
         )}
       </div>
 
@@ -56,14 +61,19 @@ export default function KillChainNav({
 
           return (
             <div key={step.step} className="flex items-stretch shrink-0">
-              <button
-                onClick={() => onStepClick(i)}
-                className={`flex items-start gap-2.5 px-3 py-2.5 rounded-lg border min-w-[130px] max-w-[180px] text-left transition-all cursor-pointer ${
-                  isActive
-                    ? `${colors.bg} ${colors.border} ring-2 ring-offset-1 ring-pitch-black-200 shadow-sm`
-                    : "bg-pitch-black-50 border-pitch-black-200 hover:border-pitch-black-300 hover:bg-pitch-black-100"
-                }`}
-              >
+              <div className="relative p-0.5">
+                <span className={`${cornerMark} -top-1 -left-0.5 ${isActive ? "text-muted-foreground/70" : ""}`} aria-hidden="true">┌</span>
+                <span className={`${cornerMark} -top-1 -right-0.5 ${isActive ? "text-muted-foreground/70" : ""}`} aria-hidden="true">┐</span>
+                <span className={`${cornerMark} -bottom-1 -left-0.5 ${isActive ? "text-muted-foreground/70" : ""}`} aria-hidden="true">└</span>
+                <span className={`${cornerMark} -bottom-1 -right-0.5 ${isActive ? "text-muted-foreground/70" : ""}`} aria-hidden="true">┘</span>
+                <button
+                  onClick={() => onStepClick(i)}
+                  className={`flex items-start gap-2.5 px-3 py-2.5 rounded-lg border min-w-[130px] max-w-[180px] text-left transition-all cursor-pointer ${
+                    isActive
+                      ? `${colors.bg} ${colors.border} shadow-sm`
+                      : "bg-pitch-black-50 border-pitch-black-200 hover:border-pitch-black-300 hover:bg-pitch-black-100"
+                  }`}
+                >
                 {/* Step number badge — inline, always visible */}
                 <span
                   className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5 ${
@@ -93,6 +103,7 @@ export default function KillChainNav({
                   </p>
                 </div>
               </button>
+              </div>
 
               {/* Arrow connector */}
               {i < killChain.length - 1 && (
@@ -122,6 +133,6 @@ export default function KillChainNav({
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }

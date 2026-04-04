@@ -20,7 +20,7 @@ function significanceBadge(significance: string) {
     return <Badge variant="destructive" className="text-xs">{significance}</Badge>;
   }
   if (lower.includes("medium") || lower.includes("moderate")) {
-    return <Badge variant="secondary" className="text-xs bg-yellow-500/10 text-yellow-700 border-yellow-500/20">{significance}</Badge>;
+    return <Badge variant="warning" className="text-xs">{significance}</Badge>;
   }
   return <Badge variant="outline" className="text-xs">{significance}</Badge>;
 }

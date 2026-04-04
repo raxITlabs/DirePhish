@@ -14,7 +14,8 @@ import ViewToggle, {
 import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import { Alert, AlertDescription } from "@/app/components/ui/alert";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText } from "lucide-react";
+import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
 import Breadcrumbs from "@/app/components/layout/Breadcrumbs";
 import {
   checkReport,
@@ -344,7 +345,7 @@ export default function ReportPage({
               size="lg"
             >
               {generating && (
-                <Loader2 size={16} className="mr-2 animate-spin" />
+                <AsciiSpinner className="mr-2" />
               )}
               Generate Report
             </Button>

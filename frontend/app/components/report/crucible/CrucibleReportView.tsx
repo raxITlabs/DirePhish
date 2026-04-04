@@ -6,11 +6,10 @@ import remarkGfm from "remark-gfm";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
-import { Download, MessageSquare, Swords } from "lucide-react";
+import { Download } from "lucide-react";
+import { AsciiSectionHeader, AsciiDivider } from "@/app/components/ascii/DesignSystem";
 import type { CrucibleReport } from "@/app/actions/report";
 import { getSimulationCosts } from "@/app/actions/report";
 import CrucibleHeroCard from "./CrucibleHeroCard";
@@ -129,71 +128,78 @@ export default function CrucibleReportView({ report }: CrucibleReportViewProps) 
 
       {/* Executive Summary */}
       {report.executiveSummary && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Executive Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="prose prose-sm max-w-none dark:prose-invert text-base leading-relaxed">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {report.executiveSummary}
-              </ReactMarkdown>
-            </div>
-          </CardContent>
-        </Card>
+        <section className="space-y-3">
+          <AsciiSectionHeader as="h2">Executive Summary</AsciiSectionHeader>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="prose prose-sm max-w-none dark:prose-invert text-base leading-relaxed">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {report.executiveSummary}
+                </ReactMarkdown>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
       )}
+
+      <AsciiDivider variant="dots" />
 
       {/* Timeline */}
       {report.timeline && report.timeline.length > 0 && (
-        <CrucibleTimeline events={report.timeline} />
+        <>
+          <CrucibleTimeline events={report.timeline} />
+          <AsciiDivider variant="dots" />
+        </>
       )}
 
       {/* Agent Performance */}
       {report.agentScores && report.agentScores.length > 0 && (
-        <CrucibleAgentGrid agents={report.agentScores} />
+        <>
+          <CrucibleAgentGrid agents={report.agentScores} />
+          <AsciiDivider variant="dots" />
+        </>
       )}
 
       {/* Recommendations */}
       {report.recommendations && report.recommendations.length > 0 && (
-        <CrucibleRecommendations recommendations={report.recommendations} />
+        <>
+          <CrucibleRecommendations recommendations={report.recommendations} />
+          <AsciiDivider variant="dots" />
+        </>
       )}
 
       {/* Communication Analysis */}
       {report.communicationAnalysis && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <MessageSquare size={18} />
-              Communication Analysis
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="prose prose-sm max-w-none dark:prose-invert">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {report.communicationAnalysis}
-              </ReactMarkdown>
-            </div>
-          </CardContent>
-        </Card>
+        <section className="space-y-3">
+          <AsciiSectionHeader as="h2" sigil="◇">Communication Analysis</AsciiSectionHeader>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {report.communicationAnalysis}
+                </ReactMarkdown>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
       )}
+
+      {report.communicationAnalysis && report.tensions && <AsciiDivider variant="dots" />}
 
       {/* Tensions */}
       {report.tensions && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Swords size={18} />
-              Tensions &amp; Conflicts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="prose prose-sm max-w-none dark:prose-invert">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {report.tensions}
-              </ReactMarkdown>
-            </div>
-          </CardContent>
-        </Card>
+        <section className="space-y-3">
+          <AsciiSectionHeader as="h2" sigil="⚔">Tensions &amp; Conflicts</AsciiSectionHeader>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {report.tensions}
+                </ReactMarkdown>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
       )}
     </div>
   );

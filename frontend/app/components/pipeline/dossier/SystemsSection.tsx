@@ -6,10 +6,9 @@ import { Label } from "@/app/components/ui/label";
 import { Button } from "@/app/components/ui/button";
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
 } from "@/app/components/ui/card";
+import { AsciiSectionHeader } from "@/app/components/ascii/DesignSystem";
 import {
   Select,
   SelectTrigger,
@@ -38,9 +37,9 @@ const CRITICALITIES = ["low", "medium", "high", "critical"] as const;
 export default function SystemsSection({ form }: SystemsSectionProps) {
   return (
     <Card className="rounded-xl">
-      <CardHeader>
-        <CardTitle>Technology Stack</CardTitle>
-      </CardHeader>
+      <div className="px-4 pt-4 pb-1">
+        <AsciiSectionHeader>Technology Stack</AsciiSectionHeader>
+      </div>
       <CardContent>
         <form.Field name="systems" mode="array">
           {(systemsField) => (

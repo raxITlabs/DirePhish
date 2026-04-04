@@ -1,5 +1,7 @@
 "use client";
 
+import { Card } from "@/app/components/ui/card";
+
 function formatTactic(t: string): string {
   return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -17,14 +19,14 @@ interface KillChainFlowProps {
   threatName?: string;
 }
 
-const STEP_COLORS = [
-  "bg-royal-azure-100 border-royal-azure-300 text-royal-azure-800",
-  "bg-royal-azure-100 border-royal-azure-300 text-royal-azure-800",
-  "bg-tuscan-sun-100 border-tuscan-sun-300 text-tuscan-sun-800",
-  "bg-tuscan-sun-100 border-tuscan-sun-300 text-tuscan-sun-800",
-  "bg-burnt-peach-100 border-burnt-peach-300 text-burnt-peach-800",
-  "bg-burnt-peach-100 border-burnt-peach-300 text-burnt-peach-800",
-  "bg-burnt-peach-100 border-burnt-peach-300 text-burnt-peach-800",
+const STEP_TEXT_COLORS = [
+  "text-royal-azure-800",
+  "text-royal-azure-800",
+  "text-tuscan-sun-800",
+  "text-tuscan-sun-800",
+  "text-burnt-peach-800",
+  "text-burnt-peach-800",
+  "text-burnt-peach-800",
 ];
 
 export default function KillChainFlow({ killChain, threatName }: KillChainFlowProps) {
@@ -33,20 +35,17 @@ export default function KillChainFlow({ killChain, threatName }: KillChainFlowPr
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <p className="text-sm font-medium text-pitch-black-600">MITRE ATT&CK Kill Chain</p>
+        <span className="text-primary font-mono text-xs select-none" aria-hidden="true">{"⚔"}</span>
+        <p className="font-mono text-xs font-semibold uppercase tracking-wider text-foreground">MITRE ATT&CK Kill Chain</p>
         {threatName && (
-          <span className="text-xs text-pitch-black-400">— {threatName}</span>
+          <span className="text-xs font-mono text-muted-foreground">— {threatName}</span>
         )}
       </div>
 
-      {/* Horizontal flow */}
       <div className="flex items-stretch gap-0 overflow-x-auto pb-2">
         {killChain.map((step, i) => (
           <div key={step.step} className="flex items-stretch shrink-0">
-            {/* Step card */}
-            <div
-              className={`relative px-4 py-3 rounded-lg border min-w-[140px] max-w-[180px] ${STEP_COLORS[i % STEP_COLORS.length]}`}
-            >
+            <Card size="sm" className={`min-w-[140px] max-w-[180px] ${STEP_TEXT_COLORS[i % STEP_TEXT_COLORS.length]}`}>
               <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5">
                 {formatTactic(step.tactic)}
               </p>
@@ -56,9 +55,8 @@ export default function KillChainFlow({ killChain, threatName }: KillChainFlowPr
               <p className="text-[10px] opacity-70 mt-1 truncate">
                 {step.target}
               </p>
-            </div>
+            </Card>
 
-            {/* Arrow connector */}
             {i < killChain.length - 1 && (
               <div className="flex items-center px-1">
                 <svg width="20" height="12" viewBox="0 0 20 12" className="text-pitch-black-300">

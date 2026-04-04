@@ -14,7 +14,8 @@ import RiskScoreView from "@/app/components/report/exercise/RiskScoreView";
 import PlaybookFirstLayout from "@/app/components/report/exercise/PlaybookFirstLayout";
 import ExportButton from "@/app/components/report/exercise/ExportButton";
 import { Skeleton } from "@/app/components/ui/skeleton";
-import { AlertTriangle, Home, Loader2 } from "lucide-react";
+import { AlertTriangle, Home } from "lucide-react";
+import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
 import { Card, CardContent } from "@/app/components/ui/card";
 import Link from "next/link";
 
@@ -96,12 +97,12 @@ export default function ExerciseReportPage({
     return (
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="flex items-center gap-3">
-          <Loader2 className="animate-spin text-muted-foreground" size={20} />
+          <AsciiSpinner className="text-lg text-muted-foreground" />
           <div>
             <p className="font-medium">Generating Exercise Report</p>
             <p className="text-sm text-muted-foreground">
               Analyzing simulations, aggregating team performance, running root
-              cause analysis, and generating incident response playbook...
+              cause analysis, and generating incident response playbook\u2026
             </p>
           </div>
         </div>

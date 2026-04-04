@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatDuration } from "@/app/lib/utils";
+import { AsciiSectionHeader, AsciiStatus, AsciiMetric, AsciiProgressBar, AsciiMetricCard, AsciiDivider } from "@/app/components/ascii/DesignSystem";
+import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
 import type {
   CompanyDossier,
   GraphData,
@@ -471,112 +473,82 @@ function ResearchActivityView({ progress }: { progress: ResearchProgress }) {
 
   return (
     <div className="space-y-5">
-      {/* Progress bar */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Progress</span>
-          <span className="text-[10px] font-mono text-royal-azure-600 tabular-nums">{progress.progress}%</span>
-        </div>
-        <div className="h-1.5 bg-royal-azure-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-royal-azure-500 rounded-full transition-all duration-700 ease-out"
-            style={{ width: `${progress.progress}%` }}
-          />
-        </div>
+      {/* Progress + Elapsed — single line */}
+      <div className="font-mono text-xs flex items-baseline gap-2 whitespace-nowrap">
+        <AsciiProgressBar value={progress.progress} width={12} showPercent={false} color="text-primary" label={`Research progress: ${progress.progress}%`} />
+        <span className="text-foreground tabular-nums">{progress.progress}%</span>
+        {progress.startedAt && (
+          <span className="text-muted-foreground tabular-nums">{minutes}:{seconds}</span>
+        )}
       </div>
 
-      {/* Elapsed time */}
-      {progress.startedAt && (
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Elapsed</span>
-          <span className="text-xs font-mono text-foreground/70 tabular-nums">{minutes}:{seconds}</span>
-        </div>
-      )}
+      <AsciiDivider variant="dots" />
 
-      {/* Research steps timeline */}
+      {/* Activity timeline */}
+      <AsciiSectionHeader sigil="│" as="h4">Activity</AsciiSectionHeader>
       <div className="space-y-0">
-        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Activity</p>
-        <div className="relative">
-          {RESEARCH_STEPS.map((step, i) => {
-            const isCompleted = i < activeStepIndex;
-            const isActive = i === activeStepIndex;
-            const isPending = i > activeStepIndex;
+        {RESEARCH_STEPS.map((step, i) => {
+          const isCompleted = i < activeStepIndex;
+          const isActive = i === activeStepIndex;
+          const isLast = i === RESEARCH_STEPS.length - 1;
 
-            return (
-              <div key={step.threshold} className="flex items-start gap-3 relative">
-                {/* Vertical connector line */}
-                {i < RESEARCH_STEPS.length - 1 && (
-                  <div
-                    className={`absolute left-[7px] top-[18px] w-[2px] h-[calc(100%-2px)] ${
-                      isCompleted ? "bg-royal-azure-300" : "bg-border/30"
-                    }`}
-                  />
+          const status: "complete" | "running" | "pending" = isCompleted
+            ? "complete"
+            : isActive
+              ? "running"
+              : "pending";
+
+          return (
+            <div key={step.threshold} className="flex items-start gap-2 font-mono text-xs">
+              {/* ASCII timeline rail */}
+              <div className="flex flex-col items-center select-none shrink-0" aria-hidden="true">
+                <AsciiStatus status={status} showLabel={false} />
+                {!isLast && (
+                  <span className="text-muted-foreground/30 text-[10px] leading-tight whitespace-pre">{"│\n│"}</span>
                 )}
-                {/* Dot / Check */}
-                <div className="relative z-10 shrink-0 mt-0.5">
-                  {isCompleted ? (
-                    <div className="w-4 h-4 rounded-full bg-royal-azure-500 flex items-center justify-center">
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                        <path d="M2 5L4.5 7.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                  ) : isActive ? (
-                    <div className="w-4 h-4 rounded-full bg-royal-azure-500 animate-pulse-dot" />
-                  ) : (
-                    <div className="w-4 h-4 rounded-full bg-border/30" />
-                  )}
-                </div>
-                {/* Label */}
-                <div className="pb-4 min-w-0">
-                  <span
-                    className={`text-xs font-mono leading-tight ${
-                      isCompleted
-                        ? "text-royal-azure-700"
-                        : isActive
-                          ? "text-foreground font-medium"
-                          : "text-muted-foreground/40"
-                    }`}
-                  >
-                    {step.label}
-                  </span>
-                  {isActive && progress.progressMessage && (
-                    <p className="text-[10px] font-mono text-muted-foreground mt-0.5 truncate">
-                      {progress.progressMessage}
-                    </p>
-                  )}
-                  {"substeps" in step && step.substeps && (isActive || isCompleted) && (
-                    <ul className="mt-1.5 space-y-1">
-                      {step.substeps.map((sub: string) => (
-                        <li key={sub} className="flex items-start gap-1.5">
-                          <span className={`mt-[5px] shrink-0 block w-1 h-1 rounded-full ${
-                            isCompleted ? "bg-royal-azure-400" : "bg-royal-azure-400 animate-pulse-dot"
-                          }`} />
-                          <span className={`text-[10px] font-mono leading-snug ${
-                            isCompleted ? "text-royal-azure-600" : "text-muted-foreground"
-                          }`}>
-                            {sub}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
               </div>
-            );
-          })}
-        </div>
+              {/* Content */}
+              <div className="pb-3 min-w-0">
+                <span
+                  className={`leading-tight ${
+                    isCompleted
+                      ? "text-foreground"
+                      : isActive
+                        ? "text-foreground font-medium"
+                        : "text-muted-foreground/40"
+                  }`}
+                >
+                  {step.label}
+                </span>
+                {isActive && progress.progressMessage && (
+                  <p className="text-[10px] font-mono text-muted-foreground mt-0.5 truncate">
+                    {progress.progressMessage}
+                  </p>
+                )}
+                {"substeps" in step && step.substeps && (isActive || isCompleted) && (
+                  <ul className="mt-1 space-y-0.5">
+                    {step.substeps.map((sub: string) => (
+                      <li key={sub} className="flex items-start gap-1.5 text-[10px]">
+                        <span className="text-muted-foreground/40 select-none" aria-hidden="true">·</span>
+                        <span className={isCompleted ? "text-foreground/70" : "text-muted-foreground"}>
+                          {sub}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Placeholder counters */}
+      <AsciiDivider variant="dots" />
+
+      {/* Counters */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-royal-azure-50/50 rounded-lg px-3 py-2 text-center">
-          <div className="text-xl font-bold font-mono text-royal-azure-300">--</div>
-          <div className="text-[10px] font-mono text-royal-azure-400 uppercase">Entities</div>
-        </div>
-        <div className="bg-verdigris-50/50 rounded-lg px-3 py-2 text-center">
-          <div className="text-xl font-bold font-mono text-verdigris-300">--</div>
-          <div className="text-[10px] font-mono text-verdigris-400 uppercase">Relationships</div>
-        </div>
+        <AsciiMetricCard label="Entities" value="--" icon="§" valueColor="text-primary" />
+        <AsciiMetricCard label="Relationships" value="--" icon="›" valueColor="text-secondary" />
       </div>
     </div>
   );
@@ -832,9 +804,9 @@ function StageDetail({
       return (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
+            <AsciiSpinner className="text-lg text-primary shrink-0" />
             <span className="text-sm font-mono text-muted-foreground">
-              {state?.detail || "Building agent personas, pressures, and communication channels..."}
+              {state?.detail || "Building agent personas, pressures, and communication channels\u2026"}
             </span>
           </div>
 
@@ -1017,7 +989,7 @@ function StageDetail({
       return (
         <div className="space-y-3" aria-live="polite">
           <div className="flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-tuscan-sun-500 border-t-transparent rounded-full animate-spin shrink-0" />
+            <AsciiSpinner className="text-lg text-tuscan-sun-500 shrink-0" />
             <span className="text-sm font-mono text-foreground/80">
               Variation {completed + 1}/{total}
             </span>
@@ -1152,7 +1124,7 @@ function StageDetail({
       return (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
+            <AsciiSpinner className="text-lg text-primary shrink-0" />
             <span className="text-sm font-mono text-muted-foreground">
               {forkAgent && forkRound
                 ? `Forking round ${forkRound} \u2014 ${forkAgent}\u2019s decision...`
@@ -1299,8 +1271,8 @@ function StageDetail({
   if (state?.status === "running") {
     return (
       <div className="flex items-center gap-3 py-8">
-        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
-        <span className="text-sm font-mono text-muted-foreground">{state.message || "Processing..."}</span>
+        <AsciiSpinner className="text-lg text-primary shrink-0" />
+        <span className="text-sm font-mono text-muted-foreground">{state.message || "Processing\u2026"}</span>
       </div>
     );
   }

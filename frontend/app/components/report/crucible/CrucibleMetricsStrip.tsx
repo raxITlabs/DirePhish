@@ -1,7 +1,6 @@
 "use client";
 
-import { Card, CardContent } from "@/app/components/ui/card";
-import { Users, Layers, Zap, TrendingUp, DollarSign } from "lucide-react";
+import { AsciiMetricCard } from "@/app/components/ascii/DesignSystem";
 import type { CrucibleReport } from "@/app/actions/report";
 
 interface CrucibleMetricsStripProps {
@@ -27,9 +26,9 @@ export default function CrucibleMetricsStrip({
   function scoreColor(score: string): string {
     const n = parseFloat(score);
     if (isNaN(n)) return "text-muted-foreground";
-    if (n >= 7) return "text-green-600";
-    if (n >= 5) return "text-yellow-600";
-    return "text-red-600";
+    if (n >= 7) return "text-verdigris-700";
+    if (n >= 5) return "text-tuscan-sun-700";
+    return "text-burnt-peach-700";
   }
 
   const costDisplay = totalCostUsd !== undefined
@@ -37,27 +36,23 @@ export default function CrucibleMetricsStrip({
     : "—";
 
   const metrics = [
-    { label: "Agents", value: String(agentCount), icon: Users },
-    { label: "Rounds", value: String(rounds), icon: Layers },
-    { label: "Total Actions", value: String(totalActions), icon: Zap },
-    { label: "Avg Score", value: avgScore, icon: TrendingUp, className: scoreColor(avgScore) },
-    { label: "Est. Cost", value: costDisplay, icon: DollarSign },
+    { label: "Agents", value: String(agentCount), icon: "●" },
+    { label: "Rounds", value: String(rounds), icon: "◆" },
+    { label: "Total Actions", value: String(totalActions), icon: "⚡" },
+    { label: "Avg Score", value: avgScore, icon: "▲", valueColor: scoreColor(avgScore) },
+    { label: "Est. Cost", value: costDisplay, icon: "$" },
   ];
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
       {metrics.map((m) => (
-        <Card key={m.label}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-muted-foreground mb-1">
-              <m.icon size={14} />
-              <span className="text-xs font-medium">{m.label}</span>
-            </div>
-            <p className={`text-2xl font-bold ${m.className ?? ""}`}>
-              {m.value}
-            </p>
-          </CardContent>
-        </Card>
+        <AsciiMetricCard
+          key={m.label}
+          label={m.label}
+          value={m.value}
+          icon={m.icon}
+          valueColor={m.valueColor}
+        />
       ))}
     </div>
   );

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Card, CardContent } from "@/app/components/ui/card";
+import { AsciiSectionHeader, AsciiEmptyState } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 
 interface Props {
@@ -17,15 +19,16 @@ export default function BeforeAfterComparison({ projectId, currentScore }: Props
 
   if (!hasBaseline) {
     return (
-      <div className="bg-pitch-black-100 rounded-xl p-5 border border-dashed border-pitch-black-300">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-pitch-black-500 mb-2">
-          Before / After Comparison
-        </h3>
-        <p className="text-[12px] text-pitch-black-500">
-          Run DirePhish again after remediation to see your risk score improvement.
-          The comparison will show score delta, dimension changes, and annualized loss reduction.
-        </p>
-      </div>
+      <Card className="border border-dashed border-border/40">
+        <CardContent>
+          <AsciiSectionHeader as="h3" sigil="↔">Before / After Comparison</AsciiSectionHeader>
+          <AsciiEmptyState
+            title="No baseline available"
+            description="Run DirePhish again after remediation to see your risk score improvement. The comparison will show score delta, dimension changes, and annualized loss reduction."
+            sigil="↔"
+          />
+        </CardContent>
+      </Card>
     );
   }
 

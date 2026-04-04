@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
 import type { CompanyDossier } from "@/app/types";
 import type { DossierFormValues, DossierForm } from "@/app/lib/dossier-schema";
 import { Button } from "@/app/components/ui/button";
@@ -92,7 +93,7 @@ export default function PipelineDossierPanel({
           className="w-full font-mono text-sm"
           onClick={() => form.handleSubmit()}
         >
-          {confirming ? "Confirming..." : "Confirm & Continue"}
+          {confirming ? <><AsciiSpinner /> Confirming</> : "Confirm & Continue"}
         </Button>
       </div>
     </div>
