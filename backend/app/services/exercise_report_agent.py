@@ -1419,7 +1419,7 @@ def _generate_exercise_report(
                 from .counterfactual_engine import CounterfactualEngine
                 original_sim_id = sim_ids[0] if sim_ids else None
                 if original_sim_id:
-                    cf_comparison = CounterfactualEngine.compare_branches(original_sim_id, branch_ids)
+                    cf_comparison = CounterfactualEngine.compare_branches(original_sim_id, branch_ids, cost_tracker=cost_tracker)
                     logger.info(f"Loaded CF comparison: {len(branch_ids)} branches")
             except Exception as e:
                 logger.warning(f"Counterfactual comparison failed: {e}")
@@ -1572,6 +1572,7 @@ _PHASE_DISPLAY_NAMES = {
     "config_expansion": "Config Generation",
     "simulation": "Simulation",
     "exercise_report": "Report Generation",
+    "counterfactual": "What-If Analysis",
 }
 
 # Phases that are project-level (should only be counted once, not per-sim)
