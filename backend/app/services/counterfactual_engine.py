@@ -13,6 +13,7 @@ from pathlib import Path
 
 from ..config import Config
 from ..utils.llm_client import LLMClient
+from ..utils.cost_tracker import CostTracker
 from ..utils.logger import get_logger
 
 logger = get_logger("counterfactual_engine")
@@ -50,7 +51,8 @@ class CounterfactualEngine:
 
     @staticmethod
     def identify_decision_points(
-        sim_id: str, actions: list[dict], config: dict
+        sim_id: str, actions: list[dict], config: dict,
+        cost_tracker: CostTracker | None = None,
     ) -> list[dict]:
         """Use LLM to identify 3-5 critical decision points in a completed simulation.
 
@@ -98,6 +100,14 @@ Return ONLY a JSON object: {{"decision_points": [...]}}"""
                 temperature=0.3,
                 max_tokens=4096,
             )
+            if cost_tracker and llm.last_usage:
+                cost_tracker.track_llm(
+                    "counterfactual", llm.model,
+                    llm.last_usage["input_tokens"],
+                    llm.last_usage["output_tokens"],
+                    "identify_decision_points",
+                    llm.last_usage.get("cached_tokens", 0),
+                )
             points = result.get("decision_points", [])
             logger.info(
                 "Identified %d decision points for sim %s", len(points), sim_id
@@ -234,7 +244,10 @@ Return ONLY a JSON object: {{"decision_points": [...]}}"""
     # ------------------------------------------------------------------
 
     @staticmethod
-    def compare_branches(original_sim_id: str, branch_ids: list[str]) -> dict:
+    def compare_branches(
+        original_sim_id: str, branch_ids: list[str],
+        cost_tracker: CostTracker | None = None,
+    ) -> dict:
         """Compare outcomes across original and forked branches.
 
         Returns:
@@ -303,6 +316,14 @@ Focus on how the fork decisions changed containment speed and action count."""
                 temperature=0.4,
                 max_tokens=512,
             )
+            if cost_tracker and llm.last_usage:
+                cost_tracker.track_llm(
+                    "counterfactual", llm.model,
+                    llm.last_usage["input_tokens"],
+                    llm.last_usage["output_tokens"],
+                    "compare_branches_divergence",
+                    llm.last_usage.get("cached_tokens", 0),
+                )
         except Exception as e:
             logger.warning("LLM comparison failed: %s", e)
             divergence_summary = "Comparison unavailable."

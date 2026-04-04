@@ -14,12 +14,13 @@ interface KillChainStep {
   description: string;
 }
 
-type ViewId = "playbook" | "executive" | "security" | "crisis-comms";
+type ViewId = "playbook" | "executive" | "security" | "crisis-comms" | "cost";
 
 const VIEWS: { id: ViewId; label: string }[] = [
   { id: "executive", label: "Executive Summary" },
   { id: "security", label: "Security Team" },
   { id: "crisis-comms", label: "Crisis Comms" },
+  { id: "cost", label: "Cost Breakdown" },
 ];
 
 interface ReportStagesPanelProps {

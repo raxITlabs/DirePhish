@@ -362,9 +362,21 @@ export interface ExerciseReport {
       usd: number;
       inputTokens: number;
       outputTokens: number;
+      cachedTokens: number;
+      llmUsd: number;
+      searchQueries: number;
+      searchUsd: number;
+      embeddingTokens: number;
+      embeddingUsd: number;
     }>;
     totalInputTokens: number;
     totalOutputTokens: number;
+    totalCachedTokens: number;
+    serviceBreakdown: {
+      llm: { usd: number; inputTokens: number; outputTokens: number; cachedTokens: number };
+      searchGrounding: { usd: number; queries: number };
+      embedding: { usd: number; tokens: number };
+    };
     model?: string;
   };
 
