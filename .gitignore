@@ -25,6 +25,7 @@ dist/
 build/
 
 # Next.js build output
+.next/
 frontend/.next/
 
 # Node.js
