@@ -8,6 +8,7 @@ import {
 } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
 import { Users, Zap } from "lucide-react";
+import { AsciiProgressBar } from "@/app/components/ascii/DesignSystem";
 import type { CrucibleReport } from "@/app/actions/report";
 
 type AgentScore = NonNullable<CrucibleReport["agentScores"]>[0];
@@ -16,10 +17,10 @@ interface CrucibleAgentCardProps {
   agents: AgentScore[];
 }
 
-function scoreColor(score: number): string {
-  if (score >= 8) return "bg-green-500";
-  if (score >= 5) return "bg-yellow-500";
-  return "bg-red-500";
+function scoreBarColor(score: number): string {
+  if (score >= 8) return "text-verdigris-600";
+  if (score >= 5) return "text-tuscan-sun-600";
+  return "text-burnt-peach-600";
 }
 
 function scoreTextColor(score: number): string {
@@ -60,12 +61,14 @@ export default function CrucibleAgentGrid({ agents }: CrucibleAgentCardProps) {
               </div>
 
               {/* Score bar */}
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${scoreColor(agent.score)}`}
-                  style={{ width: `${agent.score * 10}%` }}
-                />
-              </div>
+              <AsciiProgressBar
+                value={agent.score}
+                max={10}
+                width={14}
+                showPercent={false}
+                color={scoreBarColor(agent.score)}
+                label={`${agent.name} score: ${agent.score}/10`}
+              />
 
               {/* Strengths & Weaknesses */}
               {agent.strengths.length > 0 && (

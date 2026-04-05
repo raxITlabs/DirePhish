@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import AppSidebar from "@/app/components/layout/AppSidebar";
-import GlobalHeader from "@/app/components/layout/GlobalHeader";
-// import BackgroundGrain from "@/app/components/ascii/BackgroundGrain";
+import LayoutShell from "@/app/components/layout/LayoutShell";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -32,15 +30,10 @@ export default function RootLayout({
       className={`${geistMono.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="h-full font-sans">
-        {/* <BackgroundGrain /> */}
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:text-sm focus:font-mono">
           Skip to main content
         </a>
-        <GlobalHeader />
-        <div className="flex" style={{ height: "calc(100svh - 3rem)" }}>
-          <AppSidebar />
-          <main id="main-content" className="flex-1 min-w-0 overflow-auto">{children}</main>
-        </div>
+        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   );

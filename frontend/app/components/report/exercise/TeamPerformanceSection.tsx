@@ -32,10 +32,10 @@ function scoreColor(score: number): string {
   return "text-burnt-peach-700";
 }
 
-function scoreBg(score: number): string {
-  if (score >= 7) return "bg-verdigris-500";
-  if (score >= 5) return "bg-tuscan-sun-500";
-  return "bg-burnt-peach-500";
+function scoreBarColor(score: number): string {
+  if (score >= 7) return "text-verdigris-600";
+  if (score >= 5) return "text-tuscan-sun-600";
+  return "text-burnt-peach-600";
 }
 
 function formatRole(slug: string): string {
@@ -77,12 +77,14 @@ function TeamCard({ team }: { team: Team }) {
               <span className="w-28 text-muted-foreground truncate">
                 {DIMENSION_LABELS[key] ?? key}
               </span>
-              <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${scoreBg(value)}`}
-                  style={{ width: `${value * 10}%`, opacity: 0.8 }}
-                />
-              </div>
+              <AsciiProgressBar
+                value={value}
+                max={10}
+                width={14}
+                showPercent={false}
+                color={scoreBarColor(value)}
+                label={`${DIMENSION_LABELS[key] ?? key}: ${value}/10`}
+              />
               <span className={`w-5 text-right font-mono font-bold ${scoreColor(value)}`}>
                 {value}
               </span>

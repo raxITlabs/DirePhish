@@ -112,12 +112,14 @@ export default function CostView({ report }: Props) {
                         {fmt(phase.usd)}
                       </span>
                     </div>
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-verdigris-500 rounded-full transition-all"
-                        style={{ width: `${(phase.usd / maxPhaseUsd) * 100}%` }}
-                      />
-                    </div>
+                    <AsciiProgressBar
+                      value={phase.usd}
+                      max={maxPhaseUsd}
+                      width={14}
+                      showPercent={false}
+                      color="text-verdigris-600"
+                      label={`${phase.phase} cost`}
+                    />
                     <div className="flex gap-4 mt-1">
                       <span className="text-[10px] text-foreground/40">
                         {fmtTokens(phase.inputTokens)} in
