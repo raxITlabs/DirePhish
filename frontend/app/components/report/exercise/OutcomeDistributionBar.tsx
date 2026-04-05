@@ -1,5 +1,7 @@
 "use client";
 
+import { AsciiSectionHeader, AsciiDistributionBar } from "@/app/components/ascii/DesignSystem";
+
 interface OutcomeDistributionBarProps {
   distribution: {
     contained_early: number;
@@ -10,10 +12,10 @@ interface OutcomeDistributionBarProps {
 }
 
 const SEGMENTS = [
-  { key: "contained_early" as const, label: "Contained Early", color: "bg-verdigris-500", textColor: "text-verdigris-700", dot: "bg-verdigris-500" },
-  { key: "contained_late" as const, label: "Contained Late", color: "bg-tuscan-sun-500", textColor: "text-tuscan-sun-700", dot: "bg-tuscan-sun-500" },
-  { key: "not_contained" as const, label: "Not Contained", color: "bg-sandy-brown-500", textColor: "text-sandy-brown-700", dot: "bg-sandy-brown-500" },
-  { key: "escalated" as const, label: "Escalated", color: "bg-burnt-peach-500", textColor: "text-burnt-peach-700", dot: "bg-burnt-peach-500" },
+  { key: "contained_early" as const, label: "Contained Early", color: "text-verdigris-600", textColor: "text-verdigris-700", dot: "bg-verdigris-500" },
+  { key: "contained_late" as const, label: "Contained Late", color: "text-tuscan-sun-600", textColor: "text-tuscan-sun-700", dot: "bg-tuscan-sun-500" },
+  { key: "not_contained" as const, label: "Not Contained", color: "text-sandy-brown-600", textColor: "text-sandy-brown-700", dot: "bg-sandy-brown-500" },
+  { key: "escalated" as const, label: "Escalated", color: "text-burnt-peach-600", textColor: "text-burnt-peach-700", dot: "bg-burnt-peach-500" },
 ];
 
 export default function OutcomeDistributionBar({ distribution }: OutcomeDistributionBarProps) {
@@ -22,32 +24,18 @@ export default function OutcomeDistributionBar({ distribution }: OutcomeDistribu
 
   return (
     <div className="space-y-3">
-      <p className="font-mono text-xs font-semibold uppercase tracking-wider text-foreground">
-        <span className="text-primary select-none" aria-hidden="true">{"§ "}</span>
-        Outcome Distribution
-      </p>
+      <AsciiSectionHeader as="h3" sigil="§">Outcome Distribution</AsciiSectionHeader>
 
       {/* Bar */}
-      <div className="flex h-10 rounded-lg overflow-hidden">
-        {SEGMENTS.map((seg) => {
-          const count = distribution[seg.key];
-          const pct = (count / total) * 100;
-          if (pct === 0) return null;
-          return (
-            <div
-              key={seg.key}
-              className={`${seg.color} flex items-center justify-center transition-all duration-500`}
-              style={{ width: `${pct}%` }}
-            >
-              {pct > 10 && (
-                <span className="text-xs font-bold text-white">
-                  {Math.round(pct)}%
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <AsciiDistributionBar
+        segments={SEGMENTS.map((seg) => ({
+          value: distribution[seg.key],
+          color: seg.color,
+          label: seg.label,
+        }))}
+        width={50}
+        ariaLabel="Outcome distribution"
+      />
 
       {/* Legend */}
       <div className="flex flex-wrap gap-4">

@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
-import { AsciiSectionHeader } from "@/app/components/ascii/DesignSystem";
+import { AsciiSectionHeader, AsciiProgressBar } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 import OutcomeDistributionBar from "./OutcomeDistributionBar";
 import ReadinessGauge from "./ReadinessGauge";
@@ -58,12 +58,14 @@ export default function CISOView({ report }: CISOViewProps) {
                       <td className="py-2 px-3">{dp.agent}</td>
                       <td className="py-2 px-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-pitch-black-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-tuscan-sun-500"
-                              style={{ width: `${Math.min((dp.divergence_score / 4) * 100, 100)}%` }}
-                            />
-                          </div>
+                          <AsciiProgressBar
+                            value={dp.divergence_score}
+                            max={4}
+                            width={8}
+                            showPercent={false}
+                            color="text-tuscan-sun-600"
+                            label={`Divergence: ${dp.divergence_score.toFixed(2)}`}
+                          />
                           <span className="text-xs font-mono text-pitch-black-500">
                             {dp.divergence_score.toFixed(2)}
                           </span>
@@ -116,24 +118,22 @@ export default function CISOView({ report }: CISOViewProps) {
                   const pct = Math.round(score * 100);
                   const color =
                     pct >= 70
-                      ? "bg-verdigris-500"
+                      ? "text-verdigris-600"
                       : pct >= 40
-                        ? "bg-tuscan-sun-500"
-                        : "bg-burnt-peach-500";
+                        ? "text-tuscan-sun-600"
+                        : "text-burnt-peach-600";
                   return (
                     <div key={agent} className="flex items-center gap-3">
                       <span className="text-xs text-pitch-black-600 w-32 truncate shrink-0">
                         {agent}
                       </span>
-                      <div className="flex-1 h-2 bg-pitch-black-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${color} transition-all duration-500`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-mono text-pitch-black-500 w-10 text-right">
-                        {pct}%
-                      </span>
+                      <AsciiProgressBar
+                        value={pct}
+                        max={100}
+                        width={14}
+                        color={color}
+                        label={`${agent}: ${pct}%`}
+                      />
                     </div>
                   );
                 })}

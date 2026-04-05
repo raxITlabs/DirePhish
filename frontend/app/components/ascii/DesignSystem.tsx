@@ -1,6 +1,11 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, type ReactNode } from "react"
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/app/components/ui/tooltip"
 
 // ─────────────────────────────────────────────────────────
 // § SECTION HEADER
@@ -625,6 +630,40 @@ export function AsciiAlert({
 }
 
 // ─────────────────────────────────────────────────────────
+// ┌ℹ┐ TOOLTIP
+// ─────────────────────────────────────────────────────────
+
+export function AsciiTooltip({
+  children,
+  content,
+  side = "top",
+  align = "center",
+}: {
+  children: ReactNode
+  content: ReactNode
+  side?: "top" | "bottom" | "left" | "right"
+  align?: "center" | "start" | "end"
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={children as React.ReactElement} />
+      <TooltipContent
+        side={side}
+        align={align}
+        sideOffset={8}
+        className="relative bg-foreground text-background font-mono text-xs px-3 py-2 rounded-md max-w-xs"
+      >
+        <span className="absolute -top-px -left-px text-[8px] text-background/30 leading-none select-none" aria-hidden="true">┌</span>
+        <span className="absolute -top-px -right-px text-[8px] text-background/30 leading-none select-none" aria-hidden="true">┐</span>
+        <span className="absolute -bottom-px -left-px text-[8px] text-background/30 leading-none select-none" aria-hidden="true">└</span>
+        <span className="absolute -bottom-px -right-px text-[8px] text-background/30 leading-none select-none" aria-hidden="true">┘</span>
+        {content}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+// ─────────────────────────────────────────────────────────
 // [ | ] TAB BAR
 // ─────────────────────────────────────────────────────────
 
@@ -633,7 +672,7 @@ export function AsciiTabBar({
   activeTab,
   onTabChange,
 }: {
-  tabs: { key: string; label: string }[]
+  tabs: { key: string; label: string; tooltip?: ReactNode }[]
   activeTab: string
   onTabChange: (key: string) => void
 }) {
@@ -641,7 +680,7 @@ export function AsciiTabBar({
     <div className="font-mono text-xs flex items-center overflow-x-auto" role="tablist">
       {tabs.map((tab, i) => {
         const isActive = tab.key === activeTab
-        return (
+        const btn = (
           <button
             key={tab.key}
             type="button"
@@ -658,6 +697,16 @@ export function AsciiTabBar({
             {tab.label}
           </button>
         )
+
+        if (tab.tooltip) {
+          return (
+            <AsciiTooltip key={tab.key} content={tab.tooltip} side="bottom">
+              {btn}
+            </AsciiTooltip>
+          )
+        }
+
+        return btn
       })}
     </div>
   )
@@ -689,5 +738,59 @@ export function AsciiEmptyState({
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────
+// █▓▒ DISTRIBUTION BAR (multi-segment)
+// ─────────────────────────────────────────────────────────
+
+type DistributionSegment = {
+  value: number
+  color: string
+  label: string
+}
+
+export function AsciiDistributionBar({
+  segments,
+  width = 40,
+  ariaLabel = "Distribution",
+}: {
+  segments: DistributionSegment[]
+  width?: number
+  ariaLabel?: string
+}) {
+  const total = segments.reduce((sum, s) => sum + s.value, 0)
+  if (total === 0) return null
+
+  // Allocate characters proportionally, rounding to fill exactly `width`
+  const raw = segments.map((s) => (s.value / total) * width)
+  const floored = raw.map(Math.floor)
+  let remaining = width - floored.reduce((a, b) => a + b, 0)
+  const remainders = raw.map((r, i) => ({ i, frac: r - floored[i] }))
+  remainders.sort((a, b) => b.frac - a.frac)
+  for (let k = 0; k < remaining; k++) floored[remainders[k].i]++
+
+  const srParts = segments
+    .filter((s) => s.value > 0)
+    .map((s) => `${s.label}: ${Math.round((s.value / total) * 100)}%`)
+    .join(", ")
+
+  return (
+    <span
+      className="font-mono text-xs inline-flex items-baseline"
+      role="img"
+      aria-label={`${ariaLabel}: ${srParts}`}
+    >
+      {segments.map((seg, i) => {
+        const chars = floored[i]
+        if (chars === 0) return null
+        return (
+          <span key={i} className={seg.color} aria-hidden="true">
+            {"█".repeat(chars)}
+          </span>
+        )
+      })}
+    </span>
   )
 }
