@@ -194,7 +194,12 @@ export default function ExecutiveSummaryView({ report }: Props) {
               <p className={`text-3xl font-bold font-mono mt-1 ${
                 rs ? (rs.composite_score >= 70 ? "text-verdigris-600" : rs.composite_score >= 40 ? "text-foreground" : "text-burnt-peach-600") : "text-foreground"
               }`}>
-                {rs ? rs.composite_score.toFixed(0) : "—"}
+                {rs ? (
+                  <>
+                    <span className="text-sm mr-1" aria-hidden="true">{rs.composite_score >= 70 ? "▼" : rs.composite_score >= 40 ? "─" : "▲"}</span>
+                    {rs.composite_score.toFixed(0)}
+                  </>
+                ) : "—"}
                 <span className="text-sm font-normal text-foreground/40">/100</span>
               </p>
               {rs?.interpretation && (

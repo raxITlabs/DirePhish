@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Link2, ArrowLeft, X } from "lucide-react";
+import { Link2, X } from "lucide-react";
 import type { PipelineRun } from "@/app/types";
 import AsciiSpinner from "@/app/components/ascii/AsciiSpinner";
 import LogoAlive from "@/app/components/ascii/LogoAlive";
@@ -15,6 +15,7 @@ import {
   AsciiAlert,
   AsciiEmptyState,
 } from "@/app/components/ascii/DesignSystem";
+import BottomBar from "@/app/components/layout/BottomBar";
 
 const EXAMPLES = [
   "Ransomware hitting finance systems",
@@ -38,6 +39,7 @@ export default function HomeClient() {
   const [error, setError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [runs, setRuns] = useState<PipelineRun[]>([]);
+  const historyHeaderRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     fetch("/api/runs")
@@ -74,6 +76,11 @@ export default function HomeClient() {
     }
   }, [url, context, mode, router]);
 
+  // Focus history header when drawer opens
+  useEffect(() => {
+    if (historyOpen) historyHeaderRef.current?.focus();
+  }, [historyOpen]);
+
   const handleDeleteRun = useCallback((runId: string) => {
     setRuns((prev) => prev.filter((r) => r.runId !== runId));
   }, []);
@@ -97,7 +104,7 @@ export default function HomeClient() {
 
           <AsciiDivider variant="dots" />
 
-          <Card className="bg-card/70 backdrop-blur-sm pointer-events-auto">
+          <Card className="bg-card/85 backdrop-blur-sm pointer-events-auto">
             <div className="flex items-center gap-3 px-4 py-3">
               <Link2 className="size-4 shrink-0 text-muted-foreground/50" />
               <input
@@ -173,7 +180,7 @@ export default function HomeClient() {
         <div className="bg-card/90 backdrop-blur-md border-t border-border/30 max-h-[50vh] flex flex-col pointer-events-auto shadow-lg">
           {/* Terminal header — light */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-border/20 shrink-0">
-            <span className="font-mono text-xs text-muted-foreground">
+            <span ref={historyHeaderRef} tabIndex={-1} className="font-mono text-xs text-muted-foreground outline-none">
               <span className="text-primary/50 mr-1" aria-hidden="true">§</span>
               run-history :: {runs.length} {runs.length === 1 ? "run" : "runs"}
             </span>
@@ -208,42 +215,12 @@ export default function HomeClient() {
       </div>
 
       {/* Bottom bar — always on top */}
-      <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-auto flex items-center px-5 py-2.5 border-t border-border/15 bg-background/60 backdrop-blur-sm">
-        <a href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80 shrink-0">
-          <span className="font-mono text-sm font-bold text-primary tracking-tighter">
-            DirePhish
-          </span>
-          <span className="text-[7px] font-mono uppercase tracking-wider text-primary/50 border border-primary/30 rounded px-1 py-px leading-none">
-            Alpha
-          </span>
-          <span className="font-mono text-[8px] tracking-widest text-primary/35 hidden sm:inline">
-            by raxIT Labs
-          </span>
-        </a>
-
-        <span
-          className="flex-1 mx-4 font-mono text-[10px] text-muted-foreground/20 select-none overflow-hidden whitespace-nowrap text-center"
-          aria-hidden="true"
-        >
-          {"─ · ".repeat(30)}
-        </span>
-
-        <button
-          onClick={() => setHistoryOpen(!historyOpen)}
-          className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground/50 hover:text-foreground transition-colors shrink-0"
-        >
-          {historyOpen ? (
-            <>
-              <X className="size-3" />
-              Close
-            </>
-          ) : (
-            <>
-              <span className="text-primary/50" aria-hidden="true">§</span>
-              History{runs.length > 0 ? ` [${runs.length}]` : ""}
-            </>
-          )}
-        </button>
+      <div className="pointer-events-auto">
+        <BottomBar
+          rightLabel={historyOpen ? "Close" : `History${runs.length > 0 ? ` [${runs.length}]` : ""}`}
+          rightAction={() => setHistoryOpen(!historyOpen)}
+          rightIcon={historyOpen ? <X className="size-3" /> : undefined}
+        />
       </div>
     </div>
   );
