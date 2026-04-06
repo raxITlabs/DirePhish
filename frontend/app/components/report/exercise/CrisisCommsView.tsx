@@ -81,7 +81,7 @@ export default function CrisisCommsView({ report }: { report: ExerciseReport }) 
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {comms.map((comm) => {
           const isExpanded = expandedId === comm.audience;
           const Icon = AUDIENCE_ICONS[comm.audience] || FileText;
@@ -90,10 +90,10 @@ export default function CrisisCommsView({ report }: { report: ExerciseReport }) 
               {/* Header */}
               <button
                 onClick={() => setExpandedId(isExpanded ? null : comm.audience)}
-                className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-muted/20 transition-colors"
+                className="w-full px-4 py-2 flex items-center gap-3 text-left hover:bg-muted/20 transition-colors"
               >
-                <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
-                  <Icon size={16} className="text-muted-foreground" />
+                <div className="w-6 h-6 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+                  <Icon size={14} className="text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
