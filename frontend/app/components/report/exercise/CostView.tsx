@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/app/components/ui/card";
-import { AsciiSectionHeader, AsciiMetric, AsciiEmptyState, AsciiProgressBar } from "@/app/components/ascii/DesignSystem";
+import { AsciiSectionHeader, AsciiMetric, AsciiEmptyState, AsciiProgressBar, AsciiDivider } from "@/app/components/ascii/DesignSystem";
 import type { ExerciseReport } from "@/app/actions/report";
 
 interface Props {
@@ -42,12 +42,12 @@ export default function CostView({ report }: Props) {
       : 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* 1. Total cost */}
       <Card>
         <CardContent>
           <AsciiSectionHeader as="h3" sigil="$">Total Pipeline Cost</AsciiSectionHeader>
-          <p className="text-4xl font-bold font-mono text-foreground">
+          <p className="text-2xl font-bold font-mono text-foreground">
             {fmt(costs.totalUsd)}
           </p>
           {costs.model && (
@@ -57,6 +57,8 @@ export default function CostView({ report }: Props) {
           )}
         </CardContent>
       </Card>
+
+      <AsciiDivider variant="dots" />
 
       {/* 2. Service breakdown */}
       {svc && (

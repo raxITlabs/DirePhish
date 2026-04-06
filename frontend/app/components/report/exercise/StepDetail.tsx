@@ -41,10 +41,10 @@ export default function StepDetail({ step }: StepDetailProps) {
   const hiddenCount = teamEntries.length - TEAM_LIMIT;
 
   return (
-    <div className="space-y-4">
-      {/* Step Header */}
+    <div className="space-y-2">
+      {/* Step Header — description left, evidence chips right */}
       <Card>
-        <CardContent>
+        <CardContent className="py-2.5">
           <div className="flex items-center gap-2 mb-2">
             <Badge variant="default" className="text-[10px] font-mono">
               {step.technique_id}
@@ -53,117 +53,130 @@ export default function StepDetail({ step }: StepDetailProps) {
               {formatTactic(step.tactic)}
             </span>
           </div>
-          <p className="text-sm font-medium text-foreground leading-relaxed mb-3">
-            {step.description}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            <EvidenceChip
-              label={`Contained in ${step.evidence.containment_rate}`}
-              type={step.evidence.containment_rate.includes("0/") ? "danger" : "success"}
-            />
-            {step.evidence.avg_detection_round > 0 && (
+          <div className="flex items-start gap-4">
+            <p className="text-sm font-medium text-foreground leading-snug flex-1 min-w-0">
+              {step.description}
+            </p>
+            <div className="flex flex-wrap gap-1.5 max-w-[280px] justify-end shrink-0">
               <EvidenceChip
-                label={`Avg detection: Round ${step.evidence.avg_detection_round}`}
-                type="warning"
+                label={`Contained in ${step.evidence.containment_rate}`}
+                type={step.evidence.containment_rate.includes("0/") ? "danger" : "success"}
               />
-            )}
-            {step.evidence.systems_affected > 0 && (
-              <EvidenceChip
-                label={`${step.evidence.systems_affected} systems affected`}
-                type="info"
-              />
-            )}
-            {step.evidence.divergence_pct > 0 && (
-              <EvidenceChip
-                label={`${step.evidence.divergence_pct}% divergence`}
-                type="danger"
-              />
-            )}
+              {step.evidence.avg_detection_round > 0 && (
+                <EvidenceChip
+                  label={`Avg detection: Round ${step.evidence.avg_detection_round}`}
+                  type="warning"
+                />
+              )}
+              {step.evidence.systems_affected > 0 && (
+                <EvidenceChip
+                  label={`${step.evidence.systems_affected} systems affected`}
+                  type="info"
+                />
+              )}
+              {step.evidence.divergence_pct > 0 && (
+                <EvidenceChip
+                  label={`${step.evidence.divergence_pct}% divergence`}
+                  type="danger"
+                />
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Response Actions */}
-      {step.response_actions.length > 0 && (
-        <div>
-          <AsciiSectionHeader as="h4" sigil="»">Response Actions</AsciiSectionHeader>
-          <div className="space-y-2">
-            {step.response_actions.map((action, i) => (
-              <ResponseActionCard key={i} action={action} index={i} />
-            ))}
-          </div>
+      {/* Two-pane: Response Actions left, Team Performance + Risk right */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-2 items-stretch">
+        {/* Response Actions */}
+        <Card className="h-full">
+          <CardContent className="py-2.5">
+            <AsciiSectionHeader as="h4" sigil="»">Response Actions</AsciiSectionHeader>
+            {step.response_actions.length > 0 ? (
+              <div className="space-y-2 mt-2">
+                {step.response_actions.map((action, i) => (
+                  <ResponseActionCard key={i} action={action} index={i} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-2">No response actions for this step.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Team Performance + Step Risk — single card, fills height */}
+        <Card className="h-full">
+          <CardContent className="flex flex-col h-full">
+            {teamEntries.length > 0 && (
+              <>
+                <AsciiSectionHeader as="h4" sigil="●">Team Performance</AsciiSectionHeader>
+                <div className="space-y-1.5 mt-2">
+                  {visibleTeams.map(([team, score]) => {
+                    const pct = score <= 1 ? score * 100 : score;
+                    const barColor = pct >= 70 ? "text-verdigris-500" : pct >= 40 ? "text-tuscan-sun-500" : "text-burnt-peach-500";
+                    return (
+                      <div key={team} className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-foreground/70 truncate min-w-0 w-28">
+                          {team}
+                        </span>
+                        <AsciiProgressBar value={pct} max={100} width={12} color={barColor} label={`${team}: ${Math.round(pct)}%`} />
+                      </div>
+                    );
+                  })}
+                </div>
+                {hiddenCount > 0 && !showAllTeams && (
+                  <button
+                    onClick={() => setShowAllTeams(true)}
+                    className="mt-2 text-xs text-royal-azure-600 hover:text-royal-azure-700 font-medium"
+                  >
+                    Show all {teamEntries.length} agents
+                  </button>
+                )}
+                {showAllTeams && hiddenCount > 0 && (
+                  <button
+                    onClick={() => setShowAllTeams(false)}
+                    className="mt-2 text-xs text-muted-foreground hover:text-foreground font-medium"
+                  >
+                    Show less
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Divider + Risk — pushed to bottom */}
+            <div className="mt-auto pt-3 border-t border-border/20">
+              <StepRiskMini
+                score={step.risk_at_step.score}
+                description={step.risk_at_step.description}
+                fairIncrement={step.risk_at_step.fair_increment}
+                inline
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* What-If + Regulatory — match heights */}
+      {(step.what_if.length > 0 || step.regulatory_timeline.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 items-stretch">
+          {step.what_if.length > 0 && (
+            <Card className="h-full">
+              <CardContent className="py-2.5">
+                <AsciiSectionHeader as="h4" sigil="↕">What-If: Alternate Timelines</AsciiSectionHeader>
+                <WhatIfTimeline scenarios={step.what_if} />
+              </CardContent>
+            </Card>
+          )}
+
+          {step.regulatory_timeline.length > 0 && (
+            <Card className="h-full">
+              <CardContent className="py-2.5">
+                <AsciiSectionHeader as="h4" sigil="⚖">Regulatory Timeline</AsciiSectionHeader>
+                <RegulatoryTimeline items={step.regulatory_timeline} />
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
-
-      {/* Metrics Grid — full width, tight cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {/* Team Performance */}
-        {teamEntries.length > 0 && (
-          <Card>
-            <CardContent>
-              <AsciiSectionHeader as="h4" sigil="●">Team Performance</AsciiSectionHeader>
-              <div className="space-y-2.5 mt-3">
-                {visibleTeams.map(([team, score]) => {
-                  const pct = score <= 1 ? score * 100 : score;
-                  const barColor = pct >= 70 ? "text-verdigris-500" : pct >= 40 ? "text-tuscan-sun-500" : "text-burnt-peach-500";
-                  return (
-                    <div key={team} className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-foreground/70 truncate min-w-0 w-32">
-                        {team}
-                      </span>
-                      <AsciiProgressBar value={pct} max={100} width={14} color={barColor} label={`${team}: ${Math.round(pct)}%`} />
-                    </div>
-                  );
-                })}
-              </div>
-              {hiddenCount > 0 && !showAllTeams && (
-                <button
-                  onClick={() => setShowAllTeams(true)}
-                  className="mt-2 text-xs text-royal-azure-600 hover:text-royal-azure-700 font-medium"
-                >
-                  Show all {teamEntries.length} agents
-                </button>
-              )}
-              {showAllTeams && hiddenCount > 0 && (
-                <button
-                  onClick={() => setShowAllTeams(false)}
-                  className="mt-2 text-xs text-muted-foreground hover:text-foreground font-medium"
-                >
-                  Show less
-                </button>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step Risk */}
-        <StepRiskMini
-          score={step.risk_at_step.score}
-          description={step.risk_at_step.description}
-          fairIncrement={step.risk_at_step.fair_increment}
-        />
-      </div>
-
-      {/* What-If + Regulatory — full width when they have content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {step.what_if.length > 0 && (
-          <Card>
-            <CardContent>
-              <AsciiSectionHeader as="h4" sigil="↕">What-If: Alternate Timelines</AsciiSectionHeader>
-              <WhatIfTimeline scenarios={step.what_if} />
-            </CardContent>
-          </Card>
-        )}
-
-        {step.regulatory_timeline.length > 0 && (
-          <Card>
-            <CardContent>
-              <AsciiSectionHeader as="h4" sigil="⚖">Regulatory Timeline</AsciiSectionHeader>
-              <RegulatoryTimeline items={step.regulatory_timeline} />
-            </CardContent>
-          </Card>
-        )}
-      </div>
     </div>
   );
 }

@@ -11,7 +11,7 @@ function Card({
   ...props
 }: React.ComponentProps<"div"> & { size?: "default" | "sm"; corners?: boolean }) {
   return (
-    <div className="relative p-0.5">
+    <div className="relative p-0.5 h-full">
       {corners && (
         <>
           <span className={cn(cornerMark, "-top-1 -left-0.5")} aria-hidden="true">┌</span>
@@ -24,7 +24,7 @@ function Card({
         data-slot="card"
         data-size={size}
         className={cn(
-          "group/card flex flex-col gap-4 bg-card border border-border/20 rounded-lg px-4 py-3 text-sm text-card-foreground has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:px-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0",
+          "group/card flex flex-col gap-4 bg-card border border-border/20 rounded-lg px-4 py-3 text-sm text-card-foreground h-full has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:px-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0",
           className
         )}
         {...props}
@@ -86,7 +86,7 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-content"
-      className={cn("px-4 group-data-[size=sm]/card:px-3", className)}
+      className={cn("px-4 flex-1 group-data-[size=sm]/card:px-3", className)}
       {...props}
     />
   )

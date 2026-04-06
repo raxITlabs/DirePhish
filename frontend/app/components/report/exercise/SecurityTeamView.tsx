@@ -39,39 +39,38 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
   const iocs = extractIOCs(report);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       {/* Kill Chain Flow */}
       {killChain.length > 0 && (
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="p-3">
             <KillChainFlow killChain={killChain} threatName={threatName} />
           </CardContent>
         </Card>
       )}
 
-      {/* Two-column: Systems + Attack Surface Graph */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Systems Affected */}
+      {/* Systems Affected + IOCs side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 items-stretch">
         <Card>
-          <CardContent className="p-5 space-y-3">
+          <CardContent className="p-3 space-y-2">
             <AsciiSectionHeader as="h3" sigil="◆">Systems Affected</AsciiSectionHeader>
             {worlds.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {worlds.map((w, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-pitch-black-50 ring-1 ring-foreground/10"
+                    className="flex items-center justify-between p-2 rounded-lg bg-pitch-black-50 ring-1 ring-foreground/10"
                   >
                     <div>
-                      <p className="text-sm font-medium text-pitch-black-800">
+                      <p className="text-xs font-medium text-pitch-black-800">
                         {w.name}
                       </p>
-                      <p className="text-xs text-pitch-black-500">
+                      <p className="text-[10px] text-pitch-black-500">
                         {w.type} — {w.description}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-pitch-black-400">
+                      <span className="text-[10px] text-pitch-black-400">
                         {w.actionCount} actions
                       </span>
                       <Badge
@@ -95,120 +94,122 @@ export default function SecurityTeamView({ report }: SecurityTeamViewProps) {
           </CardContent>
         </Card>
 
+        {/* Simulated IOCs */}
+        {iocs.length > 0 && (
+          <Card>
+            <CardContent className="p-3 space-y-2">
+              <AsciiSectionHeader as="h3" sigil="⚑">Simulated IOCs</AsciiSectionHeader>
+              <p className="text-[10px] text-pitch-black-400">
+                Based on attacker actions observed during simulation
+              </p>
+              <div className="space-y-1.5">
+                {iocs.map((ioc, i) => (
+                  <div
+                    key={i}
+                    className="p-2 rounded-lg bg-pitch-black-50 ring-1 ring-foreground/10 flex items-start gap-2"
+                  >
+                    <Badge variant="destructive" className="text-[9px] shrink-0">
+                      {ioc.type}
+                    </Badge>
+                    <p className="text-xs text-pitch-black-700 font-mono">
+                      {ioc.indicator}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {/* Indicators of Compromise */}
-      {iocs.length > 0 && (
-        <Card>
-          <CardContent className="p-5 space-y-3">
-            <AsciiSectionHeader as="h3" sigil="⚑">Simulated Indicators of Compromise</AsciiSectionHeader>
-            <p className="text-xs text-pitch-black-400">
-              Based on attacker actions observed during simulation
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {iocs.map((ioc, i) => (
-                <div
-                  key={i}
-                  className="p-3 rounded-xl bg-pitch-black-50 ring-1 ring-foreground/10"
-                >
-                  <Badge variant="destructive" className="text-[10px] mb-1.5">
-                    {ioc.type}
-                  </Badge>
-                  <p className="text-xs text-pitch-black-700 font-mono">
-                    {ioc.indicator}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Incident Timeline */}
-      {timeline.length > 0 && (
-        <Card>
-          <CardContent className="p-5 space-y-3">
-            <AsciiSectionHeader as="h3" sigil="│">Incident Timeline</AsciiSectionHeader>
-            <div className="flex gap-3 mb-2">
-              {Object.entries(EVENT_COLORS).map(([key, config]) => (
-                <div key={key} className="flex items-center gap-1">
-                  <span className={`w-2 h-2 rounded-full ${config.dot}`} />
-                  <span className="text-[10px] text-pitch-black-500">{config.label}</span>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-0">
-              {timeline.map((entry, i) => {
-                const type = classifyTimelineEntry(entry);
-                const colors = EVENT_COLORS[type] || EVENT_COLORS.defender;
-                return (
-                  <div key={i} className="flex items-start gap-3 py-2 border-l-2 border-pitch-black-100 pl-4 relative">
-                    <span className={`absolute -left-[5px] top-3 w-2.5 h-2.5 rounded-full ${colors.dot}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-pitch-black-400">
-                          R{entry.round}
-                        </span>
-                        <span className="text-xs font-medium text-pitch-black-600">
-                          {entry.agent}
-                        </span>
-                        {entry.significance === "critical" && (
-                          <Badge variant="destructive" className="text-[9px]">
-                            Critical
-                          </Badge>
-                        )}
+      {/* Timeline + Remediation side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 items-stretch">
+        {/* Incident Timeline */}
+        {timeline.length > 0 && (
+          <Card>
+            <CardContent className="p-3 space-y-2">
+              <AsciiSectionHeader as="h3" sigil="│">Incident Timeline</AsciiSectionHeader>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                {Object.entries(EVENT_COLORS).map(([key, config]) => (
+                  <div key={key} className="flex items-center gap-1">
+                    <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+                    <span className="text-[9px] text-pitch-black-500">{config.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-0">
+                {timeline.map((entry, i) => {
+                  const type = classifyTimelineEntry(entry);
+                  const colors = EVENT_COLORS[type] || EVENT_COLORS.defender;
+                  return (
+                    <div key={i} className="flex items-start gap-2 py-1.5 border-l-2 border-pitch-black-100 pl-3 relative">
+                      <span className={`absolute -left-[4px] top-2.5 w-2 h-2 rounded-full ${colors.dot}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-mono text-pitch-black-400">
+                            R{entry.round}
+                          </span>
+                          <span className="text-[11px] font-medium text-pitch-black-600">
+                            {entry.agent}
+                          </span>
+                          {entry.significance === "critical" && (
+                            <Badge variant="destructive" className="text-[9px]">
+                              Critical
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-pitch-black-600 mt-0.5">
+                          {entry.description}
+                        </p>
                       </div>
-                      <p className="text-xs text-pitch-black-600 mt-0.5">
-                        {entry.description}
-                      </p>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Remediation Checklist */}
-      {actions.length > 0 && (
-        <Card>
-          <CardContent className="p-5 space-y-3">
-            <AsciiSectionHeader as="h3" sigil="☐">Remediation Checklist</AsciiSectionHeader>
-            <div className="space-y-2">
-              {actions.map((a, i) => (
-                <label
-                  key={i}
-                  className="flex items-start gap-3 p-3 rounded-xl bg-pitch-black-50 ring-1 ring-foreground/10 cursor-pointer hover:bg-pitch-black-100/50 transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 rounded border-pitch-black-300 text-royal-azure-600 focus:ring-royal-azure-500"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-pitch-black-800">{a.action}</p>
-                    <div className="flex gap-3 mt-1 text-xs text-pitch-black-500">
-                      <span>{a.suggestedOwner}</span>
-                      <span>{a.suggestedTimeline}</span>
-                      <Badge
-                        variant={
-                          a.investmentLevel === "High"
-                            ? "destructive"
-                            : a.investmentLevel === "Medium"
-                              ? "warning"
-                              : "success"
-                        }
-                      >
-                        {a.investmentLevel}
-                      </Badge>
+        {/* Remediation Checklist */}
+        {actions.length > 0 && (
+          <Card>
+            <CardContent className="p-3 space-y-1">
+              <AsciiSectionHeader as="h3" sigil="☐">Remediation Checklist</AsciiSectionHeader>
+              <div className="space-y-1">
+                {actions.map((a, i) => (
+                  <label
+                    key={i}
+                    className="flex items-start gap-2 p-2 rounded-lg bg-pitch-black-50 ring-1 ring-foreground/10 cursor-pointer hover:bg-pitch-black-100/50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-pitch-black-300 text-royal-azure-600 focus:ring-royal-azure-500"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-pitch-black-800">{a.action}</p>
+                      <div className="flex gap-2 mt-0.5 text-[10px] text-pitch-black-500">
+                        <span>{a.suggestedOwner}</span>
+                        <span>{a.suggestedTimeline}</span>
+                        <Badge
+                          variant={
+                            a.investmentLevel === "High"
+                              ? "destructive"
+                              : a.investmentLevel === "Medium"
+                                ? "warning"
+                                : "success"
+                          }
+                        >
+                          {a.investmentLevel}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                  </label>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

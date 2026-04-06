@@ -107,7 +107,7 @@ export default function TeamPerformanceSection({
   teamPerformance,
 }: TeamPerformanceSectionProps) {
   return (
-    <section id="team-performance" className="space-y-6">
+    <section id="team-performance" className="space-y-3">
       <AsciiSectionHeader as="h2" sigil="●">Team Performance</AsciiSectionHeader>
 
       {/* Team cards */}
@@ -120,10 +120,8 @@ export default function TeamPerformanceSection({
       {/* Heatmap */}
       {teamPerformance.heatmapData.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Scenario Comparison Heatmap</CardTitle>
-          </CardHeader>
           <CardContent>
+            <AsciiSectionHeader as="h3" sigil="▣">Scenario Comparison Heatmap</AsciiSectionHeader>
             <HeatmapChart data={teamPerformance.heatmapData} />
           </CardContent>
         </Card>

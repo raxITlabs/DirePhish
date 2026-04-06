@@ -43,8 +43,8 @@ export default function KillChainNav({
   if (!killChain || killChain.length === 0) return null;
 
   return (
-    <Card className="p-4">
-      <div className="flex items-center gap-2 mb-3">
+    <Card className="p-3">
+      <div className="flex items-center gap-2 mb-2">
         <span className="text-primary font-mono text-xs select-none" aria-hidden="true">{"⚔"}</span>
         <p className="font-mono text-xs font-semibold uppercase tracking-wider text-foreground">
           MITRE ATT&CK Kill Chain
@@ -54,21 +54,21 @@ export default function KillChainNav({
         )}
       </div>
 
-      <div className="flex items-stretch gap-0 overflow-x-auto pb-1">
+      <div className="flex items-stretch gap-0">
         {killChain.map((step, i) => {
           const isActive = i === activeStep;
           const colors = STEP_COLORS[i % STEP_COLORS.length];
 
           return (
-            <div key={step.step} className="flex items-stretch shrink-0">
-              <div className="relative p-0.5">
+            <div key={step.step} className="flex items-stretch flex-1 min-w-0">
+              <div className="relative p-0.5 flex-1 min-w-0">
                 <span className={`${cornerMark} -top-1 -left-0.5 ${isActive ? "text-muted-foreground/70" : ""}`} aria-hidden="true">┌</span>
                 <span className={`${cornerMark} -top-1 -right-0.5 ${isActive ? "text-muted-foreground/70" : ""}`} aria-hidden="true">┐</span>
                 <span className={`${cornerMark} -bottom-1 -left-0.5 ${isActive ? "text-muted-foreground/70" : ""}`} aria-hidden="true">└</span>
                 <span className={`${cornerMark} -bottom-1 -right-0.5 ${isActive ? "text-muted-foreground/70" : ""}`} aria-hidden="true">┘</span>
                 <button
                   onClick={() => onStepClick(i)}
-                  className={`flex items-start gap-2.5 px-3 py-2.5 rounded-lg border min-w-[130px] max-w-[180px] text-left transition-all cursor-pointer ${
+                  className={`flex items-start gap-2 px-2.5 py-2 rounded-lg border w-full text-left transition-all cursor-pointer ${
                     isActive
                       ? `${colors.bg} ${colors.border} shadow-sm`
                       : "bg-pitch-black-50 border-pitch-black-200 hover:border-pitch-black-300 hover:bg-pitch-black-100"
@@ -107,26 +107,8 @@ export default function KillChainNav({
 
               {/* Arrow connector */}
               {i < killChain.length - 1 && (
-                <div className="flex items-center px-1">
-                  <svg
-                    width="20"
-                    height="12"
-                    viewBox="0 0 20 12"
-                    className="text-pitch-black-300"
-                  >
-                    <line
-                      x1="0"
-                      y1="6"
-                      x2="14"
-                      y2="6"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-                    <polygon
-                      points="14,2 20,6 14,10"
-                      fill="currentColor"
-                    />
-                  </svg>
+                <div className="flex items-center px-0.5 shrink-0">
+                  <span className="text-pitch-black-300 text-xs font-mono select-none" aria-hidden="true">→</span>
                 </div>
               )}
             </div>

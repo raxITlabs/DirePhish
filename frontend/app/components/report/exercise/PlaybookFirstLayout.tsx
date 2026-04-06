@@ -60,7 +60,7 @@ export default function PlaybookFirstLayout({
 
       {/* Main content — full width, scrollable */}
       <div ref={contentRef} tabIndex={-1} className="flex-1 min-w-0 h-full overflow-y-auto outline-none">
-        <div className="max-w-5xl mx-auto p-6 space-y-5">
+        <div className="max-w-7xl mx-auto px-4 py-3 space-y-3">
           {activeView === "playbook" ? (
             <>
               {/* Kill chain horizontal nav at top */}

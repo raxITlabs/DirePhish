@@ -1,6 +1,6 @@
 "use client";
 
-import { Card } from "@/app/components/ui/card";
+const cornerMark = "absolute font-mono text-[10px] text-muted-foreground/30 select-none leading-none pointer-events-none";
 
 function formatTactic(t: string): string {
   return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
@@ -19,21 +19,21 @@ interface KillChainFlowProps {
   threatName?: string;
 }
 
-const STEP_TEXT_COLORS = [
-  "text-royal-azure-800",
-  "text-royal-azure-800",
-  "text-tuscan-sun-800",
-  "text-tuscan-sun-800",
-  "text-burnt-peach-800",
-  "text-burnt-peach-800",
-  "text-burnt-peach-800",
+const STEP_COLORS = [
+  { bg: "bg-royal-azure-50", border: "border-royal-azure-200", text: "text-royal-azure-700" },
+  { bg: "bg-royal-azure-50", border: "border-royal-azure-200", text: "text-royal-azure-700" },
+  { bg: "bg-tuscan-sun-50", border: "border-tuscan-sun-200", text: "text-tuscan-sun-700" },
+  { bg: "bg-tuscan-sun-50", border: "border-tuscan-sun-200", text: "text-tuscan-sun-700" },
+  { bg: "bg-burnt-peach-50", border: "border-burnt-peach-200", text: "text-burnt-peach-700" },
+  { bg: "bg-burnt-peach-50", border: "border-burnt-peach-200", text: "text-burnt-peach-700" },
+  { bg: "bg-burnt-peach-50", border: "border-burnt-peach-200", text: "text-burnt-peach-700" },
 ];
 
 export default function KillChainFlow({ killChain, threatName }: KillChainFlowProps) {
   if (!killChain || killChain.length === 0) return null;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center gap-2">
         <span className="text-primary font-mono text-xs select-none" aria-hidden="true">{"⚔"}</span>
         <p className="font-mono text-xs font-semibold uppercase tracking-wider text-foreground">MITRE ATT&CK Kill Chain</p>
@@ -42,31 +42,40 @@ export default function KillChainFlow({ killChain, threatName }: KillChainFlowPr
         )}
       </div>
 
-      <div className="flex items-stretch gap-0 overflow-x-auto pb-2">
-        {killChain.map((step, i) => (
-          <div key={step.step} className="flex items-stretch shrink-0">
-            <Card size="sm" className={`min-w-[140px] max-w-[180px] ${STEP_TEXT_COLORS[i % STEP_TEXT_COLORS.length]}`}>
-              <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5">
-                {formatTactic(step.tactic)}
-              </p>
-              <p className="text-xs font-semibold leading-tight">
-                {step.technique}
-              </p>
-              <p className="text-[10px] opacity-70 mt-1 truncate">
-                {step.target}
-              </p>
-            </Card>
+      <div className="flex items-stretch gap-0">
+        {killChain.map((step, i) => {
+          const colors = STEP_COLORS[i % STEP_COLORS.length];
 
-            {i < killChain.length - 1 && (
-              <div className="flex items-center px-1">
-                <svg width="20" height="12" viewBox="0 0 20 12" className="text-pitch-black-300">
-                  <line x1="0" y1="6" x2="14" y2="6" stroke="currentColor" strokeWidth="1.5" />
-                  <polygon points="14,2 20,6 14,10" fill="currentColor" />
-                </svg>
+          return (
+            <div key={step.step} className="flex items-stretch flex-1 min-w-0">
+              <div className="relative p-0.5 flex-1 min-w-0">
+                <span className={`${cornerMark} -top-1 -left-0.5`} aria-hidden="true">┌</span>
+                <span className={`${cornerMark} -top-1 -right-0.5`} aria-hidden="true">┐</span>
+                <span className={`${cornerMark} -bottom-1 -left-0.5`} aria-hidden="true">└</span>
+                <span className={`${cornerMark} -bottom-1 -right-0.5`} aria-hidden="true">┘</span>
+                <div
+                  className={`px-2.5 py-2 rounded-lg border w-full ${colors.bg} ${colors.border}`}
+                >
+                  <p className={`text-[10px] uppercase tracking-wider mb-0.5 ${colors.text}`}>
+                    {formatTactic(step.tactic)}
+                  </p>
+                  <p className="text-xs font-semibold leading-tight text-pitch-black-800">
+                    {step.technique}
+                  </p>
+                  <p className="text-[10px] text-pitch-black-400 mt-0.5 truncate">
+                    {step.target}
+                  </p>
+                </div>
               </div>
-            )}
-          </div>
-        ))}
+
+              {i < killChain.length - 1 && (
+                <div className="flex items-center px-0.5 shrink-0">
+                  <span className="text-pitch-black-300 text-xs font-mono select-none" aria-hidden="true">→</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
