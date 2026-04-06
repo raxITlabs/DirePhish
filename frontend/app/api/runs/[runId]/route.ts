@@ -1,8 +1,10 @@
 import { getRun } from "workflow/api";
 import { readdir, unlink } from "fs/promises";
-import { join } from "path";
+import { join, resolve } from "path";
 
-const WORKFLOW_DATA_DIR = join(process.cwd(), ".next", "workflow-data");
+const WORKFLOW_DATA_DIR = resolve(
+  process.env.WORKFLOW_LOCAL_DATA_DIR || join(".next", "workflow-data")
+);
 
 async function deleteFilesByPrefix(dir: string, prefix: string) {
   try {
