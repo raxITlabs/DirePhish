@@ -22,7 +22,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./backend/uploads:/app/backend/uploads
-      - workflow-data:/app/frontend/.next/workflow-data
+      - workflow-data:/app/data/workflow
 
 volumes:
   workflow-data:
