@@ -74,6 +74,7 @@ export default function PipelinePage({
   const [activeSimId, setActiveSimId] = useState<string | null>(null);
   const [activeSimIndex, setActiveSimIndex] = useState(0);
   const userSelectedSim = useRef(false);
+  const simIdsInitialized = useRef(false);
 
   // Project graph (from research phase, before simulations)
   const [projectGraph, setProjectGraph] = useState<GraphData>({ nodes: [], edges: [] });
@@ -234,7 +235,9 @@ export default function PipelinePage({
               // Extract simIds from simulations step
               if (update.step === "simulations" && update.status === "running" && update.detail) {
                 const ids = update.detail.split(", ").filter(Boolean);
-                if (ids.length > 1) {
+                if (ids.length > 1 && !simIdsInitialized.current) {
+                  // Only initialize on first receipt — don't overwrite user selection
+                  simIdsInitialized.current = true;
                   setAllSimIds(ids);
                   setActiveSimId(ids[0]);
                   setActiveSimIndex(0);
@@ -254,6 +257,8 @@ export default function PipelinePage({
               // Reset manual selection when sims phase completes
               if (update.step === "simulations" && update.status === "completed") {
                 userSelectedSim.current = false;
+                simIdsInitialized.current = false;
+                setAllSimIds([]);
               }
 
               // MC/CF live action feed — extract active sub-simulation ID
