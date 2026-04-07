@@ -357,10 +357,9 @@ export default function PipelinePage({
                 }
               }
               // Reset manual selection when sims phase completes
+              // Keep allSimIds so user can still browse completed sims
               if (update.step === "simulations" && update.status === "completed") {
                 userSelectedSim.current = false;
-                simIdsInitialized.current = false;
-                setAllSimIds([]);
               }
 
               // MC/CF live action feed — extract active sub-simulation ID
