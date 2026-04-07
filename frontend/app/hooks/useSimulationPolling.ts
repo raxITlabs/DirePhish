@@ -11,6 +11,7 @@ interface UseSimulationPollingResult {
   graphData: GraphData;
   graphPushing: boolean;
   error: string | null;
+  loading: boolean;
   pollGraph: () => Promise<void>;
 }
 
@@ -20,16 +21,14 @@ export function useSimulationPolling(simId: string | null): UseSimulationPolling
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], edges: [] });
   const [graphPushing, setGraphPushing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const graphVersionRef = useRef(0);
 
-  // Reset state when simId changes
+  // Only reset graph version tracking on simId change, keep stale data visible
   useEffect(() => {
-    setSimStatus(null);
-    setSimActions([]);
-    setGraphData({ nodes: [], edges: [] });
-    setGraphPushing(false);
-    setError(null);
     graphVersionRef.current = 0;
+    setError(null);
+    if (simId) setLoading(true);
   }, [simId]);
 
   const pollStatus = useCallback(async () => {
@@ -60,9 +59,9 @@ export function useSimulationPolling(simId: string | null): UseSimulationPolling
   // Initial load when simId becomes available
   useEffect(() => {
     if (!simId) return;
-    pollStatus();
-    pollActions();
-    pollGraph();
+    Promise.all([pollStatus(), pollActions(), pollGraph()]).then(() => {
+      setLoading(false);
+    });
   }, [simId, pollStatus, pollActions, pollGraph]);
 
   // Status + actions polling (every 3s while running)
@@ -88,5 +87,5 @@ export function useSimulationPolling(simId: string | null): UseSimulationPolling
     }
   }, [simStatus?.graphPush, pollGraph]);
 
-  return { simStatus, simActions, graphData, graphPushing, error, pollGraph };
+  return { simStatus, simActions, graphData, graphPushing, error, loading, pollGraph };
 }
