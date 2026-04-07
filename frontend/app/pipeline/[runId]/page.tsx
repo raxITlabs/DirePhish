@@ -66,6 +66,9 @@ export default function PipelinePage({
   const [dossier, setDossier] = useState<CompanyDossier | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [pipelineComplete, setPipelineComplete] = useState(false);
+  const [pipelineCancelled, setPipelineCancelled] = useState(false);
+  const [pipelinePaused, setPipelinePaused] = useState(false);
+  const [pauseToken, setPauseToken] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
@@ -187,6 +190,88 @@ export default function PipelinePage({
     }
   }, [allSimIds]);
 
+  // Handle pipeline cancel
+  const handleCancel = useCallback(async () => {
+    try {
+      const res = await fetch("/api/pipeline/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId }),
+      });
+      if (res.ok) {
+        setPipelineCancelled(true);
+        setPipelineComplete(true);
+      }
+    } catch {
+      // cancel failed silently
+    }
+  }, [runId]);
+
+  // Handle pipeline pause — pause (not stop) the currently running backend process
+  const handlePause = useCallback(async () => {
+    const API = process.env.NEXT_PUBLIC_FLASK_API_URL || "http://localhost:5001";
+    setPipelinePaused(true);
+
+    try {
+      if (steps["monte_carlo"]?.status === "running" && mcBatchId) {
+        await fetch(`${API}/api/crucible/monte-carlo/${mcBatchId}/pause`, { method: "POST" });
+      } else if (steps["simulations"]?.status === "running" && activeSimId) {
+        await fetch(`${API}/api/crucible/simulations/${activeSimId}/stop`, { method: "POST" });
+      }
+
+      // Also signal the WDK workflow to pause between steps
+      await fetch("/api/pipeline/pause", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId }),
+      });
+    } catch {
+      // pause failed silently
+    }
+  }, [runId, steps, mcBatchId, activeSimId]);
+
+  // Handle pipeline resume — resume paused backend process + workflow
+  const handleResume = useCallback(async () => {
+    const API = process.env.NEXT_PUBLIC_FLASK_API_URL || "http://localhost:5001";
+
+    // Resume MC if it was paused
+    if (steps["monte_carlo"]?.status === "running" && mcBatchId) {
+      try {
+        await fetch(`${API}/api/crucible/monte-carlo/${mcBatchId}/resume`, { method: "POST" });
+      } catch { /* resume failed silently */ }
+    }
+
+    if (!pauseToken) {
+      // No hook token — just clear the paused state (pause wasn't enacted yet)
+      setPipelinePaused(false);
+      return;
+    }
+    try {
+      const res = await fetch("/api/pipeline/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: pauseToken, data: { resume: true } }),
+      });
+      if (res.ok) {
+        setPipelinePaused(false);
+        setPauseToken(null);
+      }
+    } catch {
+      // resume failed silently
+    }
+  }, [pauseToken, steps, mcBatchId]);
+
+  // Handle pipeline skip — stop current expensive step and move on
+  const handleSkip = useCallback(async () => {
+    const API = process.env.NEXT_PUBLIC_FLASK_API_URL || "http://localhost:5001";
+    if (steps["monte_carlo"]?.status === "running" && mcBatchId) {
+      await fetch(`${API}/api/crucible/monte-carlo/${mcBatchId}/stop`, { method: "POST" });
+    } else if (steps["simulations"]?.status === "running" && activeSimId) {
+      await fetch(`${API}/api/crucible/simulations/${activeSimId}/stop`, { method: "POST" });
+    }
+    setPipelinePaused(false);
+  }, [steps, mcBatchId, activeSimId]);
+
   // Poll for pipeline updates
   useEffect(() => {
     if (pipelineComplete) return;
@@ -223,6 +308,23 @@ export default function PipelinePage({
 
               // Check for completion
               if (update.step === "complete") {
+                setPipelineComplete(true);
+              }
+
+              // Detect paused state from workflow
+              if (update.step === "paused" && update.detail) {
+                try {
+                  const parsed = JSON.parse(update.detail);
+                  if (parsed.hookToken) {
+                    setPipelinePaused(true);
+                    setPauseToken(parsed.hookToken);
+                  }
+                } catch { /* not JSON */ }
+              }
+
+              // Detect cancellation from stream
+              if (update.step === "cancelled") {
+                setPipelineCancelled(true);
                 setPipelineComplete(true);
               }
 
@@ -368,6 +470,14 @@ export default function PipelinePage({
         dossierSummary={dossier?.company?.name}
         pipelineComplete={pipelineComplete}
         threatData={threatData}
+        runId={runId}
+        onCancel={handleCancel}
+        onPause={handlePause}
+        onResume={handleResume}
+        onSkip={handleSkip}
+        cancelled={pipelineCancelled}
+        paused={pipelinePaused}
+        mcProgress={mcLiveProgress}
       />
 
       {/* Center + Right: canvas with optional detail panel */}

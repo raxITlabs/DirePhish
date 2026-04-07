@@ -575,6 +575,24 @@ def monte_carlo_stop(batch_id):
     return jsonify({"data": {"status": result}})
 
 
+@crucible_bp.route("/monte-carlo/<batch_id>/pause", methods=["POST"])
+def monte_carlo_pause(batch_id):
+    """Pause running batch — in-flight iterations finish, remaining skip."""
+    result = MonteCarloEngine.pause_batch(batch_id)
+    if result == "not_found":
+        return jsonify({"error": f"Batch '{batch_id}' not found"}), 404
+    return jsonify({"data": {"status": result}})
+
+
+@crucible_bp.route("/monte-carlo/<batch_id>/resume", methods=["POST"])
+def monte_carlo_resume(batch_id):
+    """Resume a paused batch from where it left off."""
+    result = MonteCarloEngine.resume_batch(batch_id)
+    if result == "not_found":
+        return jsonify({"error": f"Batch '{batch_id}' not found"}), 404
+    return jsonify({"data": {"status": result}})
+
+
 @crucible_bp.route("/monte-carlo/<batch_id>/iterations", methods=["GET"])
 def get_mc_iterations(batch_id):
     """Return summary of each completed MC iteration from disk."""
