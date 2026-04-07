@@ -28,6 +28,14 @@ interface PipelineStagesPanelProps {
   dossierSummary?: string;
   pipelineComplete: boolean;
   threatData?: ThreatAnalysisResponse | null;
+  runId?: string;
+  onCancel?: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
+  onSkip?: () => void;
+  cancelled?: boolean;
+  paused?: boolean;
+  mcProgress?: { completed: number; total: number } | null;
 }
 
 const STATUS_TO_ASCII: Record<StepStatus, "complete" | "running" | "failed" | "pending"> = {
@@ -97,7 +105,16 @@ export default function PipelineStagesPanel({
   dossierSummary,
   pipelineComplete,
   threatData,
+  runId,
+  onCancel,
+  onPause,
+  onResume,
+  onSkip,
+  cancelled,
+  paused,
+  mcProgress,
 }: PipelineStagesPanelProps) {
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const completedCount = stepOrder.filter((s) => steps[s.id]?.status === "completed").length;
   const totalSteps = stepOrder.length;
   const progress = totalSteps > 0 ? (completedCount / totalSteps) * 100 : 0;
@@ -129,7 +146,11 @@ export default function PipelineStagesPanel({
   // Determine overall status label
   const runningStep = stepOrder.find((s) => steps[s.id]?.status === "running");
   let statusLabel = "Waiting to start...";
-  if (pipelineComplete) {
+  if (cancelled) {
+    statusLabel = "Pipeline cancelled";
+  } else if (paused) {
+    statusLabel = "Pipeline paused";
+  } else if (pipelineComplete) {
     statusLabel = "Pipeline complete";
   } else if (runningStep) {
     statusLabel = `Running: ${runningStep.label}`;
@@ -250,6 +271,112 @@ export default function PipelineStagesPanel({
           })}
         </ul>
       </div>
+
+      {/* Pipeline controls */}
+      {!pipelineComplete && !cancelled && (isRunning || paused) && (
+        <div className="px-4 py-3 border-t border-border/10 space-y-1.5">
+          {!paused ? (
+            <>
+              {/* Pause button — context-aware label */}
+              <button
+                onClick={onPause}
+                className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-border/30 text-xs font-mono text-muted-foreground hover:text-tuscan-sun-700 hover:border-tuscan-sun-300 transition-colors"
+              >
+                <span className="select-none" aria-hidden="true">║</span>
+                {runningStep?.id === "monte_carlo"
+                  ? "Pause stress testing"
+                  : runningStep?.id === "simulations"
+                    ? "Pause simulations"
+                    : `Pause after ${runningStep?.label || "current step"}`}
+              </button>
+
+              {/* Skip — only for expensive steps */}
+              {(runningStep?.id === "monte_carlo" || runningStep?.id === "simulations") && (
+                <button
+                  onClick={onSkip}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-1 rounded-lg text-[11px] font-mono text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                >
+                  <span className="select-none" aria-hidden="true">»</span>
+                  Skip to next step
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Resume */}
+              <button
+                onClick={onResume}
+                className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-verdigris-300 bg-verdigris-50 text-xs font-mono text-verdigris-700 hover:bg-verdigris-100 transition-colors"
+              >
+                <span className="select-none" aria-hidden="true">▶</span>
+                Resume
+              </button>
+
+              {/* Skip while paused */}
+              <button
+                onClick={onSkip}
+                className="w-full flex items-center justify-center gap-2 px-3 py-1 rounded-lg text-[11px] font-mono text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+              >
+                <span className="select-none" aria-hidden="true">»</span>
+                Skip to next step
+              </button>
+            </>
+          )}
+
+          {/* Cancel — always with confirmation */}
+          {!confirmCancel ? (
+            <button
+              onClick={() => setConfirmCancel(true)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono text-muted-foreground/50 hover:text-burnt-peach-600 transition-colors"
+            >
+              <span className="select-none" aria-hidden="true">✗</span>
+              Cancel
+            </button>
+          ) : (
+            <div className="space-y-1.5 p-2 rounded-lg border border-burnt-peach-200 bg-burnt-peach-50/50">
+              <p className="text-[10px] font-mono text-burnt-peach-600 text-center">
+                This will stop the pipeline permanently.
+              </p>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => { onCancel?.(); setConfirmCancel(false); }}
+                  className="flex-1 px-2 py-1.5 rounded-lg border border-burnt-peach-300 bg-burnt-peach-100 text-xs font-mono text-burnt-peach-700 hover:bg-burnt-peach-200 transition-colors"
+                >
+                  [yes, cancel]
+                </button>
+                <button
+                  onClick={() => setConfirmCancel(false)}
+                  className="flex-1 px-2 py-1.5 rounded-lg border border-border/30 text-xs font-mono text-muted-foreground hover:bg-muted/30 transition-colors"
+                >
+                  [no, keep running]
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Paused footer — context-aware status */}
+      {paused && !cancelled && (
+        <div className="px-4 py-2 border-t border-tuscan-sun-200 bg-tuscan-sun-50/50">
+          <p className="text-[10px] font-mono text-tuscan-sun-700 text-center">
+            {runningStep?.id === "monte_carlo" && mcProgress
+              ? `║ Paused at ${mcProgress.completed}/${mcProgress.total} variations`
+              : runningStep?.id === "simulations"
+                ? "║ Paused"
+                : `║ Paused after ${runningStep?.label || "current step"}`}
+          </p>
+        </div>
+      )}
+
+      {/* Cancelled state */}
+      {cancelled && (
+        <div className="px-4 py-2 border-t border-burnt-peach-200 bg-burnt-peach-50/50">
+          <p className="text-[10px] font-mono text-burnt-peach-600 text-center">
+            ✗ Pipeline was cancelled
+          </p>
+        </div>
+      )}
     </div>
   );
 }

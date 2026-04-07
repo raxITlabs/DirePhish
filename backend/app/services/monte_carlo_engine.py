@@ -57,7 +57,7 @@ class MonteCarloBatch:
     batch_id: str
     project_id: str
     mode: MonteCarloMode
-    status: str  # pending | running | completed | failed | cost_exceeded | stopped
+    status: str  # pending | running | completed | failed | cost_exceeded | stopped | paused
     iterations_total: int
     iterations_completed: int = 0
     iterations_failed: int = 0
@@ -68,6 +68,8 @@ class MonteCarloBatch:
     completed_at: str | None = None
     error: str | None = None
     _stop_requested: bool = field(default=False, repr=False)
+    _pause_requested: bool = field(default=False, repr=False)
+    _callback_token: str | None = field(default=None, repr=False)
 
     def to_dict(self) -> dict:
         """Serialize batch state for API responses."""
@@ -141,6 +143,7 @@ class MonteCarloEngine:
             cost_limit_usd=cost_limit_usd,
         )
         cls._batches[batch_id] = batch
+        batch._callback_token = callback_token
 
         logger.info(
             "Launching Monte Carlo batch %s — mode=%s, iterations=%d, cost_limit=$%.2f",
@@ -182,6 +185,59 @@ class MonteCarloEngine:
         batch.completed_at = datetime.now(timezone.utc).isoformat()
         logger.info("Batch %s stop requested", batch_id)
         return "stopped"
+
+    @classmethod
+    def pause_batch(cls, batch_id: str) -> str:
+        """Pause a running batch. In-flight iterations finish, pending ones skip."""
+        batch = cls._batches.get(batch_id)
+        if not batch:
+            return "not_found"
+        if batch.status not in ("pending", "running"):
+            return batch.status
+        batch._pause_requested = True
+        batch.status = "paused"
+        # Don't set completed_at — batch is not done
+        logger.info("Batch %s pause requested at %d/%d", batch_id, batch.iterations_completed, batch.iterations_total)
+        return "paused"
+
+    @classmethod
+    def resume_batch(cls, batch_id: str) -> str:
+        """Resume a paused batch from where it left off."""
+        batch = cls._batches.get(batch_id)
+        if not batch:
+            return "not_found"
+        if batch.status != "paused":
+            return batch.status
+        batch._pause_requested = False
+        batch.status = "running"
+        remaining = batch.iterations_total - batch.iterations_completed
+        logger.info("Batch %s resuming — %d iterations remaining", batch_id, remaining)
+
+        # Re-launch the batch for remaining iterations in a background thread
+        # We need the original config — read it from the first iteration's directory
+        mc_dir = UPLOADS_DIR / "crucible_projects" / batch.project_id / "monte_carlo" / batch.batch_id
+        config_path = mc_dir / "base_config.json"
+        if config_path.exists():
+            import json as _json
+            with open(config_path) as f:
+                base_config = _json.load(f)
+        else:
+            logger.error("Cannot resume batch %s: base_config.json not found", batch_id)
+            batch.status = "failed"
+            batch.error = "Cannot resume: config not found"
+            return "failed"
+
+        # Get the callback token from the batch — it was stored when launched
+        cb_token = getattr(batch, '_callback_token', None)
+
+        thread = threading.Thread(
+            target=lambda: asyncio.run(
+                _run_batch_resume(batch, base_config, remaining, callback_token=cb_token)
+            ),
+            daemon=True,
+        )
+        thread.start()
+        return "running"
 
     @classmethod
     def estimate_cost(
@@ -305,6 +361,12 @@ async def _run_batch(
     )
     mc_dir.mkdir(parents=True, exist_ok=True)
 
+    # Save config for potential resume
+    config_path = mc_dir / "base_config.json"
+    if not config_path.exists():
+        with open(config_path, "w") as f:
+            json.dump(base_config, f, indent=2)
+
     tasks = []
     for i in range(batch.iterations_total):
         task = asyncio.create_task(
@@ -325,6 +387,11 @@ async def _run_batch(
         tasks.append(task)
 
     await asyncio.gather(*tasks, return_exceptions=True)
+
+    if batch.status == "paused":
+        # Don't aggregate, don't callback — wait for resume
+        logger.info("Batch %s paused at %d/%d iterations", batch.batch_id, batch.iterations_completed, batch.iterations_total)
+        return
 
     # Final status
     if batch.status == "stopped":
@@ -505,7 +572,7 @@ async def _run_iteration(
     """Run a single iteration within semaphore concurrency control."""
     async with semaphore:
         # Check stop/cost before starting
-        if batch._stop_requested:
+        if batch._stop_requested or batch._pause_requested:
             return
         if batch.cost_tracker.total_cost() >= batch.cost_limit_usd:
             batch.status = "cost_exceeded"
@@ -628,3 +695,217 @@ async def _run_iteration(
             batch.status = "cost_exceeded"
             batch.error = f"Cost limit ${batch.cost_limit_usd:.2f} exceeded after iteration {iteration_index}"
             logger.warning("Batch %s cost exceeded: $%.4f >= $%.2f", batch.batch_id, batch.cost_tracker.total_cost(), batch.cost_limit_usd)
+
+
+async def _run_batch_resume(batch, base_config, remaining_count, callback_token=None):
+    """Resume a paused batch, running only remaining iterations."""
+    resume_start_time = time.time()
+    mode_cfg = MODE_CONFIGS[batch.mode]
+    semaphore = asyncio.Semaphore(mode_cfg["max_workers"])
+
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    from scripts.run_crucible_simulation import run_single_iteration
+    from openai import AsyncOpenAI
+    import httpx
+
+    shared_client = AsyncOpenAI(
+        api_key=Config.LLM_API_KEY,
+        base_url=Config.LLM_BASE_URL,
+        timeout=httpx.Timeout(connect=10.0, read=120.0, write=30.0, pool=5.0),
+        max_retries=2,
+    )
+    shared_model = Config.LLM_MODEL_NAME
+
+    from .firestore_memory import FirestoreMemory
+    shared_memory = FirestoreMemory(cost_tracker=batch.cost_tracker)
+
+    from .monte_carlo_variations import VariationGenerator
+    var_gen = VariationGenerator()
+
+    mc_dir = UPLOADS_DIR / "crucible_projects" / batch.project_id / "monte_carlo" / batch.batch_id
+
+    start_index = batch.iterations_completed
+    tasks = []
+    for i in range(start_index, start_index + remaining_count):
+        task = asyncio.create_task(
+            _run_iteration(
+                batch=batch,
+                iteration_index=i,
+                base_config=base_config,
+                semaphore=semaphore,
+                shared_client=shared_client,
+                shared_model=shared_model,
+                shared_memory=shared_memory,
+                var_gen=var_gen,
+                variation_params={},
+                output_dir=str(mc_dir),
+                run_single_iteration=run_single_iteration,
+            )
+        )
+        tasks.append(task)
+
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+    if batch.status == "paused":
+        # Paused again during resume
+        logger.info("Batch %s re-paused at %d/%d iterations", batch.batch_id, batch.iterations_completed, batch.iterations_total)
+        return
+
+    # Final status
+    if batch.status == "stopped":
+        pass  # Already set
+    elif batch.status == "cost_exceeded":
+        pass  # Already set
+    elif batch.iterations_failed == batch.iterations_total:
+        batch.status = "failed"
+        batch.error = "All iterations failed"
+    else:
+        batch.status = "completed"
+
+    batch.completed_at = datetime.now(timezone.utc).isoformat()
+
+    # Aggregate results
+    try:
+        from dataclasses import asdict
+        from pathlib import Path as _Path
+        from .monte_carlo_aggregator import aggregate_batch, IterationResult
+
+        valid_results = []
+
+        # Disk-based recovery
+        if not batch.results:
+            logger.info("batch.results empty — recovering from disk for %s", batch.batch_id)
+            for iter_dir_candidate in sorted(mc_dir.iterdir()):
+                if iter_dir_candidate.is_dir() and "_iter_" in iter_dir_candidate.name:
+                    summary_path = iter_dir_candidate / "summary.json"
+                    if summary_path.exists():
+                        with open(summary_path) as f:
+                            s = json.load(f)
+                        batch.results.append({
+                            "iteration_id": iter_dir_candidate.name,
+                            "status": "completed",
+                            "output_dir": str(iter_dir_candidate),
+                            "seed": s.get("seed", 0),
+                            "total_rounds": s.get("total_rounds", 0),
+                            "total_actions": s.get("total_actions", 0),
+                            "cost_usd": s.get("cost_usd", 0),
+                            "variation_description": s.get("variation_description", ""),
+                            "completed_at": s.get("completed_at", ""),
+                        })
+            logger.info("Recovered %d iteration(s) from disk", len(batch.results))
+
+        for r in batch.results:
+            if r.get("status") != "completed":
+                continue
+            try:
+                iter_dir = _Path(r.get("output_dir", ""))
+                actions = []
+                actions_path = iter_dir / "actions.jsonl"
+                if actions_path.exists():
+                    with open(actions_path) as f:
+                        for line in f:
+                            line = line.strip()
+                            if line:
+                                try:
+                                    actions.append(json.loads(line))
+                                except json.JSONDecodeError:
+                                    continue
+                summary = {}
+                summary_path = iter_dir / "summary.json"
+                if summary_path.exists():
+                    with open(summary_path) as f:
+                        summary = json.load(f)
+
+                valid_results.append(IterationResult(
+                    iteration_id=r["iteration_id"],
+                    seed=r.get("seed", 0),
+                    total_rounds=r.get("total_rounds", 0),
+                    total_actions=r.get("total_actions", 0),
+                    actions=actions,
+                    summary=summary,
+                    cost_usd=r.get("cost_usd", 0),
+                    variation_description=r.get("variation_description", ""),
+                    completed_at=r.get("completed_at", ""),
+                    output_dir=r.get("output_dir", ""),
+                ))
+            except Exception as e:
+                logger.warning("Failed to build IterationResult for %s: %s", r.get("iteration_id"), e)
+
+        if valid_results:
+            aggregation = aggregate_batch(valid_results)
+            agg_path = mc_dir / "aggregation.json"
+            agg_dict = asdict(aggregation)
+            with open(agg_path, "w") as f:
+                json.dump(agg_dict, f, indent=2, default=str)
+            logger.info("Aggregation saved: %s", agg_path)
+
+            # Data flywheel
+            try:
+                from .firestore_memory import FirestoreMemory
+                flywheel = FirestoreMemory()
+                crs = agg_dict.get("containment_round_stats") or {}
+                flywheel.store_aggregate_outcome({
+                    "batch_id": batch.batch_id,
+                    "project_id": batch.project_id,
+                    "mode": batch.mode.value,
+                    "iterations": batch.iterations_completed,
+                    "outcome_distribution": agg_dict.get("outcome_distribution", {}),
+                    "containment_round_stats": {
+                        "mean": crs.get("mean", 0),
+                        "median": crs.get("median", 0),
+                        "std": crs.get("std", 0),
+                    } if crs else {},
+                    "cost_summary": {"total_usd": batch.cost_tracker.total_cost()},
+                })
+                logger.info("Data flywheel: stored aggregate for batch %s", batch.batch_id)
+            except Exception as e:
+                logger.warning("Data flywheel store failed (non-fatal): %s", e)
+        else:
+            logger.warning("No valid iteration results to aggregate for batch %s", batch.batch_id)
+    except Exception as e:
+        logger.error("Aggregation failed for batch %s: %s", batch.batch_id, e)
+
+    # Save cost summary
+    try:
+        batch.cost_tracker.save(base_dir=str(mc_dir))
+    except Exception as e:
+        logger.error("Cost save failed for batch %s: %s", batch.batch_id, e)
+
+    # If test mode, save results for gating
+    if batch.mode == MonteCarloMode.TEST and batch.status == "completed":
+        test_results_dir = UPLOADS_DIR / "crucible_projects" / batch.project_id / "monte_carlo"
+        test_results_dir.mkdir(parents=True, exist_ok=True)
+        test_results_path = test_results_dir / "test_results.json"
+        with open(test_results_path, "w") as f:
+            json.dump({
+                "batch_id": batch.batch_id,
+                "completed_at": batch.completed_at,
+                "iterations_completed": batch.iterations_completed,
+                "iterations_failed": batch.iterations_failed,
+                "total_cost_usd": batch.cost_tracker.total_cost(),
+            }, f, indent=2)
+        logger.info("Test results saved for gating: %s", test_results_path)
+
+    logger.info(
+        "Batch %s finished (resumed) — status=%s, completed=%d, failed=%d, cost=$%.4f",
+        batch.batch_id, batch.status,
+        batch.iterations_completed, batch.iterations_failed,
+        batch.cost_tracker.total_cost(),
+    )
+
+    if callback_token:
+        from .workflow_callback import resume_workflow_hook
+        resume_workflow_hook(callback_token, {
+            "status": batch.status,
+            "batch_id": batch.batch_id,
+            "iterations_completed": batch.iterations_completed,
+            "iterations_failed": batch.iterations_failed,
+            "error": batch.error or "",
+        })
+
+    MissionControl.sim_complete(
+        batch.batch_id,
+        batch.iterations_completed,
+        batch.cost_tracker.total_cost(),
+        time.time() - resume_start_time,
+    )
