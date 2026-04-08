@@ -477,7 +477,11 @@ async def _run_batch(
                 logger.warning("Failed to build IterationResult for %s: %s", r.get("iteration_id"), e)
 
         if valid_results:
-            aggregation = aggregate_batch(valid_results)
+            from ..utils.llm_client import LLMClient
+            judge_llm = LLMClient(model=Config.LLM_JUDGE_MODEL)
+            aggregation = await asyncio.to_thread(
+                aggregate_batch, valid_results, judge_llm, batch.cost_tracker
+            )
             agg_path = mc_dir / "aggregation.json"
             agg_dict = asdict(aggregation)
             with open(agg_path, "w") as f:
@@ -832,7 +836,11 @@ async def _run_batch_resume(batch, base_config, remaining_count, callback_token=
                 logger.warning("Failed to build IterationResult for %s: %s", r.get("iteration_id"), e)
 
         if valid_results:
-            aggregation = aggregate_batch(valid_results)
+            from ..utils.llm_client import LLMClient
+            judge_llm = LLMClient(model=Config.LLM_JUDGE_MODEL)
+            aggregation = await asyncio.to_thread(
+                aggregate_batch, valid_results, judge_llm, batch.cost_tracker
+            )
             agg_path = mc_dir / "aggregation.json"
             agg_dict = asdict(aggregation)
             with open(agg_path, "w") as f:
