@@ -101,7 +101,7 @@ def _synthesize_mc_stats_from_sim(sim_data_list: list[dict]) -> dict | None:
     containment/escalation detection is consistent.
     """
     import statistics
-    from .monte_carlo_aggregator import (
+    from .containment_judge import (
         CONTAINMENT_KEYWORDS,
         ESCALATION_KEYWORDS,
         _action_text,
@@ -1332,8 +1332,8 @@ def _generate_exercise_report(
                 from .monte_carlo_aggregator import (
                     aggregate_batch as _aggregate_batch,
                     IterationResult as _IterationResult,
-                    _action_text as _at,
                 )
+                from .containment_judge import _action_text as _at
                 for batch_dir in sorted(mc_root.iterdir(), reverse=True):
                     if not batch_dir.is_dir() or batch_dir.name.startswith("."):
                         continue

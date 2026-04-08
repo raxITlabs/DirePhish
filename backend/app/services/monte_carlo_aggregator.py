@@ -14,24 +14,17 @@ from dataclasses import dataclass, field
 
 from ..utils.logger import get_logger
 from typing import TYPE_CHECKING
+from .containment_judge import (
+    CONTAINMENT_KEYWORDS,
+    _action_text,
+    classify_iteration_keyword,
+)
 
 if TYPE_CHECKING:
     from ..utils.cost_tracker import CostTracker
     from ..utils.llm_client import LLMClient
 
 logger = get_logger("monte_carlo_aggregator")
-
-# ---------------------------------------------------------------------------
-# Keywords used to classify iteration outcomes
-# ---------------------------------------------------------------------------
-CONTAINMENT_KEYWORDS = re.compile(
-    r"\b(isolat|contain|block|quarantin|lockdown|shut\s*down|revok|suspend|kill)\w*\b",
-    re.IGNORECASE,
-)
-ESCALATION_KEYWORDS = re.compile(
-    r"\b(exfiltrat|ransom|encrypt|deploy\s*payload|lateral\s*mov|data\s*leak)\w*\b",
-    re.IGNORECASE,
-)
 
 
 # ---------------------------------------------------------------------------
@@ -122,47 +115,6 @@ class BatchAggregation:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _action_text(action: dict) -> str:
-    """Extract searchable text from an action record."""
-    parts: list[str] = []
-    parts.append(action.get("action", ""))
-    args = action.get("args", {})
-    if isinstance(args, dict):
-        for v in args.values():
-            if isinstance(v, str):
-                parts.append(v)
-    result = action.get("result", {})
-    if isinstance(result, dict):
-        for v in result.values():
-            if isinstance(v, str):
-                parts.append(v)
-    return " ".join(parts)
-
-
-def classify_iteration(result: IterationResult) -> tuple[str, int | None]:
-    """Classify an iteration outcome and return (label, containment_round|None)."""
-    containment_round: int | None = None
-    has_escalation = False
-    midpoint = result.total_rounds / 2.0
-
-    for action in result.actions:
-        text = _action_text(action)
-        rnd = action.get("round", 0)
-
-        if ESCALATION_KEYWORDS.search(text):
-            has_escalation = True
-
-        if containment_round is None and CONTAINMENT_KEYWORDS.search(text):
-            containment_round = rnd
-
-    if has_escalation and containment_round is None:
-        return "escalated", None
-    if containment_round is not None:
-        label = "contained_early" if containment_round <= midpoint else "contained_late"
-        return label, containment_round
-    return "not_contained", None
-
-
 def _shannon_entropy(counts: Counter) -> float:
     """Shannon entropy (bits) of a frequency distribution."""
     total = sum(counts.values())
@@ -227,7 +179,7 @@ def aggregate_batch(
             from .containment_judge import classify_iteration_llm
             label, c_round, meta = classify_iteration_llm(r, llm, cost_tracker)
         else:
-            label, c_round = classify_iteration(r)
+            label, c_round = classify_iteration_keyword(r)
         outcome_counts[label] += 1
         if c_round is not None:
             containment_rounds.append(c_round)
