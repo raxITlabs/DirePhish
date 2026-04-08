@@ -69,3 +69,69 @@ def classify_iteration_keyword(result) -> tuple[str, int | None]:
         label = "contained_early" if containment_round <= midpoint else "contained_late"
         return label, containment_round
     return "not_contained", None
+
+
+def build_round_digest(result) -> str:
+    """Build a condensed round-level digest of an iteration's actions.
+
+    Produces ~1-2K tokens summarizing what happened each round:
+    injects, arbiter decisions, agent actions (who/where/what).
+    """
+    rounds: dict[int, list[dict]] = {}
+    for action in result.actions:
+        rnd = action.get("round", 0)
+        rounds.setdefault(rnd, []).append(action)
+
+    total_rounds = result.total_rounds or max(rounds.keys(), default=0)
+    lines: list[str] = []
+
+    ad = result.summary.get("adaptive_depth") if result.summary else None
+    if ad and ad.get("enabled"):
+        stop_round = ad.get("stopped_at_round")
+        stop_reason = ad.get("stop_reason")
+        if stop_round:
+            lines.append(
+                f"[ADAPTIVE DEPTH] Simulation stopped at round {stop_round}"
+                f" (of {total_rounds}). Arbiter reason: {stop_reason or 'unknown'}"
+            )
+            lines.append("")
+
+    for rnd_num in sorted(rounds.keys()):
+        rnd_actions = rounds[rnd_num]
+        lines.append(f"ROUND {rnd_num} (of {total_rounds}):")
+
+        for act in rnd_actions:
+            act_type = act.get("type", "")
+
+            if act_type == "inject":
+                desc = act.get("description", "unknown event")
+                lines.append(f"  [INJECT] {desc}")
+            elif act_type == "arbiter":
+                decision = act.get("decision", "?")
+                reason = act.get("reason", "")
+                complication = act.get("complication")
+                line = f"  [ARBITER] {decision}"
+                if reason:
+                    line += f" -- {reason[:120]}"
+                if complication:
+                    line += f" | Complication injected: {complication[:100]}"
+                lines.append(line)
+            else:
+                agent = act.get("agent", "?")
+                role = act.get("role", "")
+                world = act.get("world", "?")
+                action_name = act.get("action", "?")
+
+                content = ""
+                args = act.get("args", {})
+                if isinstance(args, dict):
+                    content = args.get("content", "") or args.get("message", "") or ""
+                if content:
+                    content = f": {content[:100]}"
+
+                role_str = f" ({role})" if role else ""
+                lines.append(f"  {agent}{role_str} [{world}] {action_name}{content}")
+
+        lines.append("")
+
+    return "\n".join(lines)
