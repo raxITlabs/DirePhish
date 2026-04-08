@@ -243,3 +243,94 @@ class TestLLMJudge:
         prompt_text = llm.chat_json.call_args[0][0][0]["content"]
         assert "contained" in prompt_text.lower()
         assert "round 5" in prompt_text
+
+
+class TestAggregatorIntegration:
+    """Tests for aggregate_batch with optional LLM judge."""
+
+    def test_aggregate_batch_without_llm_uses_keywords(self):
+        """Backward compat: no llm param -> keyword classification."""
+        from app.services.monte_carlo_aggregator import aggregate_batch, IterationResult
+        result = IterationResult(
+            iteration_id="compat_test_001",
+            seed=42,
+            total_rounds=10,
+            total_actions=1,
+            actions=[{"round": 1, "agent": "SOC", "role": "soc_analyst", "world": "slack",
+                      "action": "Isolating the compromised server", "args": {}, "result": {}}],
+            summary={},
+            cost_usd=0.0,
+            variation_description="",
+            completed_at="",
+            output_dir="",
+        )
+        agg = aggregate_batch([result])
+        assert agg.iteration_count == 1
+        assert agg.outcome_distribution["contained_early"] == 1
+
+    def test_aggregate_batch_with_llm_uses_judge(self):
+        """When llm is passed, judge is used instead of keywords."""
+        from app.services.monte_carlo_aggregator import aggregate_batch, IterationResult
+        result = IterationResult(
+            iteration_id="judge_test_001",
+            seed=42,
+            total_rounds=10,
+            total_actions=2,
+            actions=[
+                {"round": 1, "agent": "SOC", "role": "soc_analyst", "world": "slack",
+                 "action": "Isolating the compromised server", "args": {}, "result": {}},
+                {"round": 3, "agent": "Attacker", "role": "threat_actor", "world": "c2-channel",
+                 "action": "Data exfiltration to external server", "args": {}, "result": {}},
+            ],
+            summary={},
+            cost_usd=0.0,
+            variation_description="",
+            completed_at="",
+            output_dir="",
+        )
+
+        llm = MagicMock()
+        llm.chat_json.return_value = {
+            "outcome": "escalated",
+            "containment_round": None,
+            "confidence": 0.8,
+            "reasoning": "Attacker exfiltrated data after containment attempt.",
+        }
+        llm.model = "test-model"
+        llm.last_usage = {"input_tokens": 100, "output_tokens": 50, "cached_tokens": 0}
+
+        agg = aggregate_batch([result], llm=llm)
+        assert agg.outcome_distribution["escalated"] == 1
+        assert agg.outcome_distribution["contained_early"] == 0
+
+    def test_judge_metadata_stored_in_per_iteration_results(self):
+        """judge_metadata field is populated when LLM is used."""
+        from app.services.monte_carlo_aggregator import aggregate_batch, IterationResult
+        result = IterationResult(
+            iteration_id="meta_test_001",
+            seed=42,
+            total_rounds=10,
+            total_actions=1,
+            actions=[{"round": 1, "agent": "SOC", "role": "soc_analyst", "world": "slack",
+                      "action": "Blocking IP", "args": {}, "result": {}}],
+            summary={},
+            cost_usd=0.0,
+            variation_description="",
+            completed_at="",
+            output_dir="",
+        )
+
+        llm = MagicMock()
+        llm.chat_json.return_value = {
+            "outcome": "contained_early",
+            "containment_round": 1,
+            "confidence": 0.95,
+            "reasoning": "Blocked immediately.",
+        }
+        llm.model = "test-model"
+        llm.last_usage = {"input_tokens": 100, "output_tokens": 50, "cached_tokens": 0}
+
+        agg = aggregate_batch([result], llm=llm)
+        per_iter = agg.per_iteration_results[0]
+        assert per_iter.judge_metadata["confidence"] == 0.95
+        assert per_iter.judge_metadata.get("fallback") is not True
