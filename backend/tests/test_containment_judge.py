@@ -153,3 +153,93 @@ class TestRoundDigest:
         digest = build_round_digest(result)
         assert "ROUND 1" in digest
         assert "ROUND 2" in digest
+
+
+from unittest.mock import MagicMock
+
+
+class TestLLMJudge:
+    """Tests for classify_iteration_llm."""
+
+    def _make_llm(self, response: dict) -> MagicMock:
+        """Create a mock LLMClient returning the given JSON response."""
+        llm = MagicMock()
+        llm.chat_json.return_value = response
+        llm.model = "test-model"
+        llm.last_usage = {"input_tokens": 100, "output_tokens": 50, "cached_tokens": 0}
+        return llm
+
+    def test_returns_llm_classification(self):
+        from app.services.containment_judge import classify_iteration_llm
+        actions = _make_actions({1: ["Monitoring dashboards"], 3: ["Blocking IP"]})
+        result = _make_result(actions, total_rounds=10)
+        llm = self._make_llm({
+            "outcome": "contained_early",
+            "containment_round": 3,
+            "confidence": 0.85,
+            "reasoning": "Defenders blocked the attacker IP in round 3.",
+        })
+        label, c_round, meta = classify_iteration_llm(result, llm)
+        assert label == "contained_early"
+        assert c_round == 3
+        assert meta["confidence"] == 0.85
+        assert meta["reasoning"] == "Defenders blocked the attacker IP in round 3."
+        assert meta.get("fallback") is not True
+
+    def test_fallback_on_invalid_outcome(self):
+        from app.services.containment_judge import classify_iteration_llm
+        actions = _make_actions({2: ["Isolating host"]})
+        result = _make_result(actions, total_rounds=10)
+        llm = self._make_llm({
+            "outcome": "partially_contained",  # invalid
+            "containment_round": 2,
+            "confidence": 0.5,
+            "reasoning": "Partial containment.",
+        })
+        label, c_round, meta = classify_iteration_llm(result, llm)
+        assert label == "contained_early"
+        assert meta["fallback"] is True
+
+    def test_fallback_on_llm_exception(self):
+        from app.services.containment_judge import classify_iteration_llm
+        actions = _make_actions({5: ["Checking logs"]})
+        result = _make_result(actions, total_rounds=10)
+        llm = MagicMock()
+        llm.chat_json.side_effect = Exception("API timeout")
+        llm.model = "test-model"
+        label, c_round, meta = classify_iteration_llm(result, llm)
+        assert label == "not_contained"
+        assert meta["fallback"] is True
+
+    def test_cost_tracking(self):
+        from app.services.containment_judge import classify_iteration_llm
+        actions = _make_actions({1: ["Blocking attacker"]})
+        result = _make_result(actions, total_rounds=10)
+        llm = self._make_llm({
+            "outcome": "contained_early",
+            "containment_round": 1,
+            "confidence": 0.9,
+            "reasoning": "Blocked.",
+        })
+        cost_tracker = MagicMock()
+        classify_iteration_llm(result, llm, cost_tracker)
+        cost_tracker.track_llm.assert_called_once()
+        call_args = cost_tracker.track_llm.call_args
+        assert call_args[0][0] == "mc_judge"
+        assert call_args[0][1] == "test-model"
+
+    def test_prompt_includes_arbiter_stop_reason(self):
+        from app.services.containment_judge import classify_iteration_llm
+        actions = _make_actions({1: ["Alert received"]})
+        summary = {"adaptive_depth": {"enabled": True, "stopped_at_round": 5, "stop_reason": "contained"}}
+        result = _make_result(actions, total_rounds=10, summary=summary)
+        llm = self._make_llm({
+            "outcome": "contained_early",
+            "containment_round": 5,
+            "confidence": 0.9,
+            "reasoning": "Contained at round 5.",
+        })
+        classify_iteration_llm(result, llm)
+        prompt_text = llm.chat_json.call_args[0][0][0]["content"]
+        assert "contained" in prompt_text.lower()
+        assert "round 5" in prompt_text

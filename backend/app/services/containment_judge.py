@@ -135,3 +135,126 @@ def build_round_digest(result) -> str:
         lines.append("")
 
     return "\n".join(lines)
+
+
+_JUDGE_PROMPT_TEMPLATE = """You are a cybersecurity incident response evaluator. Analyze this simulation transcript and classify the OUTCOME of the defenders' response.
+
+SIMULATION:
+- Rounds: {total_rounds}, Actions: {total_actions}
+- Agents: {agents_list}
+{adaptive_depth_context}
+
+TRANSCRIPT:
+{digest}
+
+CLASSIFICATION TASK:
+Determine whether the defenders ACTUALLY CONTAINED the threat, not just whether they ATTEMPTED containment. A containment attempt that the attacker subsequently bypasses is NOT successful containment.
+
+Consider:
+1. Did defenders successfully neutralize the attacker's access or persistence?
+2. Did the attacker continue to operate AFTER defender containment actions?
+3. Did attacker activity cease or become ineffective after a specific round?
+4. Were there escalation events (exfiltration, ransomware, lateral movement) that were NOT stopped?
+
+Classify as EXACTLY ONE of:
+- "contained_early": Effective containment in first half (round <= {midpoint}). Attacker genuinely stopped.
+- "contained_late": Effective containment in second half (round > {midpoint}). Attacker eventually stopped.
+- "escalated": Attacker achieved significant objectives despite defender actions.
+- "not_contained": No clear containment. Ambiguous outcome or attacker maintained presence.
+
+Return ONLY valid JSON:
+{{"outcome": "...", "containment_round": <int or null>, "confidence": <0.0-1.0>, "reasoning": "2-3 sentences"}}"""
+
+
+def classify_iteration_llm(
+    result,
+    llm: LLMClient,
+    cost_tracker: CostTracker | None = None,
+) -> tuple[str, int | None, dict]:
+    """Classify iteration outcome using LLM-as-a-judge.
+
+    Returns (label, containment_round, metadata).
+    Falls back to keyword classification on any failure.
+    """
+    meta: dict = {"fallback": False, "judge_model": getattr(llm, "model", "unknown")}
+
+    try:
+        digest = build_round_digest(result)
+
+        # Extract agent list
+        agents_seen: dict[str, str] = {}
+        for act in result.actions:
+            agent = act.get("agent", "")
+            role = act.get("role", "")
+            if agent and agent not in agents_seen:
+                agents_seen[agent] = role
+        agents_list = ", ".join(
+            f"{a} ({r})" if r else a for a, r in agents_seen.items()
+        ) or "unknown"
+
+        # Adaptive depth context
+        ad = result.summary.get("adaptive_depth") if result.summary else None
+        adaptive_ctx = ""
+        if ad and ad.get("enabled"):
+            stop_round = ad.get("stopped_at_round")
+            stop_reason = ad.get("stop_reason")
+            if stop_round:
+                adaptive_ctx = (
+                    f"- Adaptive depth: simulation stopped at round {stop_round}."
+                    f" Arbiter reason: {stop_reason or 'unknown'}"
+                )
+
+        midpoint = result.total_rounds / 2.0
+        prompt = _JUDGE_PROMPT_TEMPLATE.format(
+            total_rounds=result.total_rounds,
+            total_actions=result.total_actions,
+            agents_list=agents_list,
+            adaptive_depth_context=adaptive_ctx,
+            digest=digest,
+            midpoint=int(midpoint),
+        )
+
+        response = llm.chat_json(
+            [{"role": "user", "content": prompt}],
+            temperature=0.1,
+            max_tokens=512,
+        )
+
+        # Track cost
+        if cost_tracker and llm.last_usage:
+            cost_tracker.track_llm(
+                "mc_judge",
+                llm.model,
+                llm.last_usage["input_tokens"],
+                llm.last_usage["output_tokens"],
+                f"judge_{result.iteration_id}",
+                cached_tokens=llm.last_usage.get("cached_tokens", 0),
+            )
+
+        # Validate response
+        outcome = response.get("outcome", "")
+        if outcome not in VALID_OUTCOMES:
+            logger.warning(
+                "Judge returned invalid outcome %r for %s, falling back to keyword",
+                outcome, result.iteration_id,
+            )
+            label, c_round = classify_iteration_keyword(result)
+            meta["fallback"] = True
+            return label, c_round, meta
+
+        c_round = response.get("containment_round")
+        if c_round is not None:
+            c_round = int(c_round)
+
+        meta["confidence"] = response.get("confidence", 0.0)
+        meta["reasoning"] = response.get("reasoning", "")
+        return outcome, c_round, meta
+
+    except Exception as e:
+        logger.warning(
+            "Judge failed for %s: %s — falling back to keyword",
+            result.iteration_id, e,
+        )
+        label, c_round = classify_iteration_keyword(result)
+        meta["fallback"] = True
+        return label, c_round, meta
