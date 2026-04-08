@@ -89,7 +89,7 @@ def compute_composite_score(
     # Containment Effectiveness (25%) — from outcome_distribution + stats
     early = outcome.get("contained_early", 0)
     late = outcome.get("contained_late", 0)
-    stats = aggregation.get("containment_round_stats", {})
+    stats = aggregation.get("containment_round_stats") or {}
     std = stats.get("std", 0)
     max_rounds = stats.get("max", 1) or 1
     base = (early * 1.0 + late * 0.5) / total * 100

@@ -93,7 +93,7 @@ def compute_fair_loss(
         p90_loss = lef * lm_values_sorted[p90_idx]
     else:
         # Fallback: estimate from aggregate stats
-        stats = aggregation.get("containment_round_stats", {})
+        stats = aggregation.get("containment_round_stats") or {}
         avg_rounds = stats.get("mean", 10)
         escalation_rate = outcome.get("escalated", 0) / total
 

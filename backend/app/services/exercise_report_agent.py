@@ -875,8 +875,8 @@ def _generate_attack_path_step(
     if mc_stats:
         iteration_count = mc_stats.get("iteration_count", 0)
         outcome_dist = mc_stats.get("outcome_distribution", {})
-        containment_stats = mc_stats.get("containment_round_stats", {})
-        divergence_points = mc_stats.get("decision_divergence_points", [])
+        containment_stats = mc_stats.get("containment_round_stats") or {}
+        divergence_points = mc_stats.get("decision_divergence_points") or []
         agent_consistency = mc_stats.get("agent_consistency", {})
 
         # Find divergence points near this step's expected round
