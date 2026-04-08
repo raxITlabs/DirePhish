@@ -69,19 +69,33 @@ export default function ReportStagesPanel({
           {report.companyName ?? "Exercise"} · {report.generatedAt ? new Date(report.generatedAt).toLocaleDateString() : ""}
         </p>
 
-        {/* Readiness bar */}
+        {/* Readiness + Containment compact meters */}
         {resilience && (
-          <div className="mt-2">
-            <AsciiProgressBar
-              value={resilience.overall}
-              max={100}
-              width={18}
-              label={`Readiness ${resilience.overall}/100`}
-            />
-            {mc && (
-              <p className="text-[10px] font-mono text-muted-foreground/40 mt-0.5 text-right">
-                {containedPct}% contained
+          <div className="mt-3 space-y-1.5">
+            <div>
+              <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-wider mb-0.5">
+                Team Readiness
               </p>
+              <AsciiProgressBar
+                value={resilience.overall}
+                max={100}
+                width={18}
+                label={`Team Readiness ${resilience.overall}/100`}
+              />
+            </div>
+            {mc && (
+              <div>
+                <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-wider mb-0.5">
+                  Containment Rate
+                </p>
+                <AsciiProgressBar
+                  value={containedPct}
+                  max={100}
+                  width={18}
+                  color={containedPct >= 50 ? "text-verdigris-500" : "text-burnt-peach-500"}
+                  label={`Containment Rate ${containedPct}%`}
+                />
+              </div>
             )}
           </div>
         )}
