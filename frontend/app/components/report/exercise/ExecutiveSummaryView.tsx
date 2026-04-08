@@ -198,7 +198,6 @@ export default function ExecutiveSummaryView({ report }: Props) {
                 }`}>
                   {rs ? (
                     <>
-                      <span className="text-sm mr-1" aria-hidden="true">{rs.composite_score >= 70 ? "▼" : rs.composite_score >= 40 ? "─" : "▲"}</span>
                       {rs.composite_score.toFixed(0)}
                     </>
                   ) : "—"}
