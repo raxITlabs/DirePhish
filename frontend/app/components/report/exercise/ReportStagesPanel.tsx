@@ -74,27 +74,37 @@ export default function ReportStagesPanel({
           <div className="mt-3 space-y-1.5">
             <div>
               <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-wider mb-0.5">
-                Team Readiness
+                Team Response
               </p>
               <AsciiProgressBar
                 value={resilience.overall}
                 max={100}
                 width={18}
-                label={`Team Readiness ${resilience.overall}/100`}
+                label={`Team Response ${resilience.overall}/100`}
               />
+              <p className="text-[9px] font-mono text-muted-foreground/30 mt-0.5">
+                detection, comms, compliance
+              </p>
             </div>
             {mc && (
               <div>
                 <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-wider mb-0.5">
-                  Containment Rate
+                  Threat Contained
                 </p>
                 <AsciiProgressBar
                   value={containedPct}
                   max={100}
                   width={18}
                   color={containedPct >= 50 ? "text-verdigris-500" : "text-burnt-peach-500"}
-                  label={`Containment Rate ${containedPct}%`}
+                  label={`Threat Contained ${containedPct}%`}
                 />
+                <p className="text-[9px] font-mono text-muted-foreground/30 mt-0.5">
+                  {containedPct === 0
+                    ? "attacker achieved objectives in all runs"
+                    : containedPct === 100
+                      ? "threat neutralized in all runs"
+                      : `${containedPct}% of ${mc.iteration_count} simulations`}
+                </p>
               </div>
             )}
           </div>
