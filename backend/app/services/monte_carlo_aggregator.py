@@ -13,6 +13,11 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 
 from ..utils.logger import get_logger
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..utils.cost_tracker import CostTracker
+    from ..utils.llm_client import LLMClient
 
 logger = get_logger("monte_carlo_aggregator")
 
@@ -96,6 +101,7 @@ class PerIterationResult:
     cross_channel_messages: int     # messages across multiple worlds
     total_messages: int             # total messages
     consistency_score: float        # agent consistency for this iteration
+    judge_metadata: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -181,7 +187,11 @@ def _safe_stdev(values: list[float | int]) -> float:
 # Main aggregation
 # ---------------------------------------------------------------------------
 
-def aggregate_batch(results: list[IterationResult]) -> BatchAggregation:
+def aggregate_batch(
+    results: list[IterationResult],
+    llm: "LLMClient | None" = None,
+    cost_tracker: "CostTracker | None" = None,
+) -> BatchAggregation:
     """Aggregate a list of Monte Carlo iteration results into a BatchAggregation."""
     if not results:
         raise ValueError("Cannot aggregate an empty results list")
@@ -212,7 +222,12 @@ def aggregate_batch(results: list[IterationResult]) -> BatchAggregation:
     per_iter_results: list[PerIterationResult] = []
 
     for r in results:
-        label, c_round = classify_iteration(r)
+        meta: dict = {}
+        if llm is not None:
+            from .containment_judge import classify_iteration_llm
+            label, c_round, meta = classify_iteration_llm(r, llm, cost_tracker)
+        else:
+            label, c_round = classify_iteration(r)
         outcome_counts[label] += 1
         if c_round is not None:
             containment_rounds.append(c_round)
@@ -253,6 +268,7 @@ def aggregate_batch(results: list[IterationResult]) -> BatchAggregation:
                 cross_channel_messages=cross_channel,
                 total_messages=total_msgs,
                 consistency_score=0.0,  # filled after agent consistency computed
+                judge_metadata=meta,
             )
         )
 
