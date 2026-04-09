@@ -31,14 +31,10 @@ class Config:
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
-    LLM_PRO_MODEL = os.environ.get('LLM_PRO_MODEL') or os.environ.get('LLM_BOOST_MODEL_NAME') or LLM_MODEL_NAME
+    LLM_PRO_MODEL = os.environ.get('LLM_PRO_MODEL') or LLM_MODEL_NAME
     LLM_JUDGE_MODEL = os.environ.get('LLM_JUDGE_MODEL') or LLM_MODEL_NAME
 
-    # Zep configuration (deprecated — replaced by Firestore)
-    ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
 
-    # Graphiti (deprecated — replaced by Firestore)
-    GRAPHITI_DB_PATH = os.environ.get('GRAPHITI_DB_PATH', os.path.join(os.path.dirname(__file__), '../data/graphiti'))
 
     # Google Cloud / Firestore Vector Search
     GCP_PROJECT_ID = os.environ.get('GOOGLE_CLOUD_PROJECT', '')
@@ -88,6 +84,5 @@ class Config:
         errors = []
         if not cls.LLM_API_KEY:
             errors.append("LLM_API_KEY is not configured")
-        # ZEP_API_KEY is optional (only needed for OASIS flow, not Crucible)
         return errors
 

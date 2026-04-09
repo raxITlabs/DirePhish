@@ -1,55 +1,59 @@
 # DirePhish Demo — YouTube + GitHub README
 
 **Format:** 3-5 min video
-**Structure:** "The Post-Mortem for the Incident That Never Happened"
-**Tone:** Personal story open, urgent middle, warm close
-**Report:** `proj_9afb2bed` — Amazon.com, Inc. · AI-Driven Social Engineering
-**All numbers below are from the actual report.**
+**Report:** `proj_bfd4a3c1` — Amazon · Supply Chain Attack
+**All numbers from the actual report.**
+
+**Voice note:** Read this like you're showing a friend your screen over a video
+call. Not presenting. Not performing. Talking. If a sentence feels weird to say
+out loud, it probably is.
 
 ---
 
 ## Beat 1 — COLD OPEN (0:00 - 0:30)
 
-Screen: The Amazon report. Executive Summary view. Numbers appearing.
+Screen: The report. Sidebar visible with the 82% and 0%.
 
-> "Across 3 simulations of an AI-driven social engineering attack on Amazon...
-> zero percent containment. The attacker achieved objectives in every single run.
+> "OK so... this is a simulation we ran against Amazon. Supply chain attack.
+> Ten runs.
 >
-> The attack: a deepfake impersonation over Slack. A senior developer's voice cloned
-> to trick a junior engineer. From there, code execution on a workstation. Persistence
-> through Okta. Privilege escalation via AWS IAM. Data harvested from S3.
-> Exfiltrated."
+> And, look at these two numbers. Team response, 82%. That's actually pretty
+> good. Detection, comms, compliance — they were on it. But then... threat
+> contained: zero. Zero percent. The attacker got through every single time.
+>
+> So the team did everything right and still lost. That's... yeah. That's
+> the finding."
 
-Screen: Show the kill chain — Slack → Workstation → Okta → AWS IAM → S3 → ExternalC2
+Screen: Kill chain visible at top. Six steps.
 
-> "Risk score: 47 out of 100. Poor. Annual exposure: $231,000.
-> Team response: 68%. Detection was good. Containment was zero."
+> "The attack went through GitHub Enterprise, into their cloud infrastructure,
+> through Secrets Manager, into Aurora, and out. Six steps. And the team couldn't
+> stop it at any of them."
 
-Beat of silence.
+Pause.
 
-> "This isn't a post-mortem. This incident never happened."
+> "This isn't a post-mortem by the way. None of this actually happened."
 
 ---
 
 ## Beat 2 — THE PERSONAL STORY (0:30 - 1:15)
 
-Cut away from the report. Dark screen or talking head.
+Cut away from the report.
 
-> "When I was at AWS, I ran security simulation exercises. The idea was simple.
-> Every team has a playbook. We wanted to see if it actually works. So we'd throw
-> a fictitious scenario at the team and watch what happens.
+> "So, some context. I used to be at AWS. And one of the things I did there was
+> run security simulation exercises. Like, tabletop exercises, incident response
+> drills, that kind of thing. And honestly it was probably the most fun work I've
+> done.
 >
-> But everyone's time poor. Planning one exercise took weeks. Coordinating schedules,
-> writing scenarios, getting the right people in the room. And those are busy people.
-> You get maybe an hour of their time. By the time you run it, half of them already
-> know what's coming.
+> But... the problem is, everyone's busy. Right? Like, these are senior people.
+> You're trying to get them all in a room, and planning one of these took weeks.
+> Writing the scenario. Coordinating schedules. And by the time you actually run
+> it, half the people have already seen the playbook. They know what's coming.
+> So you just... you don't really know if the playbook works. You know if people
+> can talk about the playbook.
 >
-> You'd walk out thinking 'that went well.' But you didn't actually know. You got
-> a conversation, not data.
->
-> So I started wondering — what if you could test the playbook without needing
-> everyone in a room? What if you could run it a hundred times and actually see
-> where the response breaks?"
+> And I kept thinking, what if you could just... test it? Like, without needing
+> everyone in a room. Run it a hundred times and see what actually happens."
 
 ---
 
@@ -57,191 +61,122 @@ Cut away from the report. Dark screen or talking head.
 
 > "So I built it."
 
-Screen: DirePhish homepage. "Predict what breaks next."
+Screen: DirePhish homepage.
 
-> "I typed in amazon.com. Told it to simulate an AI-driven deepfake attack
-> on the engineering team. And hit go."
+> "You type in a company. I put in amazon.com. Hit go."
 
-Screen: Type `amazon.com`. Add context. Click Analyze.
+Screen: Type amazon.com. Click Analyze.
 
-> "First it researches. Crawls the website, runs searches,
-> pulls the org chart, maps the tech stack. For Amazon it found Andy Jassy,
-> Amy Herzog as AWS CISO, Stephen Schmidt as CSO. Twelve systems. Slack,
-> Okta, IAM, S3, CodePipeline. Compliance frameworks. Data flows."
+> "And the first thing it does is research. Like, it's actually going out and
+> finding stuff. The org chart, the tech stack, recent news. For Amazon it found
+> Andy Jassy, Steve Schmidt, Matt Garman. GitHub Enterprise, Secrets Manager,
+> Lambda, Aurora. Twelve systems total. Recent breaches. Compliance frameworks.
+> All from public information."
 
-Screen: Pipeline running. Research step completing. Knowledge graph populating
-with Amazon's org structure.
+Screen: Knowledge graph populating.
 
-> "It also found recent events. A firewall breach affecting 600 devices.
-> A third-party vendor breach that exposed 2.8 million records. An AI bug
-> bounty program for their Nova models. All public information. All relevant
-> to what kind of attack is most likely."
+> "And this is important because, like, the scenario it picks comes from this.
+> It ranked three possible attacks and picked supply chain poisoning as the
+> most likely one. I didn't choose that. It figured it out from the research."
 
-Screen: Dossier editor — show the recent events, the risks, the systems list.
+Screen: Dossier editor.
 
-> "I didn't pick the scenario. DirePhish looked at all of this and ranked
-> three attack paths by probability. An AI-driven social engineering attack
-> came out at 45%. Supply chain poisoning at 35%. API fraud at 20%.
-> It picked the most likely one and ran it."
+> "You can review all of this. Fix stuff. But the point is it's not a template.
+> It's specific to this company."
 
-Screen: Threat analysis — show the three ranked scenarios.
+Screen: Config generation.
 
-> "You can review everything. Fix what's wrong. Add a system it missed.
-> But the scenario comes from the research, not from a template. Every company
-> gets a different test because every company has different risks."
+> "Then it builds the agents. And this is the part that... OK so. Andy Jassy's
+> agent is, quote, 'deeply scarred by the 2024 vendor breach' and 'expects
+> immediate actionable solutions.' Steve Schmidt 'communicates with technical
+> precision.' They have stress profiles. Biases. Tensions with each other.
+> I was reading these thinking, yeah, that's... that's actually what it looks
+> like."
 
-Screen: Dossier editor, editable fields. Then config generation.
+Screen: Simulation starting.
 
-> "Then it builds the agents. I used to work in this world. I know what Andy Jassy's
-> team actually looks like under pressure. So when I read that his agent is 'deeply
-> scarred by the 2024 third-party vendor breach' and 'expects immediate, actionable
-> solutions' — that landed differently for me. Amy Herzog, the AWS CISO, 'communicates
-> with technical precision and has little patience for bureaucratic delays.' They have
-> stress levels. Decision biases. Tensions with each other. I was watching AI versions
-> of people I used to work around."
+> "The simulation runs across Slack and email. You can watch the whole thing.
+> Defenders in one channel, attacker in another. And the attacker adapts.
+> Like, round 4, it writes: 'They are air-gapping the Health AI VPC. My
+> primary persistence is compromised. Shifting to Slack-to-Secrets Manager.'
+> It's... pivoting. In real time."
 
-Screen: Show the agent profiles if possible, or the config generation step.
-
-> "And they're under real pressure. A GDPR 72-hour notification countdown.
-> An IAM remediation sprint with a 24-hour deadline. Customer trust eroding."
-
-Screen: Pipeline simulations step starting.
-
-> "The simulation runs across Slack channels and email threads. In test mode
-> that's a few minutes. A full run with fifty variations, about an hour."
-
-Screen: Action feed visible. Messages flowing.
-
-> "You can watch the whole thing play out. The defenders are in a war room channel
-> trying to coordinate. The attacker is in a separate C2 channel, reading their
-> moves and adapting."
-
-Screen: Show the back-and-forth. Defender messages in one thread, attacker
-logs visible separately.
-
-> "When they detect something, the attacker pivots. When they miss something,
-> it exploits the gap."
-
-Screen: Threat actor log:
-"Defensive response is aggressive. Pivot strategy: abandon current identity persistence..."
+Screen: Threat actor logs scrolling. Don't narrate. Let it scroll for 3 seconds.
 
 > "They don't follow scripts. They decide."
 
-Pause. Let the action feed scroll for 3 seconds. No voiceover. Let the
-viewer read the actual messages — the back and forth between attacker and
-defenders. This is the moment that sells it.
+Screen: Round 12 threat actor log:
+"The honeypot is running perfectly. Defenders are busy remediating their own
+databases into oblivion while I maintain the sidecar."
 
-Screen: Hold on the threat actor logs.
-"MISSION STATUS: SUCCESS. Data exfiltrated. Defenders are crippled."
+Hold for 3 seconds. Silence.
 
-Let that sit for 3 full seconds. No voiceover. Just the log on screen.
-
-> "Then it runs the scenario again. Three times, ten times, fifty.
-> Each time varying the pressure, the timing, who responds first."
-
-Screen: Monte Carlo stress testing. Iterations ticking. Pause/skip controls
-visible in the sidebar.
-
-> "Zero percent containment. The attacker won every single run."
+> "Ten runs. Zero containment."
 
 ---
 
 ## Beat 4 — THE PAYOFF (2:30 - 3:40)
 
-Screen: The report. Kill chain step 1. [Contained in 0/3] [100% divergence]
+Screen: Kill chain step 1. Evidence chips. Response actions.
 
-> "The exercises I ran at AWS took weeks to plan. And at the end, you got a conversation.
-> This is the report I always wanted — every step of the kill chain, what the team did,
-> where they failed, what it cost."
+> "So the exercises I used to run at AWS, they took weeks. And you'd get a
+> conversation and maybe a PDF. This is what I always wanted.
+>
+> Look, every step of the kill chain. What happened. What the team did.
+> Where it broke. And the exact commands to fix it. Like, literally,
+> `aws secretsmanager rotate-secret`, assigned to the IAM team, 30 minutes.
+> At 2am during a real incident you don't want a recommendation. You want
+> the command."
 
-Screen: Stay on the kill chain step. Let the viewer see the response actions,
-the CLI commands, the risk score of 8.
+Screen: What-If for step 1.
 
-> "And something I couldn't do before."
+> "And this is new. What if the team was slow? Containment drops, exposure
+> goes to $5 million. What if you automate it? Containment goes up 45%.
+> One decision. That's the gap."
 
-Screen: What-If timelines. The two alternate paths.
+Screen: Step 5 — Collection.
 
-> "If the team delays terminating that Slack session... containment drops to zero.
-> Exposure: fifty thousand dollars. If detection is automated instead...
-> containment jumps 85%."
+> "At step 5 the attacker is scraping their AI model data. The What-If here
+> is... $50 million. Like, that's not a breach anymore. That's losing your
+> competitive advantage."
 
-Screen: Hold on the What-If comparison. -100% vs +85%. Let the numbers speak.
+Screen: Executive Summary.
 
-> "One decision. That's the difference."
+> "Risk score: 51. Moderate. And here's the thing that got me. Decision
+> consistency: 95%. The team made the same decisions in almost every run.
+> They were consistent. They were just... consistently wrong.
+>
+> Annual exposure: $232,000. Not my opinion. Math."
 
-Screen: Executive Summary. Risk score 47. The red 0% containment.
-
-> "Risk score: 47. Poor. Annual exposure: $231,000. The attacker won every time.
-> Not my opinion. Math."
-
-Screen: Hold on the exec summary for 3 seconds. Don't rush to the next view.
-This is the "blow their mind" moment from the transcript. Let it land.
+Hold for 3 seconds.
 
 ---
 
 ## Beat 5 — THE INVITE (3:40 - 4:15)
 
-Tone warms. Builder energy.
-
-> "I built DirePhish because I spent weeks planning exercises that produced a PDF
-> and a conversation. This gives you actual findings — evidence, a playbook, numbers
-> you can put in front of leadership.
+> "I built this because... I spent weeks doing what this does in an hour.
+> And I got a conversation. This gives you actual numbers you can bring
+> to leadership.
 >
-> If you want to know how your team actually performs under pressure — not what they
-> say they'd do, what they actually do — point it at your company and see.
+> If you want to know how your team actually handles pressure, not what
+> they say they'd do, point it at your company and find out.
 >
-> It's open source. The code is right there."
+> It's open source. Code's right there."
 
-Beat.
+Pause.
 
 > "DirePhish. A post-mortem for the incident that never happened."
 
-Screen: GitHub URL. raxIT Labs logo. End card.
-
----
-
-## Why This Report Is Perfect for the Demo
-
-1. **The team failed.** 0% containment. That's the whole point of the product. "Where does your response break?" Answer: everywhere.
-2. **AI-driven social engineering.** Topical, scary, novel. Not a boring ransomware scenario.
-3. **The threat actor logs are chilling.** "MISSION STATUS: SUCCESS. Defenders are crippled." That's not faked. The AI agent wrote that during the simulation.
-4. **Real AWS services in the kill chain.** Slack → Okta → IAM → S3. Anyone in tech recognizes these.
-5. **The What-If is dramatic.** Delay = $50,000 exposure. Automate = 85% improvement. Clear story.
-6. **Your personal connection.** "I used to do this at AWS. Now I built the tool."
-
----
-
-## Screen Recording Order
-
-Record in this order (not script order):
-
-1. **Report views** (you have them now):
-   - Kill chain step: Initial Access (the deepfake, 0/3 contained, response actions)
-   - Executive Summary (risk score 47, $231K ALE, 0% containment)
-   - Security Team (incident timeline with threat actor logs, IOCs)
-   - Crisis Comms (board, engineering, customer comms)
-   - Scroll through each slowly for 3-5 seconds
-
-2. **Pipeline running** — start a fresh run with amazon.com if needed, or use
-   the existing recording. Show research, graph, simulation action feed, MC.
-
-3. **Homepage** — the URL input, typing amazon.com, clicking Analyze
-
-4. **Threat actor logs** — zoom in on the action feed showing the operator logs.
-   This is the "wow" moment.
-
-Then edit into script order in post.
+End card.
 
 ---
 
 ## Key Lines to Protect
 
-These lines carry the script. Don't cut them:
-
-1. "This isn't a post-mortem. This incident never happened."
+1. "This isn't a post-mortem by the way. None of this actually happened."
 2. "So I built it."
 3. "They don't follow scripts. They decide."
-4. "MISSION STATUS: SUCCESS. Defenders are crippled." (actual AI output)
+4. "The honeypot is running perfectly. Defenders are busy remediating their own databases into oblivion." (actual AI output)
 5. "Not my opinion. Math."
 6. "A post-mortem for the incident that never happened."
 
@@ -250,25 +185,33 @@ These lines carry the script. Don't cut them:
 ## Production Notes
 
 - Runtime target: 3:45 - 4:15
-- Voiceover recommended (more room for screen recordings than talking head)
-- Screen recordings from actual DirePhish runs, not mockups
-- Music: tension-building for beats 1-3, resolve warm for beat 5
-- Let the threat actor logs sit on screen. They sell themselves.
-- The 0% containment number is the hook. Lead with it.
+- Voiceover with screen recording, or talking head with screen behind
+- Record screen first, write voiceover to match what's visible
+- Music: subtle tension for beats 1-3, warm resolve for beat 5
+- The threat actor logs sell themselves. Let them sit on screen.
+- The 82%/0% contrast is the hook
 
-## Pipeline Timing Reference (for accuracy in voiceover)
+## Report Data Reference
 
-| Mode | Total time | Iterations | Cost |
-|------|-----------|-----------|------|
+| Metric | Value |
+|--------|-------|
+| Report | proj_bfd4a3c1 |
+| Company | Amazon |
+| Scenario | Supply Chain Attack (Third-Party Dependencies) |
+| Kill chain | GitHub Enterprise → AWS Infrastructure → Secrets Manager → Aurora → ExternalC2 |
+| Iterations | 10 |
+| Team Response | 82% |
+| Containment | 0% |
+| Risk Score | 51/100 (Moderate) |
+| ALE | $232.6K |
+| Decision Consistency | 95% |
+| Key agents | Andy Jassy (100%), Steve Schmidt (99%), Matt Garman (88%), SOC Analyst (95%) |
+
+## Pipeline Timing
+
+| Mode | Time | Iterations | Cost |
+|------|------|-----------|------|
 | Test | ~3-5 min | 3 | ~$1 |
 | Quick | ~40 min | 10 | ~$7 |
 | Standard | ~75 min | 50 | ~$35 |
 | Deep | ~120+ min | 100+ | ~$70+ |
-
-The 8-step pipeline: Research → Dossier Review → Threat Analysis → Config
-Expansion → Simulations → Monte Carlo (stress testing) → Counterfactual
-(what-if) → Exercise Report
-
-The Amazon demo report (proj_9afb2bed) was run in test mode (3 iterations).
-For the demo, saying "about an hour" is accurate for quick mode, "two or three
-hours" for deep mode. Don't say "two minutes" — that's only the research step.

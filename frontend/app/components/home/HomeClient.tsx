@@ -95,10 +95,10 @@ export default function HomeClient() {
         <div className="w-full max-w-xl space-y-6">
           <div className="text-center space-y-2">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-              Predict what breaks next.
+              Predict what breaks next
             </h1>
             <p className="text-base md:text-lg text-muted-foreground font-mono">
-              Predictive incident response simulation.
+              Predictive incident response simulation
             </p>
           </div>
 

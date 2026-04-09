@@ -16,35 +16,6 @@ from .simulation_ipc import (
     CommandStatus
 )
 
-# OASIS modules depend on Zep (deprecated — may not be available)
-try:
-    from .oasis_profile_generator import OasisProfileGenerator, OasisAgentProfile
-    from .simulation_manager import SimulationManager, SimulationState, SimulationStatus
-    from .simulation_config_generator import (
-        SimulationConfigGenerator,
-        SimulationParameters,
-        AgentActivityConfig,
-        TimeSimulationConfig,
-        EventConfig,
-        PlatformConfig
-    )
-    from .simulation_runner import (
-        SimulationRunner,
-        SimulationRunState,
-        RunnerStatus,
-        AgentAction,
-        RoundSummary
-    )
-    from .graph_builder import GraphBuilderService
-    from .zep_entity_reader import ZepEntityReader, EntityNode, FilteredEntities
-    from .zep_graph_memory_updater import (
-        ZepGraphMemoryUpdater,
-        ZepGraphMemoryManager,
-        AgentActivity
-    )
-except ImportError:
-    # Zep/OASIS modules not available — Crucible flow doesn't need them
-    pass
 
 __all__ = [
     'OntologyGenerator',
