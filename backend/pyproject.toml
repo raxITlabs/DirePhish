@@ -1,7 +1,7 @@
 [project]
 name = "direphish-backend"
 version = "0.1.0"
-description = "DirePhish — Swarm-predict what goes wrong next"
+description = "DirePhish — Predictive threat simulation for security teams"
 requires-python = ">=3.11"
 license = { text = "AGPL-3.0" }
 authors = [

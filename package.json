@@ -1,7 +1,7 @@
 {
   "name": "direphish",
   "version": "0.1.0",
-  "description": "DirePhish — Swarm-predict what goes wrong next",
+  "description": "DirePhish — Predictive threat simulation for security teams",
   "scripts": {
     "setup": "npm install && cd frontend && pnpm install",
     "setup:backend": "cd backend && uv sync",
@@ -10,7 +10,8 @@
     "backend": "cd backend && portless api.direphish --app-port 5001 --force -- uv run python run.py",
     "frontend": "cd frontend && portless direphish --force -- pnpm run dev",
     "frontend:wait": "wait-on -t 120000 http-get://127.0.0.1:5001/health && cd frontend && portless direphish --force -- pnpm run dev",
-    "build": "cd frontend && pnpm run build"
+    "build": "cd frontend && pnpm run build",
+    "release": "bash scripts/release.sh"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
