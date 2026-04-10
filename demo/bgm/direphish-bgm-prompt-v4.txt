@@ -1,0 +1,47 @@
+Create a 69-second instrumental background track for a cybersecurity tool demo video. The tone is PROFESSIONAL and CONFIDENT — not childish chiptune, not dramatic film score. Think: a polished tech product launch video. Clean electronic production, understated intelligence, modern. Like the music behind a Stripe or Linear product demo — minimal, warm, assured.
+
+No vocals, no lyrics, no drums, no kick, no snare, no percussion kit. Instrumental only.
+
+Style: Modern minimal electronic. Clean analog synth textures, warm digital pads, subtle rhythmic pulses. Professional and polished, not retro or lo-fi. Dark enough for cybersecurity, light enough for open source. The mood is "smart people built this and it works" — confident without being arrogant, serious without being grim.
+
+Instruments: Clean low analog synth pulse (steady anchor, professional), warm mid-range pads with modern production, subtle digital texture layers, quiet rhythmic pulse that feels like a heartbeat not a metronome, occasional high-frequency shimmer
+Tempo: 75 BPM, steady throughout
+Key: C minor — dark but not oppressive
+Mood: Professional confidence. Quiet authority. Like presenting something you're proud of to smart people.
+
+Structure with PRECISE timestamps — the drop at 0:42 and release at 0:44 are the most important moments:
+
+[0:00 - 0:04] Opening: A clean synth pulse begins, modern and professional. Warm but restrained. Sets the tone immediately — this is a serious tool, not a toy, not a thriller.
+
+[0:04 - 0:08] Transition: Brief pause or breath as the visual changes. Pulse continues.
+
+[0:08 - 0:16] Establishing: Warm pads enter underneath the pulse. A subtle digital texture layer adds depth. Still minimal. The feel is a product being introduced — clean, professional, purposeful.
+
+[0:16 - 0:22] Building: Add a second rhythmic element — a quiet sub-bass pulse that gives weight. Pads evolve slowly. More texture. The listener feels momentum building without urgency. Something is being assembled.
+
+[0:22 - 0:28] Denser: The track reaches working density. Multiple layers active — pulse, pads, sub-bass, shimmer. Still professional, still restrained. The feel is "the machine is running." Not frantic, just focused.
+
+[0:28 - 0:40] Sustained activity: Maintain this density. The pads shift subtly in color. A quiet filter sweep rises slowly underneath over 12 seconds. The rhythm stays steady. This section should feel like watching a process run — consistent, professional, slightly tense. NOT dramatic — just engaged.
+
+[0:40 - 0:42] THE THINNING: Elements begin to strip away. The filter sweep stops. Pads recede. Sub-bass drops. Over 2 seconds, the track thins to just the primary pulse and a quiet held note. Not sudden silence — a controlled reduction. Professional restraint, not dramatic emptiness.
+
+[0:42 - 0:44] NEAR SILENCE: Just the pulse, very quiet. One or two seconds of space. The room is listening. Not scared — expectant. Like the pause before a presenter says "and here's what we found."
+
+[0:44 - 0:50] THE REVEAL: A warm, wide pad enters — broader and more harmonically rich than anything before. The pulse returns with quiet confidence. A subtle brightness in the high frequencies. This is NOT a triumphant swell — it's a settled, warm resolution. The feeling is "there it is." Earned, professional, satisfying.
+
+[0:50 - 0:54] Resolved: The warm pad holds. Everything is settled and confident. Brief plateau of warmth before the outro begins.
+
+[0:54 - 1:02] End card: All elements slowly thin. The warm pad sustains but loses energy. The pulse fades. By 1:00, only a quiet tone remains.
+
+[1:02 - 1:09] Final fade: Near-silence. A single quiet tone fading to nothing. Let the logo breathe.
+
+TONE DIRECTIVES:
+- PROFESSIONAL over playful. This is a product demo, not a game.
+- CONFIDENT over tense. The builder is proud of what they made.
+- MODERN over retro. Clean production, not lo-fi or chiptune.
+- WARM over cold. Inviting, not clinical.
+- The 0:42 silence and 0:44 reveal must be present but UNDERSTATED — a controlled professional pause, not a theatrical moment.
+- No 8-bit sounds, no chiptune, no retro gaming aesthetic.
+- No orchestral swells, no cinematic drama.
+- Think: Stripe launch video, Linear product demo, Vercel keynote music.
+- Instrumental only, no vocals, no drums, no percussion.

@@ -26,7 +26,12 @@ lateral movement succeeded. 9% full regulatory escalation."
 The output is an exercise report your board can read and your red team
 can act on. A post-mortem for an incident that never happened.
 
-<!-- TODO: Add product screenshot -->
+<p align="center">
+  <a href="demo/direphish.mp4">
+    <img src="https://img.shields.io/badge/▶%20Watch%20Demo-67s-black?style=for-the-badge" alt="Watch Demo" />
+  </a>
+</p>
+<p align="center"><sub>67 seconds. Amazon. Supply chain attack. 10 Monte Carlo runs. Zero containment.</sub></p>
 
 - [Architecture & pipeline diagram](docs/ARCHITECTURE.md)
 - [Full tech stack](docs/TECH_STACK.md)
