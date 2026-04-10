@@ -27,7 +27,7 @@ The output is an exercise report your board can read and your red team
 can act on. A post-mortem for an incident that never happened.
 
 <p align="center">
-  <a href="demo/direphish.mp4">
+  <a href="https://youtu.be/9kpxucZRj8g">
     <img src="https://img.shields.io/badge/▶%20Watch%20Demo-67s-black?style=for-the-badge" alt="Watch Demo" />
   </a>
 </p>
