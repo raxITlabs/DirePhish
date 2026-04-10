@@ -28,7 +28,7 @@ can act on. A post-mortem for an incident that never happened.
 
 <p align="center">
   <a href="https://youtu.be/9kpxucZRj8g">
-    <img src="https://img.shields.io/badge/▶%20Watch%20Demo-67s-black?style=for-the-badge" alt="Watch Demo" />
+    <img src="https://img.youtube.com/vi/9kpxucZRj8g/maxresdefault.jpg" alt="Watch Demo" width="720" />
   </a>
 </p>
 <p align="center"><sub>67 seconds. Amazon. Supply chain attack. 10 Monte Carlo runs. Zero containment.</sub></p>
