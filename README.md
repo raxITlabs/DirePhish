@@ -149,6 +149,13 @@ Sharpened by [raxIT Labs](https://raxit.ai).
 - [Crucible](https://github.com/raxITlabs/crucible) -- the simulation engine powering DirePhish
 - [MiroFish](https://github.com/666ghj/MiroFish) -- the swarm intelligence engine we built on
 
+<p align="center">
+  <a href="https://raxit.ai">Website</a> &middot;
+  <a href="https://www.linkedin.com/company/raxit-ai">LinkedIn</a> &middot;
+  <a href="https://bsky.app/profile/raxit.ai">Bluesky</a> &middot;
+  <a href="https://x.com/raxit_ai">X</a>
+</p>
+
 ## License
 
 AGPL-3.0 -- see [LICENSE](LICENSE) for details.
