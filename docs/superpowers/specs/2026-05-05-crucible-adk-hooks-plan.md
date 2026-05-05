@@ -6,7 +6,7 @@
 **Target branch:** `feature/adk-hooks`
 **Consumer:** `raxitlabs/direphish` on `claude/review-adk-migration-research-057FX`
 **Submission deadline (consumer-side):** 2026-06-05
-**Status:** ✅ **SHIPPED** on `feature/adk-hooks` (latest SHA `e914a9b`). 78 passed / 1 skipped / 0 failed. CI workflow included on the branch. Branch is **not** merged — sits parallel to `main` until post-challenge cleanup. DirePhish `backend/pyproject.toml` is pinned to `e914a9b`.
+**Status:** ✅ **SHIPPED** on `feature/adk-hooks` (verified at SHA `e914a9b`). 78 passed / 1 skipped / 0 failed. CI workflow included on the branch. Branch is **not** merged — sits parallel to `main` until post-challenge cleanup. DirePhish `backend/pyproject.toml` **tracks the `feature/adk-hooks` branch ref** during integration shake-out (mutable pin, picks up new commits on `pip install`). Switch to a frozen SHA pin once both teams are happy everything works (target: 2026-05-26, start of DirePhish W4).
 
 The original handoff brief is preserved below for the historical record. **§10 — Delivered API + deviations** captures what actually shipped and the open schema question DirePhish must resolve before the legacy round-trip test can un-skip.
 
@@ -243,11 +243,15 @@ The branch is done when **all** of these hold:
 
 This section was added after `feature/adk-hooks` shipped. It supersedes §3 wherever the two conflict.
 
-**Pinned SHA:** `e914a9b` on `raxITlabs/crucible@feature/adk-hooks`. Use exactly this in `backend/pyproject.toml`:
+**Current pin (integration shake-out):** branch ref `feature/adk-hooks`. Mutable — `pip install -e .` pulls latest HEAD each time.
 
 ```
-crucible-sim @ git+https://github.com/raxITlabs/crucible.git@e914a9b
+crucible-sim @ git+https://github.com/raxITlabs/crucible.git@feature/adk-hooks
 ```
+
+**Verified at SHA:** `e914a9b` (the snapshot whose imports were introspected in §10.5). Newer commits land transparently on the next install.
+
+**Freeze plan:** swap `@feature/adk-hooks` → `@<frozen-sha>` once integration is stable (target 2026-05-26, start of DirePhish W4). Hard-required before challenge submission so the demo build is reproducible.
 
 ### 10.1 Actual import surface
 
@@ -286,13 +290,17 @@ The shipped `ActionEvent` has `extra="forbid"` and `role: Literal["attacker","de
 
 **Recommendation:** Option C. Crucible's contract is the future shape; legacy data gets normalized at the DirePhish boundary. The fixture handed to crucible should be a curated, post-mapping slice — not raw historical data.
 
+**Decision (2026-05-05):** ✅ **Option C chosen.** DirePhish owns the normalize-on-read loader; crucible's `ActionEvent` schema stays strict. Implementation deferred until the rest of the W1 ADK build is underway — the un-skip of crucible's `TestLegacyJSONLRoundTrip` happens once DirePhish has produced the curated slice.
+
 ### 10.4 Action items for DirePhish (this repo)
 
-- [x] Pin `backend/pyproject.toml` to `e914a9b`. _(done in same commit as this addendum)_
-- [ ] Decide schema resolution (A / B / C) — owner: Adesh.
-- [ ] Once decided: produce `tests/fixtures/legacy_actions.jsonl` (curated post-mapping slice, ~10–20 lines covering all 4 roles × 3 worlds), commit to **crucible** to un-skip `TestLegacyJSONLRoundTrip`. Write the action-record loader/transformer on the DirePhish side.
+- [x] Pin `backend/pyproject.toml` to track the `feature/adk-hooks` branch ref (mutable, integration shake-out).
+- [x] Decide schema resolution — **Option C** chosen.
+- [ ] Implement DirePhish-side normalizer (`agent_type` drop + `role` re-mapping) when reading historical JSONL into `ActionEvent`. Lives at the persistence boundary, not inside the ADK orchestrator.
+- [ ] Produce `tests/fixtures/legacy_actions.jsonl` (curated post-mapping slice, ~10–20 lines covering all 4 roles × 3 worlds) and commit to **crucible** to un-skip `TestLegacyJSONLRoundTrip`.
 - [ ] During W1 ADK build: thread `role`, `simulation_id`, `round_num` into orchestrator `apply_action` calls.
 - [ ] During W1 ADK build: handle `kind="severity_changed"` `PressureEvent`s in the orchestrator's pressure-tick consumer.
+- [ ] **Before W4 (2026-05-26):** swap branch-ref pin to a frozen SHA pin in `backend/pyproject.toml`. Reproducibility lock-in for the challenge submission.
 - [ ] After 2026-06-05: open `feature/adk-hooks → main` PR on crucible.
 
 ### 10.5 Verification (post-ship, run from this repo)
