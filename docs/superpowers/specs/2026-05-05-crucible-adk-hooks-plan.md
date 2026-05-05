@@ -6,7 +6,9 @@
 **Target branch:** `feature/adk-hooks`
 **Consumer:** `raxitlabs/direphish` on `claude/review-adk-migration-research-057FX`
 **Submission deadline (consumer-side):** 2026-06-05
-**Status:** Ready for handoff. Self-contained — read cold and act.
+**Status:** ✅ **SHIPPED** on `feature/adk-hooks` (latest SHA `e914a9b`). 78 passed / 1 skipped / 0 failed. CI workflow included on the branch. Branch is **not** merged — sits parallel to `main` until post-challenge cleanup. DirePhish `backend/pyproject.toml` is pinned to `e914a9b`.
+
+The original handoff brief is preserved below for the historical record. **§10 — Delivered API + deviations** captures what actually shipped and the open schema question DirePhish must resolve before the legacy round-trip test can un-skip.
 
 ---
 
@@ -234,3 +236,76 @@ The branch is done when **all** of these hold:
 5. Verification commands in §7 all return `ok` / exit zero.
 6. A DirePhish CI run pinned to the latest `feature/adk-hooks` SHA is green.
 7. No diff in any pre-existing test's output (the regression safety nets `test_legacy_step_unchanged.py` confirm this).
+
+---
+
+## 10. Delivered API + deviations (post-ship addendum)
+
+This section was added after `feature/adk-hooks` shipped. It supersedes §3 wherever the two conflict.
+
+**Pinned SHA:** `e914a9b` on `raxITlabs/crucible@feature/adk-hooks`. Use exactly this in `backend/pyproject.toml`:
+
+```
+crucible-sim @ git+https://github.com/raxITlabs/crucible.git@e914a9b
+```
+
+### 10.1 Actual import surface
+
+```python
+from crucible import ActionEvent, PressureEvent, CrucibleEnv
+# CrucibleEnv now has:
+#   await env.tick_pressure(round_num)
+#   await env.apply_action(actor, role, world, action, args, simulation_id, round_num)
+#   env.snapshot_world(world)        # sync; returns dict[str, list[dict]]
+```
+
+### 10.2 Deviations from the original handoff (§3) — DirePhish must accommodate
+
+| Spec'd in §3 | Shipped in `e914a9b` | DirePhish-side implication |
+|---|---|---|
+| `tick_pressure` / `apply_action` are sync | **Async** (`async def`) | OK — the ADK orchestrator is async-native (`runner.run_async`, `LlmAgent.generate_content_async`). No sync wrappers needed. The `BaseAgent` wrapping the pressure engine becomes `_run_async_impl`. |
+| `PressureEngine.__init__(config, seed)` | `__init__(configs, hours_per_round)` — no `seed` | Pressure logic is deterministic (no RNG); `seed` was vestigial. No change needed in DirePhish. |
+| `PressureEngine.tick(state, round_num)` returning events | `tick() -> None` (legacy, unchanged) **plus** `tick_events(round_num) -> list[PressureEvent]` (new). No `state` param. | DirePhish wraps `tick_events` in the ADK `BaseAgent`, not `tick`. |
+| `PressureEvent.kind: Literal["countdown_breach","sla_breach","scripted"]` | Adds a fourth: `"severity_changed"` | Update DirePhish `permissions.yaml` consumers and any kind-switch in the orchestrator to handle `severity_changed`. |
+| `apply_action(actor, world, action, args)` (4 args) | `apply_action(actor, role, world, action, args, simulation_id, round_num)` (7 args) | DirePhish orchestrator must thread `role`, `simulation_id`, and `round_num` through. The orchestrator already tracks all three — no new state. |
+| `step()` semantic preserved | Preserved exactly. Refactor pinned by `tests/test_legacy_step_unchanged.py`. | No DirePhish change. |
+
+### 10.3 Open schema question (blocks the legacy round-trip test)
+
+The shipped `ActionEvent` has `extra="forbid"` and `role: Literal["attacker","defender","arbiter","inject"]`. DirePhish's existing JSONL fixtures (e.g. `backend/tests/fixtures/simulations/proj_32ba2039_scenario_0_sim/actions.jsonl`) **do not validate** under this schema for two reasons:
+
+1. **Extra field `agent_type`.** Every action record has `"agent_type": "..."` alongside `agent`. `extra="forbid"` rejects it.
+2. **Role values out of band.** Records use `"role": "threat_actor"`, `"role": "blue_team"`, etc. — not in the four-value `Literal`.
+3. **Inject records have a different shape entirely** — `{type, round, description, kill_chain_step, timestamp, simulation_id}`. They are not `ActionEvent`s; they are environmental injects. The crucible-side `tests/fixtures/legacy_actions.jsonl` fixture should exclude them or the schema should fork.
+
+**Resolution options** (pick one before un-skipping `TestLegacyJSONLRoundTrip`):
+
+- **Option A — relax the crucible schema.** Drop `extra="forbid"` on `ActionEvent`, broaden the role `Literal` to a `str` or include `"threat_actor"` and the existing defender role names. Cleanest for backward compat. Loses some validation strictness.
+- **Option B — fork the schema.** Add a separate `LegacyActionEvent` (permissive) for round-trip and keep `ActionEvent` strict for new MCP emitters. DirePhish writes `ActionEvent` going forward; reads either via a tagged-union loader.
+- **Option C — transform on read.** Map `agent_type` → drop, `role: "threat_actor"` → `role: "attacker"`, etc., in a DirePhish loader. Crucible schema stays strict. Round-trip test in crucible uses a curated, already-mapped fixture (which is what §3.2 originally implied).
+
+**Recommendation:** Option C. Crucible's contract is the future shape; legacy data gets normalized at the DirePhish boundary. The fixture handed to crucible should be a curated, post-mapping slice — not raw historical data.
+
+### 10.4 Action items for DirePhish (this repo)
+
+- [x] Pin `backend/pyproject.toml` to `e914a9b`. _(done in same commit as this addendum)_
+- [ ] Decide schema resolution (A / B / C) — owner: Adesh.
+- [ ] Once decided: produce `tests/fixtures/legacy_actions.jsonl` (curated post-mapping slice, ~10–20 lines covering all 4 roles × 3 worlds), commit to **crucible** to un-skip `TestLegacyJSONLRoundTrip`. Write the action-record loader/transformer on the DirePhish side.
+- [ ] During W1 ADK build: thread `role`, `simulation_id`, `round_num` into orchestrator `apply_action` calls.
+- [ ] During W1 ADK build: handle `kind="severity_changed"` `PressureEvent`s in the orchestrator's pressure-tick consumer.
+- [ ] After 2026-06-05: open `feature/adk-hooks → main` PR on crucible.
+
+### 10.5 Verification (post-ship, run from this repo)
+
+```bash
+cd /home/user/DirePhish/backend
+pip install -e .                                  # picks up pinned SHA e914a9b
+python -c "from crucible import ActionEvent, PressureEvent, CrucibleEnv; \
+  assert hasattr(CrucibleEnv, 'tick_pressure'); \
+  assert hasattr(CrucibleEnv, 'apply_action'); \
+  assert hasattr(CrucibleEnv, 'snapshot_world'); \
+  print('ok')"
+pytest tests/ -q                                  # legacy DirePhish tests still pass
+```
+
+If either step fails, the pin is wrong or crucible lost a public symbol — investigate before starting W1 ADK work.
