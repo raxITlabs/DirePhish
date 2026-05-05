@@ -88,6 +88,7 @@ From the Google for Startups AI Agent Challenge announcement and Addy Osmani's o
 - Custom ReACT loop → ADK `Runner` + agent tree
 - In-process Worlds → MCP servers (stdio locally, HTTP/SSE if we go cloud)
 - "Defender team" / "Adversary team" / "Judge" boundary → A2A services with their own AgentCards
+- Direct OpenAI SDK shim + raw Anthropic API → **Vertex AI Model Garden as the single model plane** (Gemini natively, Claude via `anthropic[vertex]`, Llama/Mistral available as v2 swap-ins)
 - Hand-rolled cost/observability → ADK callbacks (`before_model_callback`, `after_model_callback`, `before_tool_callback`)
 - Hand-graded "did this run go well" → ADK `AgentEvaluator` + `.evalset.json` files
 
@@ -119,17 +120,17 @@ From the Google for Startups AI Agent Challenge announcement and Addy Osmani's o
 └────────────┬──────────────────┬───────────────────┬──────────────┘
              │                  │                   │
              ▼                  ▼                   ▼
-   ┌──────────────────┐ ┌────────────────┐ ┌──────────────────┐
-   │ DefenderTeam     │ │ AdversaryTeam  │ │ ContainmentJudge │
-   │ A2A :8001        │ │ A2A :8002      │ │ A2A :8003        │
-   │ Gemini 3 Pro     │ │ Claude (Lite)  │ │ Gemini 3 Pro     │
-   │                  │ │                │ │                  │
-   │ - CISO           │ │ - ThreatActor  │ │ - rates round    │
-   │ - IR Lead        │ │   (sole agent  │ │ - emits eval     │
-   │ - SOC Analyst    │ │   for v1)      │ │   signal         │
-   │ - Legal          │ │                │ │                  │
-   │ - CEO            │ │                │ │                  │
-   └────────┬─────────┘ └───────┬────────┘ └────────┬─────────┘
+   ┌──────────────────┐ ┌────────────────────┐ ┌──────────────────┐
+   │ DefenderTeam     │ │ AdversaryTeam      │ │ ContainmentJudge │
+   │ A2A :8001        │ │ A2A :8002          │ │ A2A :8003        │
+   │ Gemini 3 (Vertex)│ │ Claude (Vertex MG) │ │ Gemini 3 Pro     │
+   │                  │ │                    │ │  (Vertex)        │
+   │ - CISO           │ │ - ThreatActor      │ │ - rates round    │
+   │ - IR Lead        │ │   (sole agent      │ │ - emits eval     │
+   │ - SOC Analyst    │ │   for v1)          │ │   signal         │
+   │ - Legal          │ │                    │ │                  │
+   │ - CEO            │ │                    │ │                  │
+   └────────┬─────────┘ └─────────┬──────────┘ └────────┬─────────┘
             │                   │                   │
             └───────────────────┼───────────────────┘
                                 ▼
@@ -153,11 +154,67 @@ If everything ran in one process, these boundaries would be honor-system. With A
 
 **MCP for Worlds is a "killer demo" pattern.** The challenge brief explicitly highlights MCP for connecting external tools. Our Worlds *are* external tools (Slack, email, SIEM). Re-implementing them as MCP servers is the natural shape and the most photogenic.
 
-**Cross-model A2A is the differentiator.** Defender runs on Gemini (better structured/factual recall, native to Google ecosystem). Adversary runs on Claude via LiteLlm (stronger adversarial reasoning, plus "we use the whole platform" signal). Judge stays on Gemini Pro for evaluative consistency. This is the kind of detail judges remember.
+**Cross-model A2A is the differentiator — and every model goes through Vertex AI.** Defender runs on Gemini (better structured/factual recall, native to Google ecosystem). Adversary runs on Claude — but **via Vertex AI Model Garden**, not direct Anthropic API and not LiteLlm. Judge stays on Gemini Pro for evaluative consistency. The point judges care about is "uses the whole Vertex platform": single billing surface, single IAM, single observability plane (Cloud Logging + Cloud Trace), $500 Google credits cover it. This is the kind of detail judges remember.
 
-**Local-first dev with optional cloud at the end.** Three localhost ports (8001/8002/8003) for A2A. stdio MCP. The whole thing runs on a laptop. Cloud deploy (Vertex AI Agent Engine for the orchestrator + Cloud Run for A2A/MCP) is week-5 work, not blocking.
+**Local-first dev with optional cloud at the end.** Three localhost ports (8001/8002/8003) for A2A. stdio MCP. The whole thing runs on a laptop, with Vertex AI as the only outbound dependency for model calls. Cloud deploy (Vertex AI Agent Engine for the orchestrator + Cloud Run for A2A/MCP) is week-5 work, not blocking.
 
-### 3.3 Why not Option 2 (surgical wrap)
+### 3.3 Model plane — Vertex AI Model Garden, multi-vendor
+
+Every model call in the system goes through **Vertex AI**. Google-built models use the native `google-genai` path; partner-built models (Anthropic, and optionally Llama / Mistral / AI21 in v2) use Vertex Model Garden's MaaS endpoints. We deliberately avoid LiteLlm and direct vendor APIs in v1.
+
+**Why one provider plane:**
+- Single auth surface (ADC + service account), single project, single billing line.
+- $500 Google credits already in hand cover the entire bill, including Claude calls.
+- Cloud Logging and Cloud Trace see every model call — including Claude — with no extra wiring. This becomes the observability story for the demo.
+- ADK's `before_model_callback` / `after_model_callback` fire uniformly across vendors because every model is an `LlmAgent`-registered class. Cost and latency tracking is one code path.
+- Eliminates an entire class of demo-day failure (rate limits on a separate Anthropic account, mismatched retry semantics between SDKs, key rotation drift).
+
+**How it's wired in ADK:**
+
+```python
+# backend/adk/models.py — runs once at process start, for every A2A service
+from google.adk.models.anthropic_llm import Claude
+from google.adk.models.registry import LLMRegistry
+
+LLMRegistry.register(Claude)  # makes "claude-*" strings resolvable on LlmAgent
+```
+
+```python
+# Defender / Judge personas — Gemini via Vertex (default path)
+from google.adk.agents import LlmAgent
+
+ir_lead = LlmAgent(model="gemini-3-pro-preview", name="ir_lead", ...)
+
+# Adversary persona — Claude via Vertex Model Garden
+threat_actor = LlmAgent(model="claude-sonnet-4-6", name="threat_actor", ...)
+```
+
+Environment (set in every A2A service container):
+```
+GOOGLE_GENAI_USE_VERTEXAI=TRUE
+GOOGLE_CLOUD_PROJECT=direphish-google-challenge
+GOOGLE_CLOUD_LOCATION=us-east5      # Claude on Vertex publishers live here
+```
+
+Dependency: `pip install "anthropic[vertex]"` in addition to ADK. No `anthropic` API key, no `ANTHROPIC_API_KEY` env var, no LiteLlm.
+
+**Model assignments (v1):**
+
+| Role | Model string | Source | Why |
+|---|---|---|---|
+| CISO, IR Lead, Judge | `gemini-3-pro-preview` | Vertex (Google native) | Reasoning depth |
+| SOC Analyst, Legal, CEO | `gemini-3-flash-lite-preview` | Vertex (Google native) | Volume + cost |
+| ThreatActor (Adversary) | `claude-sonnet-4-6` | Vertex Model Garden (Anthropic) | Adversarial reasoning + cross-vendor signal |
+| PressureEngine | n/a (deterministic `BaseAgent`) | — | No LLM |
+
+**v2 swap-in candidates (already Vertex-resident, no architecture change):**
+- Llama 4 (Meta) for a second adversary persona ("Affiliate") — demonstrates 3-vendor A2A.
+- Mistral Mixtral 8x7B for cheap red-team idea generation.
+- AI21 Jamba for long-context post-incident analysis.
+
+Because every persona is just a model string passed to `LlmAgent`, swapping a persona's vendor is a one-line change. This is itself a Track 2 talking point: "the eval loop selects not just prompts but the model that best wins each persona."
+
+### 3.4 Why not Option 2 (surgical wrap)
 
 We considered just wrapping the existing custom loop in an ADK `LlmAgent` and calling it a day. Rejected: that qualifies but doesn't win. Judges have seen 100 entries that are "we added ADK around our existing thing." The shape that wins is one where ADK *is* the architecture, not a layer on top.
 
@@ -183,11 +240,13 @@ We considered just wrapping the existing custom loop in an ADK `LlmAgent` and ca
 
 **Why this split on models:** strategic personas (CISO, IR Lead) get Pro for reasoning depth. Reactive personas (Analyst, Legal, CEO) get Flash Lite for speed and cost — they emit volume, not depth.
 
-### 4.2 Adversary team (A2A :8002, Claude via LiteLlm)
+### 4.2 Adversary team (A2A :8002, Claude via Vertex AI Model Garden)
 
 | Persona | Model | Tools (MCP) | Role |
 |---|---|---|---|
-| ThreatActor | Claude Sonnet 4.6 | slack (limited), email (send only), siem (read only — simulating recon) | Plays the ransomware crew. Owns kill chain progression. |
+| ThreatActor | `claude-sonnet-4-6` (Vertex MG, `us-east5`) | slack (limited), email (send only), siem (read only — simulating recon) | Plays the ransomware crew. Owns kill chain progression. |
+
+Wired via `LLMRegistry.register(Claude)` from `google.adk.models.anthropic_llm` at service startup. No direct Anthropic API key — auth is the same ADC the Gemini personas use.
 
 **v1:** single adversary persona. **v2:** add Affiliate, Negotiator, OPSEC.
 
@@ -280,7 +339,7 @@ A "round" is one tick of simulated time. The orchestrator drives:
 |---|---|
 | MCP server crash | Orchestrator marks world as degraded, emits SSE warning, continues round (judge accounts for it) |
 | A2A service unreachable | 3x retry with exponential backoff, then mark team as unresponsive (interesting demo failure mode) |
-| Model API rate limit | LiteLlm built-in retry, fallback to flash-lite for adversary if Claude rate-limited |
+| Model API rate limit | Vertex AI quota retry (exponential backoff in the Anthropic Vertex SDK / google-genai); fallback to `gemini-3-flash-lite-preview` for adversary if Claude-on-Vertex quota is exhausted in `us-east5` (also retry in `europe-west1` where Claude is dual-published) |
 | Eval data unavailable | Sim still runs, just doesn't write eval signal |
 
 ---
@@ -343,14 +402,14 @@ The video is written *into* the architecture, not onto it. Every decision in §3
 ## 9. Migration phases (5 weeks, 2026-05-05 → 2026-06-05)
 
 ### Week 1 (2026-05-05 → 2026-05-11) — Foundation
-- ADK skeleton in `backend/adk/` with Root Orchestrator + one persona (IR Lead) + one MCP world (Slack)
-- LiteLlm wrapper for Claude on a separate process
+- ADK skeleton in `backend/adk/` with Root Orchestrator + one persona (IR Lead, Gemini via Vertex) + one MCP world (Slack)
+- Vertex AI model plane wired up: ADC configured, `GOOGLE_GENAI_USE_VERTEXAI=TRUE` env, `anthropic[vertex]` installed, `LLMRegistry.register(Claude)` called at service startup, smoke test that both `gemini-3-pro-preview` and `claude-sonnet-4-6` resolve via the same auth path
 - SSE bus from orchestrator → existing Flask `/sim/{id}/events`
-- Goal: a single-persona round runs end-to-end, war-room renders live
+- Goal: a single-persona round runs end-to-end, war-room renders live, both Gemini and Claude callable through Vertex from the same process
 
 ### Week 2 (2026-05-12 → 2026-05-18) — Multi-persona, multi-world
-- All 5 Defender personas as a `ParallelAgent` inside DefenderTeam A2A service
-- Adversary as A2A service on its own port, Claude-backed
+- All 5 Defender personas as a `ParallelAgent` inside DefenderTeam A2A service (Gemini Pro / Flash Lite via Vertex)
+- Adversary as A2A service on its own port, Claude-on-Vertex-Model-Garden backed
 - Email + SIEM MCP servers
 - Pressure engine as custom `BaseAgent`
 - Goal: full ransomware scenario completes with all 6 personas + judge
@@ -381,7 +440,7 @@ The video is written *into* the architecture, not onto it. Every decision in §3
 |---|---|---|
 | 1 | Cloud deploy (stay local) | Local works fine for the demo, judges can clone |
 | 2 | Auto-refinement loop | Reduces to "we have evals" rather than "we improve from evals" — drops win odds |
-| 3 | Cross-model (Adversary on Gemini instead of Claude) | Loses a differentiator but stays shippable |
+| 3 | Cross-model (Adversary on Gemini instead of Claude-on-Vertex) | Loses the multi-vendor-on-one-platform differentiator but stays shippable |
 | 4 | Persona count (drop CEO + Legal) | Last resort — weakens the "real org" story |
 
 ---
@@ -390,7 +449,7 @@ The video is written *into* the architecture, not onto it. Every decision in §3
 
 If we ship all of these, we have a real shot at winning Track 2:
 
-1. **Cross-model A2A.** Claude on Adversary, Gemini on Defender. Visible in the demo. Visible in the architecture diagram.
+1. **Cross-vendor A2A on a single Vertex AI plane.** Claude on Adversary, Gemini on Defender — but both resolved through Vertex AI Model Garden, same project, same IAM, same Cloud Trace. Visible in the demo, visible in the architecture diagram, visible in one billing line. ("Same platform, different brains.")
 2. **MCP as Worlds, not as toys.** Slack/Email/SIEM MCP servers that are actual functional simulation worlds, not "hello world" demos.
 3. **Eval-driven prompt refinement loop.** Show the loop. Show the commits. Show the containment time number drop.
 4. **Pressure engine as custom BaseAgent.** Most ADK demos are LLM-only. Showing a deterministic agent in the same tree shows we understand the framework.
@@ -409,7 +468,8 @@ If we ship all of these, we have a real shot at winning Track 2:
 - **Realistic hours/week between now and June 5?** Plan above assumes 15–25 hrs/wk. If <15, cut order in §9 kicks in.
 
 ### Risks
-- **LiteLlm + Claude reliability.** Claude rate limits could bottleneck adversary. Mitigation: cache adversary actions for replay; flash-lite fallback.
+- **Claude-on-Vertex regional quota.** Claude on Vertex is published in a small set of regions (`us-east5`, `europe-west1` at time of writing). A single-region quota cap could bottleneck the adversary during the demo. Mitigation: dual-region client config with failover; cache adversary actions for replay; `gemini-3-flash-lite-preview` cold fallback wired through the same `LlmAgent` so failover is a model-string swap, not an SDK swap.
+- **Partner model availability drift on Vertex.** Anthropic deprecated Claude 3 Haiku on Vertex on 2026-02-23 (shutdown 2026-08-23); Mistral retired Codestral 25.01 and Mistral Large 24.11 on 2026-01-23. Mitigation: pin to `claude-sonnet-4-6` (current GA), monitor Vertex release notes, keep a v2 list of Vertex-resident swap-ins so a deprecation isn't a re-architecture.
 - **MCP stdio overhead.** 4 stdio subprocesses per round may be slow. Mitigation: process pooling; switch to HTTP MCP if stdio bottlenecks.
 - **Eval data quality.** Historical Crucible runs may not be cleanly labeled. Mitigation: human review pass; synthetic fills gaps.
 - **Demo recording at the deadline.** Most likely failure mode is "code works, video is rushed." Mitigation: lock feature freeze at 2026-06-02, leave 3 days for recording.
@@ -435,6 +495,7 @@ If we ship all of these, we have a real shot at winning Track 2:
 | 6 personas, 3 worlds, ransomware, ~15 rounds, 3 A2A services | 2026-05-04 | Smallest scope that demos all the patterns |
 | Local-first dev, cloud optional | 2026-05-04 | User pushback on 8-service deploy plan |
 | Cross-model: Claude on Adversary, Gemini on Defender | 2026-05-04 | Differentiator + uses platform fully |
+| Vertex AI Model Garden as the **only** model plane (Gemini natively, Claude via `anthropic[vertex]` + `LLMRegistry.register(Claude)`); no LiteLlm, no direct Anthropic API key | 2026-05-05 | Single auth + billing + observability surface; $500 Google credits cover Claude calls; uniform ADK callbacks for cost/latency across vendors; eliminates a class of demo-day failures |
 | Hybrid eval data (historical + synthetic) | 2026-05-04 | Coverage gaps in historical data |
 | Hard rule: no implementation until plan written and approved | 2026-05-04 | Brainstorming gate |
 | Crucible package not deleted, just deprecated | 2026-05-04 | Safe rollback |
