@@ -113,6 +113,9 @@ def create_app(config_class=Config):
     from .api.crucible import crucible_bp
     app.register_blueprint(crucible_bp, url_prefix='/api/crucible')
 
+    from .api.adk_smoke import adk_bp
+    app.register_blueprint(adk_bp, url_prefix='/api/adk')
+
     # Health check
     @app.route('/health')
     def health():
