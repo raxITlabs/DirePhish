@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feature/google-challenge
       - claude/review-adk-migration-research-057FX
 
 jobs:
