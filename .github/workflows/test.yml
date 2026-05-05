@@ -1,0 +1,48 @@
+name: backend tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - claude/review-adk-migration-research-057FX
+
+jobs:
+  adk:
+    name: pytest tests/adk (hermetic)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # Hermetic Vertex env. No real ADC; no network egress for model calls.
+      # Live smoke tests live under tests/adk/local/ and are excluded here.
+      GOOGLE_GENAI_USE_VERTEXAI: "TRUE"
+      GOOGLE_CLOUD_PROJECT: "ci-fake-project"
+      GOOGLE_CLOUD_LOCATION: "us-east5"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ADK test deps
+        # Scoped install: only what the ADK test suite needs to import +
+        # run. The full backend depends on graphiti-core / camel-ai whose
+        # transitive neo4j pins conflict under pip's modern resolver
+        # (uv handles it via [tool.uv] override-dependencies). Broaden CI
+        # to the full suite once that install path is unified.
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pytest>=8" "pytest-asyncio>=0.23" "pydantic>=2"
+          pip install "google-adk>=1.32.0" "anthropic[vertex]>=0.98.0"
+          pip install "crucible-sim @ git+https://github.com/raxITlabs/crucible.git@feature/adk-hooks"
+
+      - name: Run ADK tests
+        run: |
+          python -m pytest tests/adk \
+            --confcutdir=tests/adk \
+            --ignore=tests/adk/local \
+            -q

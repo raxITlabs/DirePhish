@@ -317,3 +317,91 @@ pytest tests/ -q                                  # legacy DirePhish tests still
 ```
 
 If either step fails, the pin is wrong or crucible lost a public symbol — investigate before starting W1 ADK work.
+
+---
+
+## 11. Resolved open questions (2026-05-05)
+
+All questions from spec §11, the handoff §8, and the schema mismatch in §10.3 are now answered. This section is the source of truth for downstream implementers.
+
+### 11.1 Schema resolution → **Option C** (normalize-on-read in DirePhish)
+
+Crucible's `ActionEvent` (`extra="forbid"`, `role: Literal["attacker","defender","arbiter","inject"]`) stays strict. DirePhish owns a normalizer at the persistence boundary. Module: `backend/app/services/legacy_action_loader.py` (lives next to `firestore_memory.py`, not inside `backend/adk/` — it's a persistence concern, not an orchestration one).
+
+### 11.2 Concrete role mapping table
+
+Surveyed across `backend/tests/fixtures/simulations/proj_*/actions.jsonl` (364 records total).
+
+| Legacy `role` value | Records | Maps to `ActionEvent.role` |
+|---|---:|---|
+| `threat_actor` | 28 | `attacker` |
+| `ciso` | 56 | `defender` |
+| `infrastructure_lead` | 56 | `defender` |
+| `security_engineer` | 56 | `defender` |
+| `ceo` | 28 | `defender` |
+| `ceo_of_applications` | 28 | `defender` |
+| `chief_scientist` | 28 | `defender` |
+| `president` | 28 | `defender` |
+| `general_counsel` | 28 | `defender` |
+| `cfo` | 28 | `defender` |
+
+The strict `role` enum is **side of the simulation**, not job title. The legacy `role` slug (e.g. `"ciso"`, `"chief_scientist"`) is **persona identity**, recovered by name lookup from a static persona registry indexed by `agent` (the named identity field, e.g. `"Dane Stuckey"` → `ciso`). The persona registry does not live in event records — it's config-time data under `backend/adk/agents/personas/`.
+
+### 11.3 `agent_type` field handling → **drop**
+
+Survey: `agent_type` appears on **only 28 of 364 records**, all with value `"threat_actor"` (and only on attacker records). It carries no information not already captured by `role: "attacker"`. The normalizer drops it.
+
+### 11.4 `inject` and `arbiter` records → **separate event channels, not `ActionEvent`**
+
+Surveyed top-level `type` records:
+- **`inject`** (12 records): `{type, round, description, kill_chain_step, timestamp, simulation_id}` — environmental events injected by the scenario engine. Not an actor's action.
+- **`arbiter`** (24 records): `{type, round, decision, reason, complication, timestamp, simulation_id}` — judge decisions / scenario complications. Not an actor's action.
+
+Neither is an `ActionEvent`. The legacy `actions.jsonl` was a **mixed-event log**, not an action-only log.
+
+**DirePhish-side handling:** define two small Pydantic models (`InjectEvent`, `ArbiterEvent`) alongside the normalizer, route each `type`-tagged record to its own model. The eval loader (W3) consumes all three. **Do not propose these for crucible** — they're consumer-side, not part of crucible's contract.
+
+**For the crucible round-trip fixture (`tests/fixtures/legacy_actions.jsonl`):** include only proper action records (the 364 with `action`/`agent`/`world` keys), already normalized through the mapping in §11.2. Strip `agent_type`. Curate ~15 lines covering all 4 worlds × both roles.
+
+### 11.5 World name pass-through → **unchanged, no mapping**
+
+Surveyed worlds: `executive-strategy` (140), `technical-triage` (112), `incident-war-room` (84), `c2-channel` (28). `ActionEvent.world` is unconstrained `str` in crucible — values pass through verbatim.
+
+These are *channel* names, not the `slack`/`email`/`siem` MCP world names that W2 introduces. Both can coexist on `ActionEvent.world` because crucible doesn't constrain it. The MCP world servers DirePhish writes in W2 will use new names; legacy fixtures keep the old ones.
+
+### 11.6 Persona-slug recovery (since `role` collapses to 4 values)
+
+The 9 defender persona slugs (ciso, infrastructure_lead, security_engineer, ceo, ceo_of_applications, chief_scientist, president, general_counsel, cfo) are not preserved in `ActionEvent`. They're recovered via a static lookup module:
+
+```python
+# backend/adk/agents/personas/__init__.py
+PERSONA_BY_AGENT_NAME = {
+    "Dane Stuckey": "ciso",
+    "Marcus Thorne": "infrastructure_lead",
+    "Elena Rodriguez": "security_engineer",
+    "Sam Altman": "ceo",
+    # ... etc.
+}
+```
+
+This file is also where ADK persona `LlmAgent`s are defined in W1. The mapping is config-time; missing entries surface as a `KeyError` (loud failure preferred over silent fallback).
+
+### 11.7 Pydantic version → **v2** (confirmed by introspection)
+
+`ActionEvent.model_fields["role"].annotation` returned successfully against the pinned crucible install — this only works on Pydantic v2. DirePhish backend already pins `pydantic>=2.0.0` (`backend/pyproject.toml:25`). No bump needed.
+
+### 11.8 `WorldState` parameter → **moot**
+
+Crucible shipped `tick_events(round_num)` with no `state` param — the engine is self-contained. The original §3.1 spec line `tick(state, round_num)` is superseded by §10.2.
+
+### 11.9 Random seed plumbing → **moot**
+
+Crucible's pressure logic uses no RNG. The spec'd `seed` param on `PressureEngine.__init__` was vestigial. No DirePhish-side change.
+
+### 11.10 Deferred (no action needed before W4)
+
+| Question | Disposition | Revisit when |
+|---|---|---|
+| `graphiti` via MCP vs in-process | Defer to v2. Keep `firestore_memory.py` as the memory boundary. Vector search there is sufficient for W1–W5. | If eval refinement (W4) reveals memory-recall gaps Firestore can't close. |
+| Vertex AI Agent Engine vs Cloud Run for orchestrator hosting | Defer to W4. W1–W3 develop locally + on Cloud Run-compatible Docker. Hosting is an ops decision, not a code decision. | Demo recording prep (W5 Day 1). |
+| SHA freeze date | Currently tracking `feature/adk-hooks` branch ref. Freeze 2026-05-26 to a frozen SHA pin. | DirePhish W4 kickoff. |
