@@ -67,20 +67,27 @@ PERSONA_BY_AGENT_NAME: dict[str, str] = {
 }
 
 
-def make_defender_team():
+def make_defender_team(*, model_key: str = "flash"):
     """Construct all 5 defenders as ``LlmAgent`` instances.
 
     Returns the list in canonical order:
     ``[ciso, ir_lead, soc_analyst, legal, ceo]``. Wrap in a
-    ``ParallelAgent`` when assembling the orchestrator's defender
-    branch.
+    ``ParallelAgent`` (or SequentialAgent under tight quota) when
+    assembling the orchestrator's defender branch.
+
+    Args:
+        model_key: ``"flash"`` (default) or ``"pro"``. Flash is the
+            default because new GCP projects ship with ~5 RPM of Pro
+            quota — 7 calls per round (5 defenders + adversary + judge)
+            exceeds that. Flip strategic personas (CISO, IR Lead) back
+            to Pro after a quota lift if you want deeper reasoning.
     """
     return [
-        make_ciso(),
-        make_ir_lead(),
-        make_soc_analyst(),
-        make_legal(),
-        make_ceo(),
+        make_ciso(model_key=model_key),
+        make_ir_lead(model_key=model_key),
+        make_soc_analyst(model_key=model_key),
+        make_legal(model_key=model_key),
+        make_ceo(model_key=model_key),
     ]
 
 

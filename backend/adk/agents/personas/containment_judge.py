@@ -74,7 +74,7 @@ improves.
 
 def make_containment_judge(
     *,
-    model_key: str = "pro",
+    model_key: str = "flash",
     instruction: Optional[str] = None,
 ):
     """Construct the ContainmentJudge ``LlmAgent`` on Gemini Pro."""

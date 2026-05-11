@@ -75,7 +75,7 @@ you're worried about being recorded.
 def make_threat_actor(
     *,
     provider: str = "gemini",
-    model_key: str = "pro",
+    model_key: str = "flash",
     instruction: Optional[str] = None,
 ):
     """Construct the ThreatActor ``LlmAgent``.
