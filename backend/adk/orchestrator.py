@@ -449,9 +449,21 @@ class Orchestrator(BaseAgent):
             user_id="orchestrator",
             state={_K_ROUND: round_num, _K_SIM: self.simulation_id},
         )
+        # Embed sim_id + round_num verbatim so personas pass them
+        # unchanged into tool calls (their instructions tell them to
+        # use exactly these values).
         new_message = types.Content(
             role="user",
-            parts=[types.Part(text=f"run round {round_num}")],
+            parts=[
+                types.Part(
+                    text=(
+                        f"Round {round_num} starting. "
+                        f"simulation_id={self.simulation_id}, "
+                        f"round_num={round_num}. "
+                        "Make exactly one tool call."
+                    )
+                )
+            ],
         )
         async for _event in runner.run_async(
             user_id="orchestrator",
