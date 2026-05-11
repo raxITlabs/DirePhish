@@ -500,8 +500,7 @@ class Orchestrator(BaseAgent):
             for part in event.content.parts:
                 fr = getattr(part, "function_response", None)
                 if fr is not None:
-                    resp = getattr(fr, "response", None)
-                    action = _action_event_from_response(resp)
+                    action = _action_event_from_response(getattr(fr, "response", None))
                     if action is not None:
                         if author in adversary_names and captured_adversary is None:
                             captured_adversary = action
@@ -614,19 +613,30 @@ def _collect_names(agent: BaseAgent) -> set[str]:
 
 
 def _action_event_from_response(resp: Any) -> Optional[ActionEvent]:
-    """Reconstruct an ``ActionEvent`` from an MCP tool's response dict.
+    """Reconstruct an ``ActionEvent`` from an MCP tool's response.
 
-    Our slack/email/pagerduty MCP servers all return
-    ``ActionEvent.model_dump()`` as the tool result, so the response
-    dict has the right shape. Returns None if the response doesn't
-    match (e.g. an unexpected tool, or an LLM-side error response).
+    MCP wraps tool results in a standard envelope:
+        {"content": [...], "structuredContent": <raw return value>, "isError": False}
+
+    Our slack/email/pagerduty MCP servers return ``ActionEvent.model_dump()``
+    as the raw return value, which ends up under ``structuredContent``.
+    For non-MCP tools or fakes the response may be the raw dict directly,
+    so we accept both shapes.
     """
     if not isinstance(resp, dict):
         return None
-    if not {"action", "world", "agent", "round"}.issubset(resp.keys()):
+    # Check for MCP envelope first
+    if "structuredContent" in resp and isinstance(resp["structuredContent"], dict):
+        if resp.get("isError"):
+            return None
+        candidate = resp["structuredContent"]
+    else:
+        candidate = resp
+
+    if not {"action", "world", "agent", "round"}.issubset(candidate.keys()):
         return None
     try:
-        return ActionEvent(**resp)
+        return ActionEvent(**candidate)
     except Exception:
         return None
 
