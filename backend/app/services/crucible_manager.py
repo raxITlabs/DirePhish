@@ -126,7 +126,7 @@ def list_all_simulations() -> list[dict]:
 
 
 def launch_simulation(config: dict, callback_token: str | None = None) -> str:
-    """Save config and launch run_crucible_simulation.py as subprocess."""
+    """Save config and launch backend.adk.runner as subprocess."""
     sim_id = config.get("simulation_id") or f"crucible_{uuid.uuid4().hex[:8]}"
     config["simulation_id"] = sim_id
 
