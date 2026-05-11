@@ -33,9 +33,12 @@ from google.adk.models.registry import LLMRegistry
 #     LLM_MODEL_NAME does NOT override Claude — global is Gemini-only.
 #
 # Defaults are the current Vertex Model Garden releases as of 2026-05.
-# Bump them in .env when newer IDs land, no code change needed.
-_DEFAULT_GEMINI_PRO = "gemini-3-pro-preview"
-_DEFAULT_GEMINI_FLASH = "gemini-3.1-flash-lite-preview"
+# Note: Vertex IDs differ slightly from AI Studio IDs — e.g. on Vertex
+# the flash-lite is GA ('gemini-3.1-flash-lite', no preview suffix).
+# gemini-3-pro-preview was retired 2026-03-26 → use gemini-3.1-pro-preview.
+# Bump in .env when newer IDs land, no code change needed.
+_DEFAULT_GEMINI_PRO = "gemini-3.1-pro-preview"
+_DEFAULT_GEMINI_FLASH = "gemini-3.1-flash-lite"
 _DEFAULT_CLAUDE_SONNET = "claude-sonnet-4-5"
 _DEFAULT_CLAUDE_OPUS = "claude-opus-4-1"
 _DEFAULT_CLAUDE_HAIKU = "claude-haiku-4-5"
