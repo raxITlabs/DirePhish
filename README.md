@@ -36,6 +36,35 @@ can act on. A post-mortem for an incident that never happened.
 - [Architecture & pipeline diagram](docs/ARCHITECTURE.md)
 - [Full tech stack](docs/TECH_STACK.md)
 - [GCP setup guide](docs/GCP_SETUP.md)
+- [ADK migration design](docs/superpowers/specs/2026-05-05-adk-migration-research.md)
+- [Google Agent Platform research](docs/superpowers/specs/2026-05-11-google-agent-platform-research.md)
+
+## Built on Google ADK
+
+DirePhish runs on Google's [Agent Development Kit](https://adk.dev). The
+simulation core, judge, refinement loop, and threat actor are all
+`BaseAgent` / `LlmAgent` instances composed via `SequentialAgent` +
+`ParallelAgent`. Worlds (Slack, Email, PagerDuty) are exposed as
+[MCP](https://modelcontextprotocol.io) servers. The Containment Judge
+is also available as a stand-alone
+[A2A](https://a2a-protocol.org) service.
+
+- **Multi-model** — Gemini 3.1 family (Flash Lite / Pro) for the
+  defender team and judge via Vertex AI Model Garden; Claude Sonnet
+  4.5 for the threat actor via the same registry. Flip
+  `THREAT_ACTOR_PROVIDER=claude|gemini` in `.env`, no code change.
+- **Cross-process A2A** — the Judge runs in-process by default; flip
+  to the cross-process A2A endpoint by setting `A2A_JUDGE_URL`.
+- **Eval-driven refinement** — `scripts/refine_prompts.py` runs a
+  `LoopAgent` over a 25-case evalset in `backend/tests/evalsets/` and
+  promotes the variant that improves the weakest rubric.
+  `scripts/eval_report.py` renders the headline business metric.
+- **Observability** — OpenTelemetry traces (opt-in via
+  `CLOUD_TRACE_ENABLED=true`) export to Cloud Trace. Cost dashboard
+  at `GET /api/adk/cost-dashboard/<sim_id>`.
+- **Deployment** — Cloud Run for the orchestrator + frontend; Vertex
+  AI Agent Engine for the Judge
+  (`backend/adk/agent_engine_deploy.py`).
 
 ## Quick start
 
@@ -60,9 +89,31 @@ cp .env.example .env
 
 Required keys in `.env`:
 
-- `LLM_API_KEY` -- Google Gemini API key
+- `LLM_API_KEY` -- Google Gemini API key (AI Studio side)
 - `GOOGLE_CLOUD_PROJECT` -- your GCP project ID
 - `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` -- for web crawling
+
+Required for ADK live mode (Vertex AI Model Garden routing):
+
+- `GOOGLE_GENAI_USE_VERTEXAI=TRUE`
+- `GOOGLE_CLOUD_LOCATION=global` (Gemini 3.1 family lives on `global`;
+  regional endpoints only carry Gemini 2.5)
+
+Optional ADK knobs (all default sensibly when unset):
+
+- `LLM_MODEL_NAME` -- one-model-everywhere override for Gemini
+- `GEMINI_PRO_MODEL_NAME`, `GEMINI_FLASH_MODEL_NAME` -- per-tier overrides
+- `CLAUDE_SONNET_MODEL_NAME` / `OPUS` / `HAIKU` -- per-tier overrides
+- `THREAT_ACTOR_PROVIDER=gemini|claude` (default `gemini`; flip to
+  `claude` once Anthropic models are enabled on your project's
+  Vertex Model Garden — see
+  `backend/adk/agents/personas/CLAUDE_VERTEX_ENABLEMENT.md`)
+- `A2A_JUDGE_URL=http://localhost:8003` -- runs the judge as a
+  cross-process A2A service instead of in-process
+- `CLOUD_TRACE_ENABLED=true` -- export OpenTelemetry spans to Cloud
+  Trace
+- `DIREPHISH_FIRESTORE_ENABLED=false` -- disable per-round Firestore
+  writes (for CI / local-only runs)
 
 ### Create Firestore indexes
 
@@ -74,12 +125,119 @@ Wait for all indexes to show `READY` (`gcloud firestore indexes composite list`)
 
 ### Run
 
+The dev workflow is unchanged — `./start.sh` (or `npm run dev`) brings
+the backend up on port 5001 and the Next.js frontend on port 3000.
+With `portless` aliases, the URLs are:
+
+- Frontend: https://direphish.localhost:1355
+- Backend:  https://api.direphish.localhost:1355
+
+```bash
+./start.sh           # bare metal (recommended for dev)
+./start.sh docker    # Docker dev with hot reload
+./start.sh prod      # Docker prod (Gunicorn + Next start)
+./start.sh stop      # tear down containers
+```
+
+Or via npm:
+
 ```bash
 npm run dev
 ```
 
-Open https://direphish.localhost (requires [portless](https://github.com/nicepkg/portless))
-or http://localhost:3000 without it.
+Open https://direphish.localhost (requires
+[portless](https://github.com/nicepkg/portless)) or
+http://localhost:3000 without it.
+
+### What changed under the hood (ADK migration)
+
+Same `./start.sh`, same UI flow, same API surface. The difference is
+who runs the simulation rounds:
+
+- **Before:** Flask's `/api/crucible/projects/<id>/launch` spawned
+  `scripts/run_crucible_simulation.py` (a 1024-line raw OpenAI /
+  CAMEL ChatAgent loop).
+- **After:** Flask spawns `python -m backend.adk.runner`, the ADK-
+  native runner that drives rounds via a `SequentialAgent` over
+  pressure → inject → attacker-observation → adversary → defender
+  (ParallelAgent over 5 personas) → judge phases. The legacy script
+  is preserved as `scripts/run_crucible_simulation_legacy.py` for
+  one-line rollback.
+
+Output files (`actions.jsonl`, `summary.json`, `costs.json`,
+Firestore episodes + graph) are byte-for-byte compatible with the
+legacy contract; the frontend pipeline page renders the new runner's
+output without any changes.
+
+### Try the ADK paths
+
+Once `./start.sh` is up, three quick checks:
+
+```bash
+# 1. ADK module health + active model strings
+curl -sS http://localhost:5001/api/adk/health | jq
+
+# 2. One-round smoke (fake mode — no Vertex calls)
+curl -sS -X POST http://localhost:5001/api/adk/smoke \
+  -H 'content-type: application/json' \
+  -d '{"round_num":1, "mode":"fake", "simulation_id":"smoke-1"}' | jq
+
+# 3. Live-mode smoke (requires Vertex env vars from §Configure)
+curl -sS -X POST http://localhost:5001/api/adk/smoke \
+  -H 'content-type: application/json' \
+  -d '{"round_num":1, "mode":"live", "simulation_id":"live-1"}' | jq
+```
+
+For the live war-room UI, point a browser at:
+
+```
+https://direphish.localhost:1355/adk-demo/<your-sim-id>
+```
+
+This page subscribes to `/api/adk/sse/<sim_id>` and renders each
+persona's action as it streams in, plus a live cost ticker pulling
+from `/api/adk/cost-dashboard/<sim_id>`.
+
+### Optional: stand-alone A2A Judge service
+
+For the cross-process scoring story (the Judge runs as a separate
+agent + AgentCard discoverable at `/.well-known/agent.json`):
+
+```bash
+cd backend
+uv run uvicorn adk.a2a.judge_service:app --port 8003
+```
+
+Then in `.env`: `A2A_JUDGE_URL=http://localhost:8003`. Restart
+`./start.sh`; the orchestrator now routes Judge calls to the A2A
+endpoint instead of in-process.
+
+### Optional: refinement loop
+
+The Track 2 differentiator — `LoopAgent`-based prompt refinement
+against the 25-case ransomware evalset:
+
+```bash
+cd backend
+RUN_LIVE_VERTEX=1 uv run python scripts/refine_prompts.py \
+    --persona ir_lead --rounds 3
+```
+
+Results land in `backend/evals/results/<persona>_<timestamp>/`. Use
+`scripts/eval_report.py` to render the headline HTML
+("containment time reduced from round N to round M").
+
+### Optional: deploy the Judge to Vertex AI Agent Engine
+
+```bash
+cd backend
+GOOGLE_CLOUD_PROJECT=raxit-ai VERTEX_AGENT_ENGINE_LOCATION=us-central1 \
+  uv run python -m adk.agent_engine_deploy
+```
+
+Prints the deployed `reasoning_engine` resource name; set
+`A2A_JUDGE_URL` to its endpoint to route production scoring through
+Agent Engine.
 
 ### First simulation
 
