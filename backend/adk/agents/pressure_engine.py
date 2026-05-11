@@ -33,6 +33,7 @@ from google.adk.agents import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event
 from google.genai import types
+from pydantic import PrivateAttr
 
 from crucible.config import PressureConfig
 from crucible.events import PressureEvent
@@ -68,6 +69,11 @@ class PressureEngineAgent(BaseAgent):
     # Pydantic field — declared so BaseAgent's extra='forbid' allows it.
     # arbitrary_types_allowed is inherited from BaseAgent.model_config.
     engine: PressureEngine
+
+    # Private capture of the most-recent tick events so the orchestrator
+    # can harvest into RoundReport after the runner finishes. Session
+    # state isn't readable post-invocation under InMemorySessionService.
+    _last_events: list[PressureEvent] = PrivateAttr(default_factory=list)
 
     def __init__(
         self,
@@ -112,6 +118,7 @@ class PressureEngineAgent(BaseAgent):
         round_num = int(ctx.session.state.get(self.STATE_KEY_ROUND, 0))
         events = self.engine.tick_events(round_num)
         ctx.session.state[self.STATE_KEY_EVENTS] = events
+        self._last_events = list(events)
 
         summary = (
             f"pressure tick round={round_num} events={len(events)}"
@@ -134,7 +141,18 @@ class PressureEngineAgent(BaseAgent):
     # ------------------------------------------------------------------
     def tick(self, round_num: int) -> list[PressureEvent]:
         """Advance the engine by one round; return any events fired."""
-        return self.engine.tick_events(round_num)
+        events = self.engine.tick_events(round_num)
+        self._last_events = list(events)
+        return events
+
+    @property
+    def last_events(self) -> list[PressureEvent]:
+        """Events from the most recent ``tick`` / ``_run_async_impl`` call."""
+        return list(self._last_events)
+
+    def reset(self) -> None:
+        """Clear ``last_events`` between rounds (for the orchestrator)."""
+        self._last_events = []
 
     def trigger(self, event_name: str) -> None:
         """Buffer a scripted trigger; flushes on the next ``tick``."""

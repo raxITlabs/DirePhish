@@ -240,16 +240,24 @@ class _DefenderTeamAdapter(BaseAgent):
 class _JudgeAdapter(BaseAgent):
     """Adapter for a W1 plain-class judge.
 
-    Reads phase outputs from the upstream adapters (held directly,
-    not via session state) and calls ``inner.score``.
+    Reads phase outputs from the upstream sub-agents and calls
+    ``inner.score``. Sources phase data via dispatch:
+
+    - Wrapped W1 fakes (``_PressureAdapter`` / ``_ActorAdapter``) →
+      read directly from their PrivateAttr captures.
+    - Real ``BaseAgent`` collaborators (``PressureEngineAgent``,
+      ``LlmAgent``) → read from session state or fall back to empty.
+      Full state-event harvesting for real LlmAgent defenders is
+      W3 work; for W2 day 1-3 the judge sees an empty defender list
+      when defenders are real, which the fake judge handles fine.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     inner: Any  # _JudgeLike
-    pressure_adapter: _PressureAdapter
-    adversary_adapter: _ActorAdapter
-    defender_team: BaseAgent  # _DefenderTeamAdapter or single _ActorAdapter
+    pressure_source: BaseAgent
+    adversary_source: BaseAgent
+    defender_source: BaseAgent
 
     _score: dict = PrivateAttr(default_factory=dict)
 
@@ -257,17 +265,17 @@ class _JudgeAdapter(BaseAgent):
         self,
         *,
         inner: _JudgeLike,
-        pressure_adapter: _PressureAdapter,
-        adversary_adapter: _ActorAdapter,
-        defender_team: BaseAgent,
+        pressure_source: BaseAgent,
+        adversary_source: BaseAgent,
+        defender_source: BaseAgent,
         name: str = "judge",
     ) -> None:
         super().__init__(
             name=name,
             inner=inner,
-            pressure_adapter=pressure_adapter,
-            adversary_adapter=adversary_adapter,
-            defender_team=defender_team,
+            pressure_source=pressure_source,
+            adversary_source=adversary_source,
+            defender_source=defender_source,
         )
 
     def reset(self) -> None:
@@ -281,12 +289,13 @@ class _JudgeAdapter(BaseAgent):
         self, ctx: InvocationContext
     ) -> AsyncGenerator[Event, None]:
         round_num = int(ctx.session.state.get(_K_ROUND, 0))
-        defender_actions = _collect_defender_actions(self.defender_team)
         score = await self.inner.score(
             round_num=round_num,
-            pressure_events=self.pressure_adapter.events,
-            adversary_action=self.adversary_adapter.action,
-            defender_actions=defender_actions,
+            pressure_events=_extract_pressure_events(
+                self.pressure_source, ctx.session.state
+            ),
+            adversary_action=_extract_adversary_action(self.adversary_source),
+            defender_actions=_extract_defender_actions(self.defender_source),
         )
         self._score = dict(score) if score else {}
         yield Event(
@@ -300,11 +309,31 @@ class _JudgeAdapter(BaseAgent):
         )
 
 
-def _collect_defender_actions(defender_team: BaseAgent) -> list[ActionEvent]:
-    if isinstance(defender_team, _DefenderTeamAdapter):
-        return defender_team.actions
-    if isinstance(defender_team, _ActorAdapter):
-        return defender_team.actions
+def _extract_pressure_events(
+    source: BaseAgent, state: dict
+) -> list[PressureEvent]:
+    """Read pressure events from either an adapter or session state."""
+    if isinstance(source, _PressureAdapter):
+        return source.events
+    # Real PressureEngineAgent writes to state["pressure_events"]
+    events = state.get("pressure_events", [])
+    return list(events) if events else []
+
+
+def _extract_adversary_action(source: BaseAgent) -> Optional[ActionEvent]:
+    if isinstance(source, _ActorAdapter):
+        return source.action
+    # Real LlmAgent adversary: action harvesting is W3 work; return None.
+    return None
+
+
+def _extract_defender_actions(source: BaseAgent) -> list[ActionEvent]:
+    if isinstance(source, _DefenderTeamAdapter):
+        return source.actions
+    if isinstance(source, _ActorAdapter):
+        return source.actions
+    # Real LlmAgent defender or ParallelAgent: harvest from tool events
+    # is W3 work; return empty so fake judge still runs.
     return []
 
 
@@ -367,9 +396,9 @@ class Orchestrator(BaseAgent):
 
         judge_adapter = _ensure_judge_agent(
             judge,
-            pressure_adapter=pressure_adapter,
-            adversary_adapter=adversary_adapter,
-            defender_team=defender_team_adapter,
+            pressure_source=pressure_adapter,
+            adversary_source=adversary_adapter,
+            defender_source=defender_team_adapter,
         )
 
         sequence = SequentialAgent(
@@ -469,23 +498,27 @@ def _ensure_actor_agent(
 def _ensure_judge_agent(
     j: _JudgeLike | BaseAgent,
     *,
-    pressure_adapter: BaseAgent,
-    adversary_adapter: BaseAgent,
-    defender_team: BaseAgent,
+    pressure_source: BaseAgent,
+    adversary_source: BaseAgent,
+    defender_source: BaseAgent,
 ) -> BaseAgent:
     if isinstance(j, BaseAgent):
         return j
     return _JudgeAdapter(
         inner=j,
-        pressure_adapter=pressure_adapter,
-        adversary_adapter=adversary_adapter,
-        defender_team=defender_team,
+        pressure_source=pressure_source,
+        adversary_source=adversary_source,
+        defender_source=defender_source,
     )
 
 
 def _get_pressure_events(adapter: BaseAgent) -> list[PressureEvent]:
     if isinstance(adapter, _PressureAdapter):
         return adapter.events
+    # Real PressureEngineAgent exposes last_events as a property.
+    last_events = getattr(adapter, "last_events", None)
+    if last_events is not None:
+        return list(last_events)
     return []
 
 
