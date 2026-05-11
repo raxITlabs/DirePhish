@@ -183,6 +183,13 @@ def main(dry_run: bool = False) -> int:
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
 
+    # Wire OpenTelemetry (no-op unless CLOUD_TRACE_ENABLED=true)
+    try:
+        from adk.callbacks.otel_trace import init_tracing
+        init_tracing(service_name="direphish-adk-runner")
+    except Exception as e:
+        logger.warning("[runner] OTel init skipped: %s", e)
+
     config = json.loads(args.config.read_text())
     runner = AdkSimulationRunner(config=config, output_dir=args.output)
 

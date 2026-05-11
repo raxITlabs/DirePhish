@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 
 from adk.callbacks import track_cost
+from adk.callbacks.guardrails import enforce_permissions
 from adk.models import CLAUDE_MODELS, GEMINI_MODELS
 
 
@@ -95,6 +96,7 @@ def gemini_llm_agent(
         model=GEMINI_MODELS[model_key],
         instruction=instruction,
         tools=tools,
+        before_tool_callback=enforce_permissions,
         after_model_callback=track_cost,
         output_key=output_key or f"{name}_last_response",
     )
@@ -118,6 +120,7 @@ def claude_llm_agent(
         model=CLAUDE_MODELS[model_key],
         instruction=instruction,
         tools=tools,
+        before_tool_callback=enforce_permissions,
         after_model_callback=track_cost,
         output_key=output_key or f"{name}_last_response",
     )
