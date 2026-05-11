@@ -25,7 +25,7 @@ from typing import Any, Awaitable, Callable, Optional, Protocol
 
 from crucible.events import ActionEvent
 
-from ._factory import gemini_llm_agent, pagerduty_toolset, slack_toolset
+from ._factory import gemini_llm_agent, slack_toolset
 
 logger = logging.getLogger("direphish.adk.personas.ir_lead")
 
@@ -155,7 +155,9 @@ def make_ir_lead(
 ):
     """Construct the production IR Lead ``LlmAgent`` on Gemini Pro.
 
-    Wired to Slack + PagerDuty MCP toolsets and the track_cost callback.
+    Wired to the Slack MCP toolset and the track_cost callback.
+    PagerDuty toolset is omitted in W2: crucible's pagerduty
+    apply_action hangs on channel read. Reintroduce when fixed.
     """
     return gemini_llm_agent(
         name="ir_lead",
@@ -164,7 +166,7 @@ def make_ir_lead(
             "Coordinates war room, directs SOC + Infra, escalates to CISO."
         ),
         instruction=instruction or _IR_LEAD_INSTRUCTION,
-        tools=[slack_toolset(), pagerduty_toolset()],
+        tools=[slack_toolset()],
         model_key=model_key,
         output_key="ir_lead_last_response",
     )

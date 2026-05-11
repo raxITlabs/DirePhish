@@ -42,14 +42,24 @@ def _world_toolset(*, module: str, prefix: str):
     duplicate function names across tools (every world has e.g.
     ``do_nothing``). Prefixing — ``slack_do_nothing`` vs
     ``email_do_nothing`` — keeps the names disjoint.
+
+    Timeout is bumped to 30s — first call per subprocess needs to
+    construct ``CrucibleEnv`` (load YAML, open SQLite, start dispatch
+    loop) which can take ~10s. The default 5s causes McpError timeouts
+    when 5 defenders fire in parallel and all need their first call
+    to land. Subsequent calls reuse the live env and respond in ms.
     """
+    from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
     from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
     from mcp import StdioServerParameters
 
     command, args = _stdio_command_for_world(module)
     return McpToolset(
-        connection_params=StdioServerParameters(
-            command=command, args=args, env={**os.environ}
+        connection_params=StdioConnectionParams(
+            server_params=StdioServerParameters(
+                command=command, args=args, env={**os.environ}
+            ),
+            timeout=30.0,
         ),
         tool_name_prefix=prefix,
     )

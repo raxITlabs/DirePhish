@@ -20,7 +20,6 @@ from ._factory import (
     claude_llm_agent,
     email_toolset,
     gemini_llm_agent,
-    pagerduty_toolset,
     slack_toolset,
 )
 
@@ -98,7 +97,7 @@ def make_threat_actor(
             "~15 rounds against ACME Corp."
         ),
         instruction=instruction or _THREAT_ACTOR_INSTRUCTION,
-        tools=[slack_toolset(), email_toolset(), pagerduty_toolset()],
+        tools=[slack_toolset(), email_toolset()],
         output_key="threat_actor_last_response",
     )
     if provider == "claude":
