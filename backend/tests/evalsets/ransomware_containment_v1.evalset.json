@@ -1,0 +1,175 @@
+{
+  "eval_set_id": "ransomware_containment_v1",
+  "name": "Ransomware Containment — v1 Coverage Set",
+  "description": "Round-level scenarios covering early/mid/late phases of an active ransomware incident at ACME Corp. Used to score defender personas (CISO, IR Lead, SOC Analyst, Legal, CEO) against the 4 rubrics in test_config.json.",
+  "eval_cases": [
+    {
+      "eval_id": "ir_lead_round1_initial_detection",
+      "conversation": [
+        {
+          "invocation_id": "ir-lead-r1",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 1 starting. SOC just detected ransomware encryption activity on prod database servers. Three customer-facing services affected. simulation_id=evalset-r1, round_num=1. Make one move."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #incident-war-room with: 'Confirmed ransomware on prod DB. Activating IR plan, scoping spread. SOC: confirm encryption rate. Infra: prepare network segmentation. Status update in 5min.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "ir_lead_round5_mid_containment",
+      "conversation": [
+        {
+          "invocation_id": "ir-lead-r5",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 5 starting. Adversary has deployed secondary persistence (DLL hijack in 3 VPC instances). SOC isolated original entry but new beacons are firing. simulation_id=evalset-r5, round_num=5."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling mention_user to @soc-lead with: 'Need IOC list for all DLL hijack instances NOW. Isolation by AZ if needed. Posting decision to war-room in 60s.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "ir_lead_round12_endgame_containment",
+      "conversation": [
+        {
+          "invocation_id": "ir-lead-r12",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 12. Containment is 80% achieved. CISO authorized customer access freeze on impacted services 2 rounds ago. CEO asking about restore timeline. simulation_id=evalset-r12, round_num=12."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #incident-war-room with: 'Containment ~80%. Beginning controlled restoration on AZ-1 services. Restore ETA 4 hours per service tier. Posting tier 1 service list to CEO via mention.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "ciso_round3_disclosure_window",
+      "conversation": [
+        {
+          "invocation_id": "ciso-r3",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 3. PII for ~50k EU customers may have been accessed. GDPR 72h clock started at round 1. Legal is asking for your call on regulator notification. simulation_id=evalset-r3, round_num=3."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_email to legal@acme.com with subject 'GDPR Article 33 — Notification Decision' body: 'Authorizing regulator notification within 48h on current evidence. Hold customer disclosure until scope confirmed by round 6. Draft language for review.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "soc_analyst_round2_evidence_collection",
+      "conversation": [
+        {
+          "invocation_id": "soc-r2",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 2. You're seeing repeated failed auth attempts from a previously-trusted service account, plus elevated network egress from prod-db-3. simulation_id=evalset-r2, round_num=2."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling acknowledge_alert with alert_id=auth-anom-7782, notes='Service account svc-prod-replicator firing failed auths AND egress spike to known C2 indicator. Treating as compromised. Pivoting to lateral check.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "legal_round4_breach_notification_draft",
+      "conversation": [
+        {
+          "invocation_id": "legal-r4",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 4. CISO authorized GDPR notification. ~50k EU users affected. Need draft language for regulator. Customer notification timeline TBD. simulation_id=evalset-r4, round_num=4."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_email to dpo-team@acme.com with: 'Draft GDPR Article 33 notification attached. Scope: ~50k EU users, PII access only (no payment data). Containment in progress. Customer notification draft pending scope confirmation. Forward to external counsel before send.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "ceo_round7_press_inquiry",
+      "conversation": [
+        {
+          "invocation_id": "ceo-r7",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 7. Bloomberg reporter is calling about service outages. Containment is 60%. Legal hasn't approved external comms yet. simulation_id=evalset-r7, round_num=7."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #incident-war-room with: 'Bloomberg inquiry incoming. Routing through Legal — no comment until @Che approves language. Comms team: holding statement draft only.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    }
+  ]
+}

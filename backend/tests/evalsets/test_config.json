@@ -1,0 +1,31 @@
+{
+  "criteria": {
+    "containment": {
+      "description": "Did the round materially advance threat containment? 0=adversary expanded; 10=path cut decisively.",
+      "threshold": 6.0
+    },
+    "evidence": {
+      "description": "Were defender actions grounded in real world-state evidence? 0=guessing; 10=every action references a signal.",
+      "threshold": 6.0
+    },
+    "communication": {
+      "description": "Right channel, audience, urgency? 0=wrong everything; 10=perfectly targeted.",
+      "threshold": 6.5
+    },
+    "business_impact": {
+      "description": "Net business risk delta. 0=new risk created; 5=neutral; 10=risk reduced.",
+      "threshold": 6.0
+    },
+    "tool_trajectory_avg_score": {
+      "description": "ADK built-in: average match between actual and expected tool sequence.",
+      "threshold": 0.5
+    },
+    "response_match_score": {
+      "description": "ADK built-in: ROUGE between final agent response and reference. Loose threshold — exact match isn't expected for narrative IR comms.",
+      "threshold": 0.3
+    }
+  },
+  "criteria_config": {
+    "judge_model": "gemini-2.5-pro"
+  }
+}
