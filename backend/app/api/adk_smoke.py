@@ -2,21 +2,24 @@
 
 Exposes three endpoints under ``/api/adk``:
 
-- ``GET /api/adk/health`` — confirms the ADK module tree imports cleanly
-  in the Flask process. Cheap; no Vertex calls.
+- ``GET /api/adk/health`` — confirms the ADK module tree imports
+  cleanly inside Flask. Cheap; no Vertex calls.
 - ``POST /api/adk/smoke`` — runs ONE round of the ADK orchestrator.
-  Defenders fall into one of two modes:
+  Two modes:
 
-  - **live mode** (default when Vertex env vars are set): IR Lead is a
-    real Gemini-backed ``LlmAgent`` connecting to the Slack-world
-    FastMCP server. Adversary + Judge stay as deterministic fakes
-    (replaced with real ``LlmAgent``s in W2 day 4-5).
+  - **live mode** (default when Vertex env vars are set): the full
+    real cast — 5 defender ``LlmAgent``s on Gemini (CISO, IR Lead, SOC
+    Analyst, Legal, CEO), 1 adversary on Claude (Sonnet via Vertex
+    Model Garden), 1 judge on Gemini Pro. Defenders run in parallel
+    via ``ParallelAgent``. All connect to Slack/Email/PagerDuty MCP
+    servers over stdio.
   - **fake mode** (when Vertex env vars are missing): IR Lead uses a
-    deterministic strategy. No Gemini calls. Useful for CI smoke
-    without cloud auth.
+    deterministic strategy. Adversary + Judge are deterministic
+    fakes. No Gemini/Claude calls. Useful for CI smoke without
+    cloud auth.
 
-  Force the mode via JSON body: ``{"mode": "fake"}`` or ``{"mode":
-  "live"}``. Default is auto-detect from env.
+  Force the mode via JSON body: ``{"mode": "fake"}`` or
+  ``{"mode": "live"}``. Default is auto-detect.
 
 - ``GET /api/adk/sse/<simulation_id>`` — Server-Sent Events stream of
   every record published to the in-process ``SSEBus`` for that sim id.
@@ -38,8 +41,6 @@ logger = logging.getLogger("direphish.adk")
 adk_bp = Blueprint("adk", __name__)
 
 
-# Module-level SSE bus shared across all requests. One Flask process
-# owns one bus; subscribers see records published during their lifetime.
 def _get_bus():
     from adk.sse import SSEBus
 
@@ -49,7 +50,6 @@ def _get_bus():
 
 
 def _vertex_env_ready() -> bool:
-    """Return True iff all env vars required by ``init_models`` are present."""
     return (
         os.environ.get("GOOGLE_GENAI_USE_VERTEXAI") == "TRUE"
         and bool(os.environ.get("GOOGLE_CLOUD_PROJECT"))
@@ -91,8 +91,6 @@ def smoke():
 
     Body (JSON, all optional):
         {"simulation_id": "...", "round_num": 1, "mode": "live" | "fake"}
-
-    Mode default: ``live`` if Vertex env vars are set, else ``fake``.
     """
     body = request.get_json(silent=True) or {}
     sim_id = body.get("simulation_id") or f"adk-smoke-{int(time.time() * 1000)}"
@@ -117,7 +115,6 @@ def smoke():
 
 @adk_bp.route("/sse/<simulation_id>", methods=["GET"])
 def sse_stream(simulation_id: str):
-    """Server-Sent Events stream — one frame per record on the bus."""
     bus = _get_bus()
     logger.info("[ADK] SSE subscribe sim=%s", simulation_id)
 
@@ -136,22 +133,17 @@ def sse_stream(simulation_id: str):
 
 
 # ----------------------------------------------------------------------
-# Smoke harness — fakes for adversary + judge; real (or fake) IR Lead.
-# Adversary + Judge become real LlmAgents in W2 day 4-5.
+# Fake-mode collaborators (used when Vertex auth isn't configured).
+# Live mode replaces ALL of these with real LlmAgents.
 # ----------------------------------------------------------------------
 
 
 class _FakeAdversary:
-    """Deterministic adversary that pushes one canned message to its C2 channel.
-
-    Replaced by a Claude-backed LlmAgent in W2 day 4-5.
-    """
-
     name = "The Silent IP Drain Operator"
     role = "attacker"
 
     async def act(self, env, round_num: int, simulation_id: str):
-        logger.info("[ADK] phase=adversary round=%d agent=%r", round_num, self.name)
+        logger.info("[ADK] phase=adversary round=%d agent=%r (fake)", round_num, self.name)
         return await env.apply_action(
             actor=self.name,
             role=self.role,
@@ -167,11 +159,9 @@ class _FakeAdversary:
 
 
 class _FakeJudge:
-    """Deterministic per-dimension scorer. Replaced by a Gemini Pro LlmAgent in W3."""
-
     async def score(self, round_num, pressure_events, adversary_action, defender_actions):
         logger.info(
-            "[ADK] phase=judge round=%d pressure=%d adversary=%r defenders=%d",
+            "[ADK] phase=judge round=%d pressure=%d adversary=%r defenders=%d (fake)",
             round_num,
             len(pressure_events),
             adversary_action.role if adversary_action else None,
@@ -186,55 +176,30 @@ class _FakeJudge:
 
 
 class _SmokeFakeEnv:
-    """In-process fake env for the fake adversary's apply_action calls.
-
-    The real IR Lead (live mode) talks to its own MCP-side CrucibleEnv
-    via stdio — that's a separate concrete env owned by the MCP server.
-    This fake env exists only to make the fake adversary's act() call
-    work without dragging a real CrucibleEnv into the Flask process.
-    """
+    """In-process fake env for the fake adversary's apply_action calls."""
 
     def __init__(self) -> None:
         self.calls: list[dict] = []
 
     async def apply_action(
-        self,
-        actor: str,
-        role: str,
-        world: str,
-        action: str,
-        args: dict,
-        simulation_id: str,
-        round_num: int,
+        self, actor, role, world, action, args, simulation_id, round_num
     ):
         from crucible.events import ActionEvent
 
-        self.calls.append(
-            {
-                "actor": actor,
-                "role": role,
-                "world": world,
-                "action": action,
-                "args": args,
-                "simulation_id": simulation_id,
-                "round_num": round_num,
-            }
-        )
+        self.calls.append({
+            "actor": actor, "role": role, "world": world, "action": action,
+            "args": args, "simulation_id": simulation_id, "round_num": round_num,
+        })
         return ActionEvent(
             round=round_num,
             timestamp=datetime.now(timezone.utc).isoformat(),
             simulation_id=simulation_id,
-            agent=actor,
-            role=role,
-            world=world,
-            action=action,
-            args=args,
-            result={"success": True, "smoke": True},
+            agent=actor, role=role, world=world, action=action,
+            args=args, result={"success": True, "smoke": True},
         )
 
 
 async def _deterministic_ir_lead_action(env, round_num, simulation_id):
-    """Strategy used in fake mode — returns a canned slack message."""
     return (
         "incident-war-room",
         "send_message",
@@ -248,13 +213,16 @@ async def _deterministic_ir_lead_action(env, round_num, simulation_id):
     )
 
 
+# ----------------------------------------------------------------------
+# Round runner
+# ----------------------------------------------------------------------
+
+
 async def _run_smoke_round(simulation_id: str, round_num: int, *, mode: str) -> dict:
     """Build the orchestrator and run one round in the requested mode."""
-    # Imports inside the function so /health surfaces import errors in JSON
-    # rather than 500'ing the blueprint at registration time.
     from crucible.config import PressureConfig
 
-    from adk.agents.personas import IRLeadPersona, make_ir_lead
+    from adk.agents.personas import IRLeadPersona
     from adk.agents.pressure_engine import PressureEngineAgent
     from adk.orchestrator import Orchestrator
     from adk.sse import action_event_to_record, pressure_event_to_record
@@ -274,31 +242,53 @@ async def _run_smoke_round(simulation_id: str, round_num: int, *, mode: str) -> 
         severity_at_25pct="critical",
     )
     pressure = PressureEngineAgent(configs=[pressure_cfg], hours_per_round=1.0)
-    env = _SmokeFakeEnv()
 
     if mode == "live":
+        from adk.agents.personas import (
+            make_containment_judge,
+            make_defender_team,
+            make_threat_actor,
+        )
         from adk.models import init_models
+        from google.adk.agents import ParallelAgent
 
         init_models()  # validates Vertex env vars + registers Claude
-        defender = make_ir_lead()  # real Gemini Pro LlmAgent
-        logger.info("[ADK] live mode — IR Lead is real LlmAgent gemini-2.5-pro")
+
+        defenders = make_defender_team()
+        defender_team = ParallelAgent(name="defender_team", sub_agents=defenders)
+        adversary = make_threat_actor()
+        judge = make_containment_judge()
+        env = None  # real LlmAgents talk to MCP subprocesses, not in-process env
+
+        logger.info(
+            "[ADK] live mode — 5 defenders (Gemini) + 1 adversary (Claude) + judge (Gemini Pro)"
+        )
+
+        orchestrator = Orchestrator(
+            env=env,
+            pressure=pressure,
+            adversary=adversary,
+            defenders=[defender_team],
+            judge=judge,
+            simulation_id=simulation_id,
+        )
     else:
+        env = _SmokeFakeEnv()
         defender = IRLeadPersona(strategy=_deterministic_ir_lead_action)
         logger.info("[ADK] fake mode — IR Lead is deterministic strategy")
-
-    orchestrator = Orchestrator(
-        env=env,
-        pressure=pressure,
-        adversary=_FakeAdversary(),
-        defenders=[defender],
-        judge=_FakeJudge(),
-        simulation_id=simulation_id,
-    )
+        orchestrator = Orchestrator(
+            env=env,
+            pressure=pressure,
+            adversary=_FakeAdversary(),
+            defenders=[defender],
+            judge=_FakeJudge(),
+            simulation_id=simulation_id,
+        )
 
     logger.info("[ADK] phase=pressure round=%d", round_num)
     report = await orchestrator.run_round(round_num)
 
-    # Publish to the SSE bus so /api/adk/sse/<sim_id> subscribers see live data.
+    # Publish to SSE bus.
     for ev in report.pressure_events:
         bus.publish(simulation_id, pressure_event_to_record(ev, simulation_id))
     if report.adversary_action:
@@ -317,11 +307,7 @@ async def _run_smoke_round(simulation_id: str, round_num: int, *, mode: str) -> 
 
     logger.info(
         "[ADK] round complete sim=%s round=%d mode=%s phases=%s defender_actions=%d",
-        simulation_id,
-        round_num,
-        mode,
-        report.phases,
-        len(report.defender_actions),
+        simulation_id, round_num, mode, report.phases, len(report.defender_actions),
     )
 
     return {
@@ -335,5 +321,7 @@ async def _run_smoke_round(simulation_id: str, round_num: int, *, mode: str) -> 
         ),
         "defender_actions": [a.model_dump() for a in report.defender_actions],
         "judge_score": report.judge_score,
-        "env_call_count": len(env.calls),
+        "env_call_count": (
+            len(env.calls) if isinstance(env, _SmokeFakeEnv) else 0
+        ),
     }
