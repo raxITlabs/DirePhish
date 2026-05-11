@@ -20,6 +20,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from adk.agents.personas import make_threat_actor
+
 logger = logging.getLogger("direphish.adk.runner")
 
 
@@ -121,15 +123,17 @@ class AdkSimulationRunner:
         env=None because real LlmAgents talk to MCP subprocesses, not an
         in-process env; Orchestrator's adapter layer handles that.
         """
+        import os
+
         from crucible.config.pressure_config import PressureConfig
         from google.adk.agents import ParallelAgent
 
+        from adk.a2a.judge_client import JudgeA2aClient
         from adk.agents.adaptive_arbiter import AdaptiveArbiterAgent
         from adk.agents.attacker_observation import AttackerObservationAgent
         from adk.agents.personas import (
             make_containment_judge,
             make_defender_team,
-            make_threat_actor,
         )
         from adk.agents.pressure_engine import PressureEngineAgent
         from adk.agents.scheduled_injects import InjectAgent
@@ -144,8 +148,17 @@ class AdkSimulationRunner:
         defenders = make_defender_team()  # 5 LlmAgents in canonical order
         defender_team = ParallelAgent(name="defender_team", sub_agents=defenders)
 
-        adversary = make_threat_actor()
-        judge = make_containment_judge()
+        adversary = make_threat_actor(
+            provider=os.environ.get("THREAT_ACTOR_PROVIDER", "gemini"),
+        )
+
+        remote_judge = JudgeA2aClient()
+        if remote_judge.is_configured():
+            judge = remote_judge
+            logger.info("[runner] judge: A2A endpoint at %s", remote_judge.url)
+        else:
+            judge = make_containment_judge()
+            logger.info("[runner] judge: in-process LlmAgent")
 
         inject = InjectAgent(events=self.config.get("scheduled_events", []))
         attacker_obs = AttackerObservationAgent()
