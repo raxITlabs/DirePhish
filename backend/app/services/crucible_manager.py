@@ -166,13 +166,12 @@ def launch_simulation(config: dict, callback_token: str | None = None) -> str:
         "graph_id": graph_id,
     }
 
-    script_path = SCRIPTS_DIR / "run_crucible_simulation.py"
     stdout_log = sim_dir / "stdout.log"
     stderr_log = sim_dir / "stderr.log"
     stdout_fh = open(stdout_log, "w")
     stderr_fh = open(stderr_log, "w")
     proc = subprocess.Popen(
-        ["uv", "run", "python", str(script_path), "--config", str(config_path), "--output", str(sim_dir)],
+        ["uv", "run", "python", "-m", "backend.adk.runner", "--config", str(config_path), "--output", str(sim_dir)],
         cwd=str(Path(__file__).parent.parent.parent),
         stdout=stdout_fh,
         stderr=stderr_fh,
