@@ -151,6 +151,28 @@ async def test_runner_writes_actions_jsonl(tmp_path):
     assert (tmp_path / "summary.json").exists()
 
 
+def test_runner_uses_env_provider_for_threat_actor(tmp_path, vertex_env, monkeypatch):
+    """THREAT_ACTOR_PROVIDER env var threads through to make_threat_actor."""
+    import adk.runner as runner_module
+
+    captured = {}
+    def _stub_make(*, provider="gemini", **kw):
+        captured["provider"] = provider
+        # Return a placeholder that satisfies the Orchestrator construction
+        from adk.agents.personas import make_threat_actor as real
+        return real(provider="gemini")  # always use gemini for the actual construction
+    monkeypatch.setattr(runner_module, "make_threat_actor", _stub_make, raising=False)
+
+    monkeypatch.setenv("THREAT_ACTOR_PROVIDER", "claude")
+    cfg = json.loads(_minimal_config(tmp_path).read_text())
+    runner = AdkSimulationRunner(config=cfg, output_dir=tmp_path)
+    try:
+        runner._build_orchestrator()
+    except Exception:
+        pass  # construction may fail downstream; we only care about the captured provider
+    assert captured.get("provider") == "claude"
+
+
 def test_build_orchestrator_reads_pressure_configs_from_config(tmp_path, vertex_env):
     """Pressure configs from config dict are passed into PressureEngineAgent."""
     cfg = json.loads(_minimal_config(tmp_path).read_text())
