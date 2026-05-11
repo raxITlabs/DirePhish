@@ -35,41 +35,36 @@ def _stdio_command_for_world(module: str) -> tuple[str, list[str]]:
     return ("uv", ["run", "python", "-m", module])
 
 
-def slack_toolset():
-    """Build an MCPToolset pointing at the slack-world stdio server."""
+def _world_toolset(*, module: str, prefix: str):
+    """Build an McpToolset for a world's stdio server with per-world prefix.
+
+    The prefix is required: Gemini's function-call schema rejects
+    duplicate function names across tools (every world has e.g.
+    ``do_nothing``). Prefixing — ``slack_do_nothing`` vs
+    ``email_do_nothing`` — keeps the names disjoint.
+    """
     from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
     from mcp import StdioServerParameters
 
-    command, args = _stdio_command_for_world("mcp_servers.slack_world")
+    command, args = _stdio_command_for_world(module)
     return McpToolset(
         connection_params=StdioServerParameters(
             command=command, args=args, env={**os.environ}
         ),
+        tool_name_prefix=prefix,
     )
+
+
+def slack_toolset():
+    return _world_toolset(module="mcp_servers.slack_world", prefix="slack")
 
 
 def email_toolset():
-    from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
-    from mcp import StdioServerParameters
-
-    command, args = _stdio_command_for_world("mcp_servers.email_world")
-    return McpToolset(
-        connection_params=StdioServerParameters(
-            command=command, args=args, env={**os.environ}
-        ),
-    )
+    return _world_toolset(module="mcp_servers.email_world", prefix="email")
 
 
 def pagerduty_toolset():
-    from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
-    from mcp import StdioServerParameters
-
-    command, args = _stdio_command_for_world("mcp_servers.pagerduty_world")
-    return McpToolset(
-        connection_params=StdioServerParameters(
-            command=command, args=args, env={**os.environ}
-        ),
-    )
+    return _world_toolset(module="mcp_servers.pagerduty_world", prefix="pd")
 
 
 def gemini_llm_agent(
