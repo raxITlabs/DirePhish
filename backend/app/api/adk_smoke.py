@@ -250,18 +250,24 @@ async def _run_smoke_round(simulation_id: str, round_num: int, *, mode: str) -> 
             make_threat_actor,
         )
         from adk.models import init_models
-        from google.adk.agents import ParallelAgent
+        from google.adk.agents import SequentialAgent
 
         init_models()  # validates Vertex env vars + registers Claude
 
         defenders = make_defender_team()
-        defender_team = ParallelAgent(name="defender_team", sub_agents=defenders)
+        # SequentialAgent (not ParallelAgent) to stay under Vertex's
+        # per-minute quota on new projects. 5 parallel Gemini Pro calls
+        # + adversary + judge in one round triggers 429 RESOURCE_EXHAUSTED
+        # at default quotas. Sequential ⇒ ~one call/sec ⇒ comfortably
+        # within limits. Flip back to ParallelAgent once quota is
+        # increased (Vertex console → IAM & Admin → Quotas).
+        defender_team = SequentialAgent(name="defender_team", sub_agents=defenders)
         adversary = make_threat_actor()
         judge = make_containment_judge()
         env = None  # real LlmAgents talk to MCP subprocesses, not in-process env
 
         logger.info(
-            "[ADK] live mode — 5 defenders (Gemini) + 1 adversary (Claude) + judge (Gemini Pro)"
+            "[ADK] live mode — 5 defenders (Gemini, sequential) + 1 adversary + judge"
         )
 
         orchestrator = Orchestrator(
