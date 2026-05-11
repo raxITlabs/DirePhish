@@ -92,7 +92,10 @@ def test_evalset_file_is_loadable():
     with path.open() as f:
         data = json.load(f)
     assert "eval_cases" in data
-    assert len(data["eval_cases"]) >= 1
+    assert len(data["eval_cases"]) >= 25, (
+        f"Expected at least 25 eval cases, got {len(data['eval_cases'])}. "
+        "Run the evalset expansion task to add the missing cases."
+    )
     for case in data["eval_cases"]:
         assert "eval_id" in case
         assert "conversation" in case

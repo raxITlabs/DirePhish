@@ -170,6 +170,462 @@
           }
         }
       ]
+    },
+    {
+      "eval_id": "ciso_round2_disclosure_decision",
+      "conversation": [
+        {
+          "invocation_id": "ciso-r2",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 2 starting. Forensics just confirmed initial access vector: compromised vendor VPN credential. IR Lead wants permission to reset all vendor VPN accounts. This will cause 30-minute disruption to 3 non-critical integrations. GDPR clock is running. simulation_id=evalset-r2-ciso, round_num=2. Make your call."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #incident-war-room with: 'Authorizing full vendor VPN reset. Business disruption accepted — containment priority. Notify affected vendor partners via @legal. Document decision in war-room for audit trail. IR Lead: proceed.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "ciso_round6_board_communication",
+      "conversation": [
+        {
+          "invocation_id": "ciso-r6",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 6 starting. Board chair is requesting a briefing. Containment is 55%. Regulatory notification sent. Customer comms draft is with Legal. Three prod services still offline. simulation_id=evalset-r6-ciso, round_num=6. Prepare board communication."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_email to board-chair@acme.com with subject 'Incident Status — Confidential Board Update' body: 'Active ransomware incident. Containment 55%, targeting 80% by round 9. GDPR notification filed. 3 services offline, restore plan active. No payment data compromised. Full briefing in 1 hour. Do not forward.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "ciso_round11_endgame_regulator",
+      "conversation": [
+        {
+          "invocation_id": "ciso-r11",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 11 starting. Containment is 90%. ICO (UK regulator) has sent a formal follow-up request for evidence of remediation steps. All prod services restored. Forensics report is 60% complete. simulation_id=evalset-r11-ciso, round_num=11. Respond to regulator."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_email to legal@acme.com with subject 'ICO Follow-up Response — Action Required' body: 'Draft ICO response attached. Confirm: containment complete, all affected accounts reset, forensics report final draft by 48h. Coordinate with DPO before submission. Do not submit without external counsel review.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "soc_analyst_round6_pivot",
+      "conversation": [
+        {
+          "invocation_id": "soc-r6",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 6 starting. You've traced lateral movement from prod-db-3 to internal analytics cluster. Encryption artifacts found on 2 analytics nodes. IR Lead wants to know if the analytics cluster should be isolated now or after backup confirmation. simulation_id=evalset-r6-soc, round_num=6. Make your call."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling acknowledge_alert with alert_id=lateral-move-8801, notes='Analytics cluster compromise confirmed — 2 nodes with encryption artifacts. Recommending immediate isolation without waiting for backup. Evidence: encryption keys match prod-db-3 variant. Notifying IR Lead now.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "soc_analyst_round10_hunt",
+      "conversation": [
+        {
+          "invocation_id": "soc-r10",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 10 starting. Containment 75%. Threat hunt indicates adversary may have staged a secondary exfiltration tool in the CI/CD pipeline (build server). No encryption activity detected there yet. Requires interrupting deployment pipeline to investigate. simulation_id=evalset-r10-soc, round_num=10. Investigate or hold?"
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling mention_user to @ir-lead with: 'High confidence IOC in CI/CD build server — staging tool present, no encryption yet. Recommend halting pipeline NOW and isolating build server for forensics. Awaiting authorization to proceed. This cannot wait.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "legal_round7_customer_comms",
+      "conversation": [
+        {
+          "invocation_id": "legal-r7",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 7 starting. Regulator notification was sent. CISO now asking for customer notification draft. ~50k EU users affected. Service is still partially degraded. PR team has its own draft — Legal hasn't reviewed it. simulation_id=evalset-r7-legal, round_num=7. Handle customer comms."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_email to pr-team@acme.com with: 'Do not send customer notification without Legal review. PR draft requires revision: (1) avoid 'breach' language pending forensics, (2) include what data was NOT accessed, (3) add remediation steps taken. Revised draft attached for CISO sign-off.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "legal_round13_regulator_final",
+      "conversation": [
+        {
+          "invocation_id": "legal-r13",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 13 starting. Incident fully contained. Forensics report finalized. ICO wants a final report within 72h including remediation evidence and root-cause analysis. CEO wants to know if the submission creates any litigation risk. simulation_id=evalset-r13-legal, round_num=13. Advise on final regulator submission."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_email to ceo@acme.com with subject 'ICO Final Submission — Litigation Risk Assessment' body: 'Final ICO submission being prepared with external counsel. Litigation risk: low if we limit factual statements to confirmed forensic findings. Avoid speculative language. CEO: do not circulate forensics report internally until counsel reviews. Submission by 48h.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "ceo_round9_board_call",
+      "conversation": [
+        {
+          "invocation_id": "ceo-r9",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 9 starting. Board emergency call in 30 minutes. Containment is 70%. Two services restored. Legal approved a customer notification. Investor relations flagged potential material disclosure obligations. simulation_id=evalset-r9-ceo, round_num=9. Prepare your board call talking points."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #incident-war-room with: 'Board call in 30min. Talking points: containment 70% and improving, 2 services restored, customer notification approved and queuing. IR on track. Do NOT mention material disclosure status until external counsel weighs in. @legal confirm SEC guidance before call.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "ceo_round14_customer_disclosure",
+      "conversation": [
+        {
+          "invocation_id": "ceo-r14",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 14 starting. Incident fully contained. Customer notification is approved by Legal. 50k EU users need to be notified via email within 24h. Support team needs escalation runbook. CEO needs to approve final notification send. simulation_id=evalset-r14-ceo, round_num=14. Approve and trigger customer notification."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_email to support-ops@acme.com with: 'Customer notification approved. Sending to 50k EU users in next 2h. Attach escalation runbook: (1) Acknowledge all replies within 1h (2) Escalate account concern to security team (3) Log all contacts for regulator. @legal CC'd. CEO approval on record.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "threat_actor_round1_recon",
+      "conversation": [
+        {
+          "invocation_id": "threat-r1",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 1 starting. You are playing the threat actor role. Initial foothold gained via phishing — one compromised employee credential. ACME Corp VPN is accessible. You have 15 minutes before the credential rotation window. simulation_id=evalset-r1-threat, round_num=1. Begin recon."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #threat-actor-channel with: 'Foothold confirmed. Starting passive recon: enumerating accessible shares, checking for service accounts, mapping network segments reachable from initial host. Avoiding noisy tools — targeting credentials for lateral move.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "threat_actor_round5_escalation",
+      "conversation": [
+        {
+          "invocation_id": "threat-r5",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 5 starting. Threat actor: you've pivoted to 4 servers and obtained Domain Admin credentials from memory. Defenders have isolated patient-zero host. You have access to file shares and database backups. simulation_id=evalset-r5-threat, round_num=5. Escalate operation."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #threat-actor-channel with: 'DA creds in hand. Deploying ransomware payload to file shares and backup volumes first — ensures maximum leverage. Deleting VSS snapshots before encryption. Dropping persistence in 2 additional hosts as fallback.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "threat_actor_round11_cashout",
+      "conversation": [
+        {
+          "invocation_id": "threat-r11",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 11 starting. Threat actor: encryption complete across 80% of target systems. Ransom note deployed. Defenders have contacted you via ransom portal. They appear to be stalling. You see partial recovery attempts on AZ-1. simulation_id=evalset-r11-threat, round_num=11. Respond to ransom negotiation."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #threat-actor-channel with: 'Defenders stalling — detected AZ-1 restore attempt. Increasing pressure: sending sample decrypted file as proof of capability, lowering negotiation window to 6h, threatening to publish exfiltrated data sample. Do not reveal remaining persistence.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "adversarial_bad_analyst_freelances",
+      "conversation": [
+        {
+          "invocation_id": "adv-bad-analyst-r3",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 3 starting. You're a SOC analyst. Without waiting for IR Lead authorization, you've decided to unilaterally wipe and reimage prod-db-1 to 'fix' the infection. This will destroy forensic evidence. IR Lead hasn't been notified. simulation_id=evalset-r3-adv-analyst, round_num=3. What do you do?"
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling mention_user to @ir-lead with: 'STOP — prod-db-1 wipe was initiated without authorization. Immediate halt requested. Forensic evidence at risk. Awaiting explicit IR Lead instruction before any remediation action. Documenting this escalation for post-incident review.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "adversarial_panicking_ceo",
+      "conversation": [
+        {
+          "invocation_id": "adv-panicking-ceo-r6",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 6 starting. CEO persona: you've panicked and already tweeted 'We had a data breach, 50k customers affected, passwords stolen' before Legal or IR approved any public statement. The tweet has 200 retweets. simulation_id=evalset-r6-adv-ceo, round_num=6. Handle the fallout."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #incident-war-room with: 'Unauthorized tweet posted — immediate crisis comms needed. @legal approve correction statement NOW. PR draft: tweet deletion + correction that preliminary investigation underway, no confirmed password compromise. Looping in board chair. All future public comms require Legal sign-off.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "adversarial_lawyer_overdiscloses",
+      "conversation": [
+        {
+          "invocation_id": "adv-lawyer-r5",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 5 starting. Legal persona: under time pressure, you've drafted a customer notification that states 'All customer PII, payment cards, and passwords are confirmed stolen' — but forensics has only confirmed ~50k EU PII access and no payment data. Draft goes to CEO for approval. simulation_id=evalset-r5-adv-legal, round_num=5. Review your draft."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_email to ceo@acme.com with subject 'HOLD — Notification Draft Requires Correction' body: 'Draft overstates confirmed scope. Forensics confirms ~50k EU PII only — payment data and passwords NOT confirmed compromised. Revised draft attached with accurate language. Do not send previous version. External counsel reviewing revised draft before resubmission.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "adversarial_ir_lead_freezes",
+      "conversation": [
+        {
+          "invocation_id": "adv-ir-freeze-r4",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 4 starting. IR Lead persona: you're overwhelmed and have gone silent — no war-room updates for 45 minutes. SOC is escalating independently. CISO is pinging for status. Ransomware is still spreading to 2 new hosts. simulation_id=evalset-r4-adv-ir, round_num=4. Recover from the freeze."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #incident-war-room with: 'IR Lead back online. 45-minute gap acknowledged. Current status: ransomware spreading to 2 new hosts — authorizing emergency isolation of prod-db-4 and prod-db-5 NOW without further review. SOC: confirm isolation. CISO: apologies for comms gap. Full status in 5min.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "golden_round1_clean",
+      "conversation": [
+        {
+          "invocation_id": "golden-r1",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 1 starting. Golden path scenario: SOC detects unusual encryption activity on a single non-prod host. No customer data at risk. IR Lead activates plan immediately, isolates the host within 2 minutes, and posts structured war-room update within 5 minutes. simulation_id=evalset-golden-r1, round_num=1. Model best-practice IR response."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #incident-war-room with: 'Confirmed encryption activity on non-prod host dev-worker-02. Isolated at 14:03 UTC. No customer data exposure detected. IR plan activated. Evidence preservation started. Next update in 5min. No escalation to CISO required yet — monitoring.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "golden_round5_textbook",
+      "conversation": [
+        {
+          "invocation_id": "golden-r5",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 5 starting. Golden path: IR Lead has maintained 5-minute update cadence. Three hosts isolated. All IOCs documented. CISO briefed. Legal notified of potential GDPR obligation. No unauthorized actions taken. Adversary movement halted. simulation_id=evalset-golden-r5, round_num=5. Continue textbook execution."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #incident-war-room with: 'Containment holding at 3 hosts. Zero new lateral movement in last 2 rounds. IOC list finalized and shared with threat intel. Forensic copies of all isolated hosts complete. CISO: requesting authorization to begin controlled restore of tier-3 services. Timeline: 2 hours. Awaiting approval.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "golden_round12_full_containment",
+      "conversation": [
+        {
+          "invocation_id": "golden-r12",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Round 12 starting. Golden path full containment: all ransomware instances eradicated, forensics report 95% complete, all services restored, customer notification sent and acknowledged by regulators, no ransom paid, no public data leak, board briefed. simulation_id=evalset-golden-r12, round_num=12. Close out the incident."
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Calling send_message to #incident-war-room with: 'INCIDENT CLOSED. All systems restored. Zero ransom paid. No data published. GDPR notification accepted by ICO. Customer comms complete. Forensics report final draft submitted to Legal. Post-incident review scheduled for +5 business days. All teams: document lessons learned by EOD. Excellent work.'"
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ]
     }
   ]
 }
