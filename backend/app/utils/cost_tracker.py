@@ -251,3 +251,32 @@ class CostTracker:
             return None
         with open(path) as f:
             return json.load(f)
+
+
+# ---------------------------------------------------------------------------
+# Process-wide tracker cache — used by ADK after_model_callback so multiple
+# LlmAgents on the same simulation accumulate into one tracker without
+# threading a CostTracker instance through every constructor.
+# ---------------------------------------------------------------------------
+
+_trackers: dict[str, "CostTracker"] = {}
+
+
+def get_or_create_tracker(sim_id: str) -> "CostTracker":
+    """Return the cached CostTracker for ``sim_id`` or create one.
+
+    The ADK ``after_model_callback`` (``adk.callbacks.track_cost``) uses
+    this so cost tracking works without callers having to construct or
+    pass a tracker around. The cache is process-local: a fresh Flask
+    or gunicorn worker starts empty.
+
+    Tests can clear the cache via ``_trackers.clear()``.
+    """
+    if sim_id not in _trackers:
+        _trackers[sim_id] = CostTracker(sim_id)
+    return _trackers[sim_id]
+
+
+def reset_trackers() -> None:
+    """Test helper: clear the cache between test runs."""
+    _trackers.clear()
