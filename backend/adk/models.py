@@ -20,28 +20,42 @@ from google.adk.models.google_llm import Gemini  # noqa: F401  (registered by im
 from google.adk.models.registry import LLMRegistry
 
 # Single source of truth for model strings used across the orchestrator,
-# personas, and judge. Keep keys stable; bump values when Anthropic /
-# Google ship newer Vertex IDs.
-CLAUDE_MODELS: dict[str, str] = {
-    "sonnet": "claude-sonnet-4-5",
-    "opus": "claude-opus-4-1",
-    "haiku": "claude-haiku-4-5",
-}
+# personas, and judge. Every entry resolves from .env at import time:
+#
+#   Gemini:
+#     GEMINI_PRO_MODEL_NAME       (per-tier override)
+#     GEMINI_FLASH_MODEL_NAME     (per-tier override)
+#     LLM_MODEL_NAME              (one-model-everywhere global override)
+#
+#   Claude (via Vertex Model Garden):
+#     CLAUDE_SONNET_MODEL_NAME / CLAUDE_OPUS_MODEL_NAME /
+#     CLAUDE_HAIKU_MODEL_NAME     (per-tier override)
+#     LLM_MODEL_NAME does NOT override Claude — global is Gemini-only.
+#
+# Defaults are the current Vertex Model Garden releases as of 2026-05.
+# Bump them in .env when newer IDs land, no code change needed.
+_DEFAULT_GEMINI_PRO = "gemini-3-pro-preview"
+_DEFAULT_GEMINI_FLASH = "gemini-3.1-flash-lite-preview"
+_DEFAULT_CLAUDE_SONNET = "claude-sonnet-4-5"
+_DEFAULT_CLAUDE_OPUS = "claude-opus-4-1"
+_DEFAULT_CLAUDE_HAIKU = "claude-haiku-4-5"
 
-# Env overrides take precedence so .env can pin a specific Vertex
-# model ID without touching code. ``LLM_MODEL_NAME`` overrides BOTH
-# pro and flash (one-model-everywhere); the per-tier overrides are
-# for finer control.
-_DEFAULT_GEMINI_PRO = "gemini-2.5-pro"
-_DEFAULT_GEMINI_FLASH = "gemini-2.5-flash"
 
-_GLOBAL = os.environ.get("LLM_MODEL_NAME", "").strip()
-_PRO = os.environ.get("GEMINI_PRO_MODEL_NAME", "").strip()
-_FLASH = os.environ.get("GEMINI_FLASH_MODEL_NAME", "").strip()
+def _env(name: str) -> str:
+    return os.environ.get(name, "").strip()
+
+
+_GLOBAL = _env("LLM_MODEL_NAME")
 
 GEMINI_MODELS: dict[str, str] = {
-    "pro": _PRO or _GLOBAL or _DEFAULT_GEMINI_PRO,
-    "flash": _FLASH or _GLOBAL or _DEFAULT_GEMINI_FLASH,
+    "pro": _env("GEMINI_PRO_MODEL_NAME") or _GLOBAL or _DEFAULT_GEMINI_PRO,
+    "flash": _env("GEMINI_FLASH_MODEL_NAME") or _GLOBAL or _DEFAULT_GEMINI_FLASH,
+}
+
+CLAUDE_MODELS: dict[str, str] = {
+    "sonnet": _env("CLAUDE_SONNET_MODEL_NAME") or _DEFAULT_CLAUDE_SONNET,
+    "opus": _env("CLAUDE_OPUS_MODEL_NAME") or _DEFAULT_CLAUDE_OPUS,
+    "haiku": _env("CLAUDE_HAIKU_MODEL_NAME") or _DEFAULT_CLAUDE_HAIKU,
 }
 
 

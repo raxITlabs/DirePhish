@@ -82,6 +82,9 @@ def health():
                     "LLM_MODEL_NAME": os.environ.get("LLM_MODEL_NAME", ""),
                     "GEMINI_PRO_MODEL_NAME": os.environ.get("GEMINI_PRO_MODEL_NAME", ""),
                     "GEMINI_FLASH_MODEL_NAME": os.environ.get("GEMINI_FLASH_MODEL_NAME", ""),
+                    "CLAUDE_SONNET_MODEL_NAME": os.environ.get("CLAUDE_SONNET_MODEL_NAME", ""),
+                    "CLAUDE_OPUS_MODEL_NAME": os.environ.get("CLAUDE_OPUS_MODEL_NAME", ""),
+                    "CLAUDE_HAIKU_MODEL_NAME": os.environ.get("CLAUDE_HAIKU_MODEL_NAME", ""),
                 },
             }
         )
