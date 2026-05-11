@@ -25,7 +25,7 @@ sys.modules["crucible"].__file__ = "/tmp/fake_crucible/__init__.py"
 
 # Now add the scripts directory to sys.path and import
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-from run_crucible_simulation import _evaluate_condition  # noqa: E402
+from run_crucible_simulation_legacy import _evaluate_condition  # noqa: E402
 
 
 class TestEvaluateCondition:

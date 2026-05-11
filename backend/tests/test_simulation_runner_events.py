@@ -39,7 +39,7 @@ if hasattr(sys.modules.get("crucible"), "__file__") is False or isinstance(sys.m
     sys.modules["crucible"].__file__ = "/tmp/fake_crucible/__init__.py"
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-from run_crucible_simulation import _evaluate_condition  # noqa: E402
+from run_crucible_simulation_legacy import _evaluate_condition  # noqa: E402
 
 
 def _resolve_event_real(event, all_actions):
