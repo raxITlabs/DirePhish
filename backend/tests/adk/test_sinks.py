@@ -93,3 +93,53 @@ def test_sink_writes_into_subdir_if_output_dir_does_not_exist(tmp_path):
     sink.write(_sample_event(1))
     sink.close()
     assert (target / "actions.jsonl").exists()
+
+
+from adk.sinks.summary_json import SummaryJsonSink
+
+
+def test_summary_sink_writes_summary_json(tmp_path):
+    sink = SummaryJsonSink(output_dir=tmp_path)
+    sink.finalize(
+        simulation_id="sink-test",
+        rounds_completed=3,
+        action_count=15,
+        cost_usd=0.042,
+        outcome="contained",
+    )
+
+    data = json.loads((tmp_path / "summary.json").read_text())
+    assert data["simulation_id"] == "sink-test"
+    assert data["rounds_completed"] == 3
+    assert data["action_count"] == 15
+    assert data["cost_usd"] == 0.042
+    assert data["outcome"] == "contained"
+
+
+def test_summary_sink_includes_finalized_at_timestamp(tmp_path):
+    sink = SummaryJsonSink(output_dir=tmp_path)
+    sink.finalize(simulation_id="ts-test", rounds_completed=1)
+
+    data = json.loads((tmp_path / "summary.json").read_text())
+    assert "finalized_at" in data
+    # ISO-8601 UTC sanity
+    assert "T" in data["finalized_at"]
+
+
+def test_summary_sink_creates_output_dir(tmp_path):
+    target = tmp_path / "deeper" / "summary-test"
+    sink = SummaryJsonSink(output_dir=target)
+    sink.finalize(simulation_id="x", rounds_completed=0)
+    assert (target / "summary.json").exists()
+
+
+def test_summary_sink_accepts_arbitrary_extra_fields(tmp_path):
+    """Extra kwargs (legacy contract is open-ended) must be preserved."""
+    sink = SummaryJsonSink(output_dir=tmp_path)
+    sink.finalize(
+        simulation_id="x", rounds_completed=2,
+        custom_metric_a="alpha", custom_metric_b=42,
+    )
+    data = json.loads((tmp_path / "summary.json").read_text())
+    assert data["custom_metric_a"] == "alpha"
+    assert data["custom_metric_b"] == 42
