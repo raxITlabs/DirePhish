@@ -75,9 +75,14 @@ def health():
                     "sse": sse.__name__,
                 },
                 "personas_registered": len(PERSONA_BY_AGENT_NAME),
-                "claude_models": list(models.CLAUDE_MODELS.keys()),
-                "gemini_models": list(models.GEMINI_MODELS.keys()),
+                "claude_models": models.CLAUDE_MODELS,
+                "gemini_models": models.GEMINI_MODELS,
                 "vertex_env_ready": _vertex_env_ready(),
+                "env_overrides": {
+                    "LLM_MODEL_NAME": os.environ.get("LLM_MODEL_NAME", ""),
+                    "GEMINI_PRO_MODEL_NAME": os.environ.get("GEMINI_PRO_MODEL_NAME", ""),
+                    "GEMINI_FLASH_MODEL_NAME": os.environ.get("GEMINI_FLASH_MODEL_NAME", ""),
+                },
             }
         )
     except Exception as e:

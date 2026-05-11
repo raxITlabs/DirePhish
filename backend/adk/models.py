@@ -28,9 +28,20 @@ CLAUDE_MODELS: dict[str, str] = {
     "haiku": "claude-haiku-4-5",
 }
 
+# Env overrides take precedence so .env can pin a specific Vertex
+# model ID without touching code. ``LLM_MODEL_NAME`` overrides BOTH
+# pro and flash (one-model-everywhere); the per-tier overrides are
+# for finer control.
+_DEFAULT_GEMINI_PRO = "gemini-2.5-pro"
+_DEFAULT_GEMINI_FLASH = "gemini-2.5-flash"
+
+_GLOBAL = os.environ.get("LLM_MODEL_NAME", "").strip()
+_PRO = os.environ.get("GEMINI_PRO_MODEL_NAME", "").strip()
+_FLASH = os.environ.get("GEMINI_FLASH_MODEL_NAME", "").strip()
+
 GEMINI_MODELS: dict[str, str] = {
-    "pro": "gemini-2.5-pro",
-    "flash": "gemini-2.5-flash",
+    "pro": _PRO or _GLOBAL or _DEFAULT_GEMINI_PRO,
+    "flash": _FLASH or _GLOBAL or _DEFAULT_GEMINI_FLASH,
 }
 
 

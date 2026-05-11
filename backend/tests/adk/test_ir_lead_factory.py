@@ -52,8 +52,11 @@ def test_make_ir_lead_returns_llm_agent_wired_correctly(vertex_env):
     agent = make_ir_lead()
 
     assert isinstance(agent, LlmAgent)
+    from adk.models import GEMINI_MODELS
+
     assert agent.name == "ir_lead"
-    assert agent.model == "gemini-2.5-pro"
+    assert agent.model == GEMINI_MODELS["pro"]
+    assert agent.model, "resolved model string must be non-empty"
     assert agent.after_model_callback is not None
     assert agent.tools, "IR Lead must have at least one tool (slack toolset)"
     assert agent.instruction, "instruction must be non-empty"
@@ -63,8 +66,10 @@ def test_make_ir_lead_returns_llm_agent_wired_correctly(vertex_env):
 
 
 def test_make_ir_lead_accepts_flash_for_lower_cost(vertex_env):
+    from adk.models import GEMINI_MODELS
+
     agent = make_ir_lead(model_key="flash")
-    assert agent.model == "gemini-2.5-flash"
+    assert agent.model == GEMINI_MODELS["flash"]
 
 
 def test_make_ir_lead_accepts_custom_instruction(vertex_env):
