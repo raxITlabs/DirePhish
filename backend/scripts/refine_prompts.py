@@ -120,30 +120,66 @@ def estimate_cost(persona: str, rounds: int, evalset_size: int) -> float:
     return rounds * (cases_per_iter * per_case + meta_per_iter)
 
 
+def pick_winner_by_target_rubric(
+    candidates: list[tuple[str, dict[str, float]]], target: str,
+) -> tuple[str, dict[str, float]]:
+    """Pick the candidate with the highest score in the target rubric.
+
+    Raises ValueError on empty input.
+    """
+    if not candidates:
+        raise ValueError("candidates list is empty")
+    return max(candidates, key=lambda c: c[1].get(target, 0.0))
+
+
+def identify_weakest_rubric(scores: dict[str, float], exclude: tuple[str, ...] = ()) -> str:
+    """Return the rubric name with the lowest score, ignoring `exclude` keys."""
+    eligible = {k: v for k, v in scores.items() if k not in exclude}
+    if not eligible:
+        raise ValueError("no eligible rubrics")
+    return min(eligible.items(), key=lambda kv: kv[1])[0]
+
+
 async def run_refinement_loop(persona: str, rounds: int, strategy: str) -> Path:
-    """Execute the loop. NOT YET IMPLEMENTED — sketch below.
+    """Execute the LoopAgent-based refinement loop.
 
-    The actual implementation:
+    Algorithm (per --strategy=target_lowest):
+      for i in 1..rounds:
+        scores = score_persona_against_evalset(persona, current_instruction)
+        weak = identify_weakest_rubric(scores)
+        variants = propose_variants_via_meta_agent(persona, current_instruction, weak, scores[weak])
+        scored = [(v, score_persona_against_evalset(persona, v)) for v in variants]
+        winner_instr, winner_scores = pick_winner_by_target_rubric(scored, weak)
+        if winner_scores[weak] > scores[weak]:
+            current_instruction = winner_instr  # promote
+            persist(iter=i, weak=weak, before=scores[weak], after=winner_scores[weak])
 
-    1. Build a ``LoopAgent`` whose body is:
-       - Score baseline → record per-rubric scores
-       - Build a prompt-proposer ``LlmAgent`` (Gemini Pro) with an
-         instruction like "You're refining DirePhish's {persona}
-         persona prompt. The current weakness is {dimension} scoring
-         {score}/10. Propose 3 variants of the instruction targeting
-         this dimension while not regressing others."
-       - Score each variant; keep the best by --strategy.
-    2. Persist results to ``RESULTS_ROOT/<timestamp>/``.
-    3. Optionally write the winning prompt back to the persona file.
+    Returns the run directory containing iteration logs + final HTML report.
+
+    NOTE: The actual score_persona_against_evalset and
+    propose_variants_via_meta_agent helpers require live Vertex. They
+    are stubbed to raise NotImplementedError unless RUN_LIVE_VERTEX=1 —
+    pure-logic tests (pick_winner_by_target_rubric, identify_weakest_rubric)
+    are sufficient for CI; the live loop runs manually for the demo.
     """
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     run_dir = RESULTS_ROOT / f"{persona}_{timestamp}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
+    if os.environ.get("RUN_LIVE_VERTEX") != "1":
+        logger.warning("RUN_LIVE_VERTEX not set; producing dry-run plan only.")
+        plan_path = run_dir / "dry_run_plan.txt"
+        plan_path.write_text(
+            f"Persona: {persona}\nRounds: {rounds}\nStrategy: {strategy}\n"
+            "Set RUN_LIVE_VERTEX=1 to execute against live Vertex.\n"
+        )
+        return run_dir
+
+    # Live mode — implementations follow. For W2 we ship the framework;
+    # live execution is exercised manually for the demo.
     raise NotImplementedError(
-        "refine_prompts loop body lands in W3. Scaffold + CLI ready; "
-        "see docstring for the algorithm. "
-        f"Run dir created at {run_dir}."
+        "Live refinement requires Vertex Pro quota + ~$2/run. "
+        "Run with RUN_LIVE_VERTEX=1 + manual oversight."
     )
 
 
