@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from ._factory import email_toolset, gemini_llm_agent, slack_toolset
+from ._factory import gemini_llm_agent
+from ._shared_toolset import get_email_toolset, get_slack_toolset
 
 
 LEGAL_NAME: str = "Che Chang"
@@ -69,7 +70,7 @@ def make_legal(
             "notifications, external comms gating."
         ),
         instruction=instruction or _LEGAL_INSTRUCTION,
-        tools=[email_toolset(), slack_toolset()],
+        tools=[get_email_toolset(), get_slack_toolset()],
         model_key=model_key,
         output_key="legal_last_response",
     )

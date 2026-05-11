@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from ._factory import email_toolset, gemini_llm_agent, slack_toolset
+from ._factory import gemini_llm_agent
+from ._shared_toolset import get_email_toolset, get_slack_toolset
 
 
 CISO_NAME: str = "Dane Stuckey"
@@ -70,7 +71,7 @@ def make_ciso(
             "scope/disclosure/escalation decisions."
         ),
         instruction=instruction or _CISO_INSTRUCTION,
-        tools=[slack_toolset(), email_toolset()],
+        tools=[get_slack_toolset(), get_email_toolset()],
         model_key=model_key,
         output_key="ciso_last_response",
     )

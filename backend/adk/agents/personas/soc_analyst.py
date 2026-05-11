@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from ._factory import gemini_llm_agent, slack_toolset
+from ._factory import gemini_llm_agent
+from ._shared_toolset import get_slack_toolset
 
 
 SOC_ANALYST_NAME: str = "Elena Rodriguez"
@@ -67,7 +68,7 @@ def make_soc_analyst(
             "hygiene, evidence collection."
         ),
         instruction=instruction or _SOC_ANALYST_INSTRUCTION,
-        tools=[slack_toolset()],
+        tools=[get_slack_toolset()],
         model_key=model_key,
         output_key="soc_analyst_last_response",
     )

@@ -25,7 +25,8 @@ from typing import Any, Awaitable, Callable, Optional, Protocol
 
 from crucible.events import ActionEvent
 
-from ._factory import gemini_llm_agent, slack_toolset
+from ._factory import gemini_llm_agent
+from ._shared_toolset import get_slack_toolset
 
 logger = logging.getLogger("direphish.adk.personas.ir_lead")
 
@@ -169,7 +170,7 @@ def make_ir_lead(
             "Coordinates war room, directs SOC + Infra, escalates to CISO."
         ),
         instruction=instruction or _IR_LEAD_INSTRUCTION,
-        tools=[slack_toolset()],
+        tools=[get_slack_toolset()],
         model_key=model_key,
         output_key="ir_lead_last_response",
     )

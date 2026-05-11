@@ -16,12 +16,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from ._factory import (
-    claude_llm_agent,
-    email_toolset,
-    gemini_llm_agent,
-    slack_toolset,
-)
+from ._factory import claude_llm_agent, gemini_llm_agent
+from ._shared_toolset import get_email_toolset, get_slack_toolset
 
 
 THREAT_ACTOR_NAME: str = "The AI-Driven Credential Tsunami Operator"
@@ -98,7 +94,7 @@ def make_threat_actor(
             "~15 rounds against ACME Corp."
         ),
         instruction=instruction or _THREAT_ACTOR_INSTRUCTION,
-        tools=[slack_toolset(), email_toolset()],
+        tools=[get_slack_toolset(), get_email_toolset()],
         output_key="threat_actor_last_response",
     )
     if provider == "claude":
