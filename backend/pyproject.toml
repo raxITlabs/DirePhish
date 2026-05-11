@@ -32,6 +32,7 @@ dependencies = [
     # Firestore Vector Search (replaces Graphiti + Zep for simulation memory)
     "google-cloud-firestore>=2.16.0",
     "google-genai>=1.0.0",
+    "fastmcp>=2.13.0",
 ]
 
 [project.optional-dependencies]
@@ -66,4 +67,4 @@ pythonpath = ["."]
 asyncio_mode = "strict"
 
 [tool.hatch.build.targets.wheel]
-packages = ["app", "adk"]
+packages = ["app", "adk", "mcp_servers"]
