@@ -37,6 +37,8 @@ class AdkSimulationRunner:
 
     async def run(self) -> dict[str, Any]:
         """Drive all configured rounds via the orchestrator."""
+        import os
+
         from adk.sinks.actions_jsonl import ActionsJsonlSink
         from adk.sinks.summary_json import SummaryJsonSink
 
@@ -45,6 +47,16 @@ class AdkSimulationRunner:
 
         actions_sink = ActionsJsonlSink(output_dir=self.output_dir)
         summary_sink = SummaryJsonSink(output_dir=self.output_dir)
+
+        # Conditionally instantiate Firestore sink (skipped in test/offline mode)
+        firestore_enabled = os.environ.get("DIREPHISH_FIRESTORE_ENABLED", "true").lower() != "false"
+        firestore_sink = None
+        if firestore_enabled:
+            try:
+                from adk.sinks.firestore_sink import FirestoreSink
+                firestore_sink = FirestoreSink(simulation_id=self.simulation_id)
+            except Exception as exc:
+                logger.warning("[runner] Firestore sink unavailable: %s", exc)
 
         action_count = 0
         rounds_completed = 0
@@ -58,15 +70,26 @@ class AdkSimulationRunner:
                 )
                 rounds_completed = round_num
 
+                round_actions: list[Any] = []
+
                 # Write adversary action if present
                 if report.adversary_action is not None:
                     actions_sink.write(report.adversary_action)
                     action_count += 1
+                    round_actions.append(report.adversary_action.model_dump())
 
                 # Write all defender actions
                 for ev in report.defender_actions:
                     actions_sink.write(ev)
                     action_count += 1
+                    round_actions.append(ev.model_dump())
+
+                # Firestore per-round write
+                if firestore_sink is not None and round_actions:
+                    try:
+                        firestore_sink.round_complete(round_num=round_num, actions=round_actions)
+                    except Exception as exc:
+                        logger.warning("[runner] Firestore write failed round %d: %s", round_num, exc)
 
                 # Check for early halt flag
                 halt_requested = getattr(report, "halt_requested", False)

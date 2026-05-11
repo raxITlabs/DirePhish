@@ -143,3 +143,36 @@ def test_summary_sink_accepts_arbitrary_extra_fields(tmp_path):
     data = json.loads((tmp_path / "summary.json").read_text())
     assert data["custom_metric_a"] == "alpha"
     assert data["custom_metric_b"] == 42
+
+
+def test_firestore_sink_calls_bulk_write_per_round(monkeypatch, tmp_path):
+    from adk.sinks.firestore_sink import FirestoreSink
+
+    calls = {"bulk": 0, "graph": 0}
+    class _FakeMem:
+        def __init__(self, *a, **kw): pass
+        def add_episodes_bulk(self, sim_id, episodes): calls["bulk"] += 1
+        def extract_and_store_graph(self, sim_id, text_chunks): calls["graph"] += 1
+
+    monkeypatch.setattr("adk.sinks.firestore_sink.FirestoreMemory", _FakeMem)
+    sink = FirestoreSink(simulation_id="fs-test", graph_every_n_rounds=3)
+    sink.round_complete(round_num=1, actions=[{"agent":"x"}])
+    sink.round_complete(round_num=2, actions=[{"agent":"y"}])
+    sink.round_complete(round_num=3, actions=[{"agent":"z"}])
+    assert calls["bulk"] == 3
+    assert calls["graph"] == 1
+
+
+def test_firestore_sink_skips_when_no_actions(monkeypatch):
+    from adk.sinks.firestore_sink import FirestoreSink
+
+    calls = {"bulk": 0}
+    class _FakeMem:
+        def __init__(self, *a, **kw): pass
+        def add_episodes_bulk(self, sim_id, episodes): calls["bulk"] += 1
+        def extract_and_store_graph(self, sim_id, text_chunks): pass
+
+    monkeypatch.setattr("adk.sinks.firestore_sink.FirestoreMemory", _FakeMem)
+    sink = FirestoreSink(simulation_id="empty-test", graph_every_n_rounds=3)
+    sink.round_complete(round_num=1, actions=[])
+    assert calls["bulk"] == 0
