@@ -1,0 +1,33 @@
+{
+  "name": "DirePhish ContainmentJudge",
+  "description": "Round-by-round evaluator scoring containment, evidence, communication, business_impact on a 0-10 scale. Emits structured JSON.",
+  "version": "1.0.0",
+  "endpoint": "http://localhost:8003/a2a",
+  "capabilities": [
+    {
+      "name": "score_round",
+      "description": "Score one round of an IR simulation across 4 rubrics.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "round": {"type": "integer"},
+          "pressure_events": {"type": "array"},
+          "adversary_action": {"type": ["object", "null"]},
+          "defender_actions": {"type": "array"}
+        },
+        "required": ["round"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "containment": {"type": "number"},
+          "evidence": {"type": "number"},
+          "communication": {"type": "number"},
+          "business_impact": {"type": "number"},
+          "rationale": {"type": "string"}
+        }
+      }
+    }
+  ],
+  "auth": {"type": "none"}
+}
