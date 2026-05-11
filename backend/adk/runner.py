@@ -54,12 +54,44 @@ class AdkSimulationRunner:
         }
 
     def _build_orchestrator(self):
-        """Construct the per-round Orchestrator with personas + sinks.
+        """Construct the per-round Orchestrator with W2 personas + adversary + judge.
 
-        Filled in Task A4 — this stub raises so the caller can detect
-        the gap explicitly.
+        Per the design (Q2=C), config's agent_profiles field is ignored —
+        the W2 hardcoded factories produce the canonical persona graph.
+        env=None because real LlmAgents talk to MCP subprocesses, not an
+        in-process env; Orchestrator's adapter layer handles that.
         """
-        raise NotImplementedError("Task A4 wires personas")
+        from crucible.config.pressure_config import PressureConfig
+        from google.adk.agents import ParallelAgent
+
+        from adk.agents.personas import (
+            make_containment_judge,
+            make_defender_team,
+            make_threat_actor,
+        )
+        from adk.agents.pressure_engine import PressureEngineAgent
+        from adk.orchestrator import Orchestrator
+
+        pressure_cfgs = [PressureConfig(**p) for p in self.config.get("pressures", [])]
+        pressure = PressureEngineAgent(
+            configs=pressure_cfgs,
+            hours_per_round=self.hours_per_round,
+        )
+
+        defenders = make_defender_team()  # 5 LlmAgents in canonical order
+        defender_team = ParallelAgent(name="defender_team", sub_agents=defenders)
+
+        adversary = make_threat_actor()
+        judge = make_containment_judge()
+
+        return Orchestrator(
+            env=None,
+            pressure=pressure,
+            adversary=adversary,
+            defenders=[defender_team],
+            judge=judge,
+            simulation_id=self.simulation_id,
+        )
 
 
 def main(dry_run: bool = False) -> int:

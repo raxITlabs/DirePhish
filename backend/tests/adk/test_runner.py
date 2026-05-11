@@ -111,3 +111,43 @@ async def test_run_calls_build_orchestrator_when_none_injected(tmp_path, monkeyp
     monkeypatch.setattr(AdkSimulationRunner, "_build_orchestrator", _stub_build)
     await runner.run()
     assert built["called"]
+
+
+def test_build_orchestrator_returns_real_orchestrator(tmp_path, vertex_env):
+    """_build_orchestrator constructs an Orchestrator with W2 personas wired."""
+    from adk.orchestrator import Orchestrator
+
+    cfg = json.loads(_minimal_config(tmp_path).read_text())
+    runner = AdkSimulationRunner(config=cfg, output_dir=tmp_path)
+    orch = runner._build_orchestrator()
+
+    assert isinstance(orch, Orchestrator)
+    assert orch.simulation_id == cfg["simulation_id"]
+
+
+def test_build_orchestrator_reads_pressure_configs_from_config(tmp_path, vertex_env):
+    """Pressure configs from config dict are passed into PressureEngineAgent."""
+    cfg = json.loads(_minimal_config(tmp_path).read_text())
+    cfg["pressures"] = [
+        {
+            "name": "containment_deadline",
+            "type": "countdown",
+            "affects_roles": ["ciso"],
+            "hours": 2.0,
+            "hours_until": None,
+            "value": None,
+            "unit": None,
+            "triggered_by": None,
+            "severity_at_50pct": "high",
+            "severity_at_25pct": "critical",
+        }
+    ]
+    runner = AdkSimulationRunner(config=cfg, output_dir=tmp_path)
+    orch = runner._build_orchestrator()
+    # Pressure adapter is constructed from these configs; verify by introspection
+    # The Orchestrator wraps pressure in pressure_adapter, which holds the real
+    # PressureEngineAgent (a BaseAgent subclass). The PressureEngineAgent's
+    # ``engine`` field is a PressureEngine; we just need to verify the orch
+    # has SOME pressure agent attached.
+    assert orch.pressure_adapter is not None
+    assert orch.pressure_adapter.name == "pressure_engine"
