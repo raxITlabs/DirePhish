@@ -90,6 +90,7 @@ class RoundReport:
     adversary_action: ActionEvent | None = None
     defender_actions: list[ActionEvent] = field(default_factory=list)
     judge_score: dict = field(default_factory=dict)
+    halt_requested: bool = False
 
 
 # Only ``round_num`` and ``simulation_id`` live in session state.
@@ -369,6 +370,7 @@ class Orchestrator(BaseAgent):
     judge_adapter: BaseAgent
     inject_agent: Optional[BaseAgent] = None
     attacker_observation_agent: Optional[BaseAgent] = None
+    arbiter_agent: Optional[BaseAgent] = None
 
     def __init__(
         self,
@@ -382,6 +384,7 @@ class Orchestrator(BaseAgent):
         name: str = "orchestrator",
         inject: Optional[BaseAgent] = None,
         attacker_observation: Optional[BaseAgent] = None,
+        arbiter: Optional[BaseAgent] = None,
         **kwargs,
     ) -> None:
         pressure_adapter = _ensure_pressure_agent(pressure)
@@ -406,13 +409,15 @@ class Orchestrator(BaseAgent):
             defender_source=defender_team_adapter,
         )
 
-        # Build sequential phase list: pressure → [inject] → [attacker_obs] → adversary → defender → judge
+        # Build sequential phase list: pressure → [inject] → [attacker_obs] → adversary → defender → judge → [arbiter]
         phase_agents: list[BaseAgent] = [pressure_adapter]
         if inject is not None:
             phase_agents.append(inject)
         if attacker_observation is not None:
             phase_agents.append(attacker_observation)
         phase_agents.extend([adversary_adapter, defender_team_adapter, judge_adapter])
+        if arbiter is not None:
+            phase_agents.append(arbiter)
 
         sequence = SequentialAgent(
             name="round_sequence",
@@ -430,6 +435,7 @@ class Orchestrator(BaseAgent):
             judge_adapter=judge_adapter,
             inject_agent=inject,
             attacker_observation_agent=attacker_observation,
+            arbiter_agent=arbiter,
             sub_agents=[sequence],
             **kwargs,
         )
@@ -531,6 +537,16 @@ class Orchestrator(BaseAgent):
         if not judge_score and captured_judge_texts:
             judge_score = _parse_judge_text(captured_judge_texts)
 
+        # Read halt flag set by AdaptiveArbiterAgent (if wired)
+        final_session = await runner.session_service.get_session(
+            app_name="direphish-round",
+            user_id="orchestrator",
+            session_id=session.id,
+        )
+        halt_requested = bool(
+            final_session.state.get("halt", False) if final_session else False
+        )
+
         return RoundReport(
             round=round_num,
             phases=["pressure", "adversary", "defender", "judge"],
@@ -538,6 +554,7 @@ class Orchestrator(BaseAgent):
             adversary_action=adversary_action,
             defender_actions=defender_actions,
             judge_score=judge_score,
+            halt_requested=halt_requested,
         )
 
 

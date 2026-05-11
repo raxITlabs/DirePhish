@@ -124,6 +124,7 @@ class AdkSimulationRunner:
         from crucible.config.pressure_config import PressureConfig
         from google.adk.agents import ParallelAgent
 
+        from adk.agents.adaptive_arbiter import AdaptiveArbiterAgent
         from adk.agents.attacker_observation import AttackerObservationAgent
         from adk.agents.personas import (
             make_containment_judge,
@@ -148,6 +149,7 @@ class AdkSimulationRunner:
 
         inject = InjectAgent(events=self.config.get("scheduled_events", []))
         attacker_obs = AttackerObservationAgent()
+        arbiter = AdaptiveArbiterAgent()
 
         return Orchestrator(
             env=None,
@@ -157,6 +159,7 @@ class AdkSimulationRunner:
             adversary=adversary,
             defenders=[defender_team],
             judge=judge,
+            arbiter=arbiter,
             simulation_id=self.simulation_id,
         )
 
