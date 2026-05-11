@@ -116,6 +116,9 @@ def create_app(config_class=Config):
     from .api.adk_smoke import adk_bp
     app.register_blueprint(adk_bp, url_prefix='/api/adk')
 
+    from .api.adk_demo import adk_demo_bp
+    app.register_blueprint(adk_demo_bp, url_prefix='/api/adk')
+
     # Health check
     @app.route('/health')
     def health():
