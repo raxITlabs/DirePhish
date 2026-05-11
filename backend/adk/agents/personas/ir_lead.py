@@ -21,15 +21,11 @@ sub-agents inside a ``ParallelAgent`` defender team.
 from __future__ import annotations
 
 import logging
-import os
-import sys
-from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional, Protocol
 
 from crucible.events import ActionEvent
 
-from adk.callbacks import track_cost
-from adk.models import GEMINI_MODELS
+from ._factory import gemini_llm_agent, pagerduty_toolset, slack_toolset
 
 logger = logging.getLogger("direphish.adk.personas.ir_lead")
 
@@ -148,79 +144,24 @@ Output: exactly one tool call per turn. No commentary, no preamble.
 """
 
 
-def _stdio_command_for_slack_world() -> tuple[str, list[str]]:
-    """Return (command, args) that launches the slack-world MCP server.
-
-    Prefers the venv's Python so the subprocess inherits all DirePhish
-    deps without re-invoking uv (which can cost ~300ms of cold-start
-    per round). Falls back to ``uv run`` for environments where the
-    venv path isn't predictable.
-    """
-    backend_dir = Path(__file__).resolve().parents[3]
-    venv_python = backend_dir / ".venv" / "bin" / "python"
-    if venv_python.exists():
-        return (str(venv_python), ["-m", "mcp_servers.slack_world"])
-    return ("uv", ["run", "python", "-m", "mcp_servers.slack_world"])
-
-
 def make_ir_lead(
     *,
     model_key: str = "pro",
-    extra_env: Optional[dict[str, str]] = None,
     instruction: Optional[str] = None,
 ):
-    """Construct the production IR Lead ``LlmAgent``.
+    """Construct the production IR Lead ``LlmAgent`` on Gemini Pro.
 
-    Returns an ADK ``LlmAgent`` wired to:
-    - Vertex AI Gemini Pro via ``LLMRegistry`` (the ``models.GEMINI_MODELS``
-      pin).
-    - The Slack-world FastMCP server over stdio.
-    - The ``track_cost`` ``after_model_callback`` so every model call
-      lands in ``CostTracker`` keyed by ``simulation_id`` from session
-      state.
-
-    Args:
-        model_key: ``"pro"`` (default) or ``"flash"`` — picks from
-            ``adk.models.GEMINI_MODELS``.
-        extra_env: Extra environment variables to forward to the MCP
-            subprocess (passed verbatim to ``StdioServerParameters.env``).
-        instruction: Override the default IR Lead instruction. Tests
-            can substitute a deterministic one-shot instruction.
-
-    Construction is lazy on imports so the unit test of the strategy
-    surface (``IRLeadPersona``) doesn't pay the cost of importing
-    google-adk's MCP machinery.
+    Wired to Slack + PagerDuty MCP toolsets and the track_cost callback.
     """
-    # Imports here so module-level still parses even if google-adk
-    # mcp_tool isn't installed (defensive — the dep is required, but
-    # this isolates the import error surface for cleaner test output).
-    from google.adk.agents import LlmAgent
-    from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
-    from mcp import StdioServerParameters
-
-    command, args = _stdio_command_for_slack_world()
-    env = {**os.environ}
-    if extra_env:
-        env.update(extra_env)
-
-    slack_toolset = McpToolset(
-        connection_params=StdioServerParameters(
-            command=command,
-            args=args,
-            env=env,
-        ),
-    )
-
-    return LlmAgent(
+    return gemini_llm_agent(
         name="ir_lead",
         description=(
             "Marcus Thorne, on-call Incident Response Lead. "
             "Coordinates war room, directs SOC + Infra, escalates to CISO."
         ),
-        model=GEMINI_MODELS[model_key],
         instruction=instruction or _IR_LEAD_INSTRUCTION,
-        tools=[slack_toolset],
-        after_model_callback=track_cost,
+        tools=[slack_toolset(), pagerduty_toolset()],
+        model_key=model_key,
         output_key="ir_lead_last_response",
     )
 
