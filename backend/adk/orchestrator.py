@@ -367,6 +367,8 @@ class Orchestrator(BaseAgent):
     adversary_adapter: BaseAgent
     defender_team_adapter: BaseAgent
     judge_adapter: BaseAgent
+    inject_agent: Optional[BaseAgent] = None
+    attacker_observation_agent: Optional[BaseAgent] = None
 
     def __init__(
         self,
@@ -378,6 +380,8 @@ class Orchestrator(BaseAgent):
         judge: _JudgeLike | BaseAgent,
         simulation_id: str,
         name: str = "orchestrator",
+        inject: Optional[BaseAgent] = None,
+        attacker_observation: Optional[BaseAgent] = None,
         **kwargs,
     ) -> None:
         pressure_adapter = _ensure_pressure_agent(pressure)
@@ -402,14 +406,17 @@ class Orchestrator(BaseAgent):
             defender_source=defender_team_adapter,
         )
 
+        # Build sequential phase list: pressure → [inject] → [attacker_obs] → adversary → defender → judge
+        phase_agents: list[BaseAgent] = [pressure_adapter]
+        if inject is not None:
+            phase_agents.append(inject)
+        if attacker_observation is not None:
+            phase_agents.append(attacker_observation)
+        phase_agents.extend([adversary_adapter, defender_team_adapter, judge_adapter])
+
         sequence = SequentialAgent(
             name="round_sequence",
-            sub_agents=[
-                pressure_adapter,
-                adversary_adapter,
-                defender_team_adapter,
-                judge_adapter,
-            ],
+            sub_agents=phase_agents,
         )
 
         super().__init__(
@@ -421,6 +428,8 @@ class Orchestrator(BaseAgent):
             adversary_adapter=adversary_adapter,
             defender_team_adapter=defender_team_adapter,
             judge_adapter=judge_adapter,
+            inject_agent=inject,
+            attacker_observation_agent=attacker_observation,
             sub_agents=[sequence],
             **kwargs,
         )

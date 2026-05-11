@@ -64,12 +64,14 @@ class AdkSimulationRunner:
         from crucible.config.pressure_config import PressureConfig
         from google.adk.agents import ParallelAgent
 
+        from adk.agents.attacker_observation import AttackerObservationAgent
         from adk.agents.personas import (
             make_containment_judge,
             make_defender_team,
             make_threat_actor,
         )
         from adk.agents.pressure_engine import PressureEngineAgent
+        from adk.agents.scheduled_injects import InjectAgent
         from adk.orchestrator import Orchestrator
 
         pressure_cfgs = [PressureConfig(**p) for p in self.config.get("pressures", [])]
@@ -84,9 +86,14 @@ class AdkSimulationRunner:
         adversary = make_threat_actor()
         judge = make_containment_judge()
 
+        inject = InjectAgent(events=self.config.get("scheduled_events", []))
+        attacker_obs = AttackerObservationAgent()
+
         return Orchestrator(
             env=None,
             pressure=pressure,
+            inject=inject,
+            attacker_observation=attacker_obs,
             adversary=adversary,
             defenders=[defender_team],
             judge=judge,

@@ -96,3 +96,32 @@ def test_orchestrator_field_validation_rejects_unknown_kwargs():
             simulation_id="x",
             some_typo_kwarg=True,
         )
+
+
+def test_sequential_includes_inject_and_observation_phases():
+    """Phase order: pressure → inject → attacker_observation → adversary → defender → judge."""
+    from adk.agents.scheduled_injects import InjectAgent
+    from adk.agents.attacker_observation import AttackerObservationAgent
+    from tests.adk.test_orchestrator_smoke import FakeEnv, FakePressure, FakeAdversary, FakeJudge
+    from adk.agents.personas import IRLeadPersona
+    from adk.orchestrator import Orchestrator
+
+    async def _strat(env, n, sim):
+        return ("slack", "send_message", {"channel": "x", "content": "y"})
+
+    inject = InjectAgent(events=[])
+    obs = AttackerObservationAgent()
+    orch = Orchestrator(
+        env=FakeEnv(), pressure=FakePressure(),
+        inject=inject, attacker_observation=obs,
+        adversary=FakeAdversary(),
+        defenders=[IRLeadPersona(strategy=_strat)],
+        judge=FakeJudge(),
+        simulation_id="seq-test",
+    )
+    names = [sa.name for sa in orch.sequence.sub_agents]
+    assert "scheduled_injects" in names
+    assert "attacker_observation" in names
+    assert names.index("pressure") < names.index("scheduled_injects")
+    assert names.index("scheduled_injects") < names.index("attacker_observation")
+    assert names.index("attacker_observation") < names.index("judge")
