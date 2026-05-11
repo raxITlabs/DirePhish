@@ -10,7 +10,13 @@ registry. Missing entries surface as ``KeyError`` — loud failure is
 preferred over silent fallback to a default persona.
 """
 
-from .ir_lead import IRLeadPersona
+from .ir_lead import (
+    IR_LEAD_NAME,
+    IR_LEAD_ROLE,
+    IR_LEAD_SLUG,
+    IRLeadPersona,
+    make_ir_lead,
+)
 
 # Static map: ``ActionEvent.agent`` → persona slug. Sourced from the
 # legacy fixture survey under §11.2; extend as new personas land.
@@ -26,4 +32,11 @@ PERSONA_BY_AGENT_NAME: dict[str, str] = {
     "Sarah Friar": "cfo",
 }
 
-__all__ = ["IRLeadPersona", "PERSONA_BY_AGENT_NAME"]
+__all__ = [
+    "IRLeadPersona",
+    "make_ir_lead",
+    "IR_LEAD_NAME",
+    "IR_LEAD_ROLE",
+    "IR_LEAD_SLUG",
+    "PERSONA_BY_AGENT_NAME",
+]
