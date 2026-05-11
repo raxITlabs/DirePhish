@@ -432,7 +432,21 @@ class Orchestrator(BaseAgent):
             yield event
 
     async def run_round(self, round_num: int) -> RoundReport:
-        """Drive one round; return the typed RoundReport."""
+        """Drive one round; return the typed RoundReport.
+
+        Two harvest paths run in parallel:
+        - Adapter-shim path (W1 plain-class fakes): each adapter captures
+          its inner's output to a PrivateAttr, read via ``_get_*`` helpers.
+        - Event-stream path (real LlmAgents): events are scanned for
+          ``function_response`` parts (tool results) and final text
+          parts (judge score JSON). Routed to adversary / defender /
+          judge by matching ``event.author`` against the sub-agent
+          name sets.
+
+        The event-stream path wins when it has data (real LLM ran); the
+        adapter path wins for fake-mode tests. Both paths fall back
+        cleanly to empty / None / {} when the other source has nothing.
+        """
         # Reset adapter captures so multi-round runs don't leak state.
         for adapter in (
             self.pressure_adapter,
@@ -450,9 +464,6 @@ class Orchestrator(BaseAgent):
             user_id="orchestrator",
             state={_K_ROUND: round_num, _K_SIM: self.simulation_id},
         )
-        # Embed sim_id + round_num verbatim so personas pass them
-        # unchanged into tool calls (their instructions tell them to
-        # use exactly these values).
         new_message = types.Content(
             role="user",
             parts=[
@@ -466,27 +477,59 @@ class Orchestrator(BaseAgent):
                 )
             ],
         )
-        # Cap total Gemini calls across the round. Each persona ideally
-        # does ~2 calls (emit tool_call → see tool result → final text).
-        # 7 sub-agents × 3 = 21 budget; round to 25 for slack.
-        # Without this cap, LlmAgents can loop on tools indefinitely.
         run_config = RunConfig(max_llm_calls=25)
 
-        async for _event in runner.run_async(
+        # Sub-agent name sets for routing harvested events to phases.
+        adversary_names = _collect_names(self.adversary_adapter)
+        defender_names = _collect_names(self.defender_team_adapter)
+        judge_names = _collect_names(self.judge_adapter)
+
+        captured_adversary: Optional[ActionEvent] = None
+        captured_defenders: list[ActionEvent] = []
+        captured_judge_texts: list[str] = []
+
+        async for event in runner.run_async(
             user_id="orchestrator",
             session_id=session.id,
             new_message=new_message,
             run_config=run_config,
         ):
-            pass
+            if not event.content or not event.content.parts:
+                continue
+            author = event.author or ""
+            for part in event.content.parts:
+                fr = getattr(part, "function_response", None)
+                if fr is not None:
+                    resp = getattr(fr, "response", None)
+                    action = _action_event_from_response(resp)
+                    if action is not None:
+                        if author in adversary_names and captured_adversary is None:
+                            captured_adversary = action
+                        elif author in defender_names:
+                            captured_defenders.append(action)
+                text = getattr(part, "text", None)
+                if text and author in judge_names:
+                    captured_judge_texts.append(text)
+
+        # Prefer event-stream captures (real LLMs); fall back to adapter
+        # captures (fake-mode tests).
+        adversary_action = captured_adversary or _get_adversary_action(
+            self.adversary_adapter
+        )
+        defender_actions = captured_defenders or _get_defender_actions(
+            self.defender_team_adapter
+        )
+        judge_score = _get_judge_score(self.judge_adapter)
+        if not judge_score and captured_judge_texts:
+            judge_score = _parse_judge_text(captured_judge_texts)
 
         return RoundReport(
             round=round_num,
             phases=["pressure", "adversary", "defender", "judge"],
             pressure_events=_get_pressure_events(self.pressure_adapter),
-            adversary_action=_get_adversary_action(self.adversary_adapter),
-            defender_actions=_get_defender_actions(self.defender_team_adapter),
-            judge_score=_get_judge_score(self.judge_adapter),
+            adversary_action=adversary_action,
+            defender_actions=defender_actions,
+            judge_score=judge_score,
         )
 
 
@@ -559,4 +602,52 @@ def _get_defender_actions(adapter: BaseAgent) -> list[ActionEvent]:
 def _get_judge_score(adapter: BaseAgent) -> dict:
     if isinstance(adapter, _JudgeAdapter):
         return adapter.score
+    return {}
+
+
+def _collect_names(agent: BaseAgent) -> set[str]:
+    """Walk an agent's sub_agents tree and return every name."""
+    names = {agent.name}
+    for sa in getattr(agent, "sub_agents", []) or []:
+        names |= _collect_names(sa)
+    return names
+
+
+def _action_event_from_response(resp: Any) -> Optional[ActionEvent]:
+    """Reconstruct an ``ActionEvent`` from an MCP tool's response dict.
+
+    Our slack/email/pagerduty MCP servers all return
+    ``ActionEvent.model_dump()`` as the tool result, so the response
+    dict has the right shape. Returns None if the response doesn't
+    match (e.g. an unexpected tool, or an LLM-side error response).
+    """
+    if not isinstance(resp, dict):
+        return None
+    if not {"action", "world", "agent", "round"}.issubset(resp.keys()):
+        return None
+    try:
+        return ActionEvent(**resp)
+    except Exception:
+        return None
+
+
+def _parse_judge_text(texts: list[str]) -> dict:
+    """Parse the judge's final text output(s) into a score dict.
+
+    The judge instruction asks for JSON. We try the texts in reverse
+    (last one is most likely to be the final answer) and return the
+    first valid parse. Falls back to empty dict if all parse attempts
+    fail.
+    """
+    try:
+        from adk.agents.personas.containment_judge import parse_judge_output
+    except ImportError:
+        return {}
+
+    for txt in reversed(texts):
+        parsed = parse_judge_output(txt)
+        if parsed and any(
+            k in parsed for k in ("containment", "evidence", "communication", "business_impact")
+        ):
+            return parsed
     return {}
