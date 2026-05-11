@@ -40,6 +40,7 @@ from typing import Any, Optional, Protocol
 
 from google.adk.agents import BaseAgent, ParallelAgent, SequentialAgent
 from google.adk.agents.invocation_context import InvocationContext
+from google.adk.agents.run_config import RunConfig
 from google.adk.events import Event
 from google.adk.runners import InMemoryRunner
 from google.genai import types
@@ -465,10 +466,17 @@ class Orchestrator(BaseAgent):
                 )
             ],
         )
+        # Cap total Gemini calls across the round. Each persona ideally
+        # does ~2 calls (emit tool_call → see tool result → final text).
+        # 7 sub-agents × 3 = 21 budget; round to 25 for slack.
+        # Without this cap, LlmAgents can loop on tools indefinitely.
+        run_config = RunConfig(max_llm_calls=25)
+
         async for _event in runner.run_async(
             user_id="orchestrator",
             session_id=session.id,
             new_message=new_message,
+            run_config=run_config,
         ):
             pass
 

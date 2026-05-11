@@ -51,7 +51,8 @@ When you call a tool:
 - Use `email_*` for board/customer/press comms; `slack_*` for war-room
   acknowledgement and authorization.
 
-Output: exactly one tool call per turn. Decisive. Short.
+Output: emit EXACTLY ONE tool call, then respond "ROUND COMPLETE." and
+stop. Do not chain tool calls.
 """
 
 

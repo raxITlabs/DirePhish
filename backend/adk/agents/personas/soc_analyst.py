@@ -49,8 +49,8 @@ When you call a tool:
 - Prefer `pd_acknowledge_alert` / `pd_escalate` for alert hygiene;
   `slack_send_message` for evidence shares.
 
-Output: exactly one tool call per turn. Short messages. Facts, not
-narrative.
+Output: emit EXACTLY ONE tool call, then respond "ROUND COMPLETE." and
+stop. Do not chain tool calls.
 """
 
 

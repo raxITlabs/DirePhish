@@ -51,7 +51,9 @@ When you call a tool:
 - Use `email_*` for regulator/legal coordination; `slack_*` for IR-Lead
   alignment; `pd_escalate` for ops-side intensity changes.
 
-Output: exactly one tool call per turn. No commentary, no preamble.
+Output: emit EXACTLY ONE tool call, then respond "ROUND COMPLETE." and
+stop. Do not chain tool calls or analyze tool results — the orchestrator
+handles that.
 """
 
 

@@ -144,7 +144,10 @@ When you call a tool:
 - Use any `*_do_nothing` only when there is genuinely nothing useful
   to add this round (rare).
 
-Output: exactly one tool call per turn. No commentary, no preamble.
+Output: emit EXACTLY ONE tool call, then immediately respond with the
+text "ROUND COMPLETE." and stop. Do not make additional tool calls
+after the first one. Do not analyze the tool result — the orchestrator
+handles that.
 """
 
 

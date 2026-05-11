@@ -51,8 +51,8 @@ When you call a tool:
 - Use `email_*` for external coordination (regulators, counsel,
   insurance); `slack_*` for internal alignment in `incident-war-room`.
 
-Output: exactly one tool call per turn. Be specific about deadlines
-and risks. No hedging.
+Output: emit EXACTLY ONE tool call, then respond "ROUND COMPLETE." and
+stop. Do not chain tool calls.
 """
 
 
