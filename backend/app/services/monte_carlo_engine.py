@@ -333,7 +333,7 @@ async def _run_batch(
 
     # Import the sim runner from scripts/
     sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-    from scripts.run_crucible_simulation import run_single_iteration
+    from scripts.run_crucible_simulation_legacy import run_single_iteration
 
     # Shared dependencies — use AsyncOpenAI for parallel sim runner
     from openai import AsyncOpenAI
@@ -708,7 +708,7 @@ async def _run_batch_resume(batch, base_config, remaining_count, callback_token=
     semaphore = asyncio.Semaphore(mode_cfg["max_workers"])
 
     sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-    from scripts.run_crucible_simulation import run_single_iteration
+    from scripts.run_crucible_simulation_legacy import run_single_iteration
     from openai import AsyncOpenAI
     import httpx
 
