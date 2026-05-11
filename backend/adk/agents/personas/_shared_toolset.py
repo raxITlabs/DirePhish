@@ -11,12 +11,14 @@ from __future__ import annotations
 
 from typing import Optional
 
+from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
+
 from ._factory import _world_toolset
 
 
-_slack: Optional[object] = None
-_email: Optional[object] = None
-_pagerduty: Optional[object] = None
+_slack: Optional[McpToolset] = None
+_email: Optional[McpToolset] = None
+_pagerduty: Optional[McpToolset] = None
 
 
 def get_slack_toolset():
