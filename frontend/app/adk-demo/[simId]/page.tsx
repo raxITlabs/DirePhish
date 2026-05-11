@@ -111,12 +111,38 @@ export default function AdkDemoPage({ params }: { params: Promise<{ simId: strin
   const [sseEvents, setSseEvents] = useState<StreamEvent[]>([]);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [costData, setCostData] = useState<{ total_cost_usd: number; phases: Record<string, unknown> } | null>(null);
 
   useEffect(() => {
     return openSseStream(simId, (rec) => {
       const ev = rec as StreamEvent;
       setSseEvents((e) => [...e, ev]);
     });
+  }, [simId]);
+
+  useEffect(() => {
+    const API_BASE =
+      typeof window !== "undefined"
+        ? `${window.location.protocol}//api.${window.location.hostname}:${window.location.port}`
+        : "https://api.direphish.localhost:1355";
+
+    let cancelled = false;
+    async function poll() {
+      try {
+        const r = await fetch(`${API_BASE}/api/adk/cost-dashboard/${simId}`);
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!cancelled) setCostData(data);
+      } catch (e) {
+        console.warn("cost poll failed", e);
+      }
+    }
+    poll();
+    const id = setInterval(poll, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [simId]);
 
   async function runNext() {
@@ -148,8 +174,7 @@ export default function AdkDemoPage({ params }: { params: Promise<{ simId: strin
 
   const scores = buildScores(rounds);
 
-  // TODO: totalUsd will read from /api/adk/cost-dashboard/<sim_id> (Track E's endpoint)
-  const totalUsd = 0.0;
+  const totalUsd = costData?.total_cost_usd ?? 0.0;
 
   return (
     <main className="min-h-screen bg-[#faf9f7] p-6 font-mono">
