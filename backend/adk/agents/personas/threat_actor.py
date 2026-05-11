@@ -16,7 +16,13 @@ from __future__ import annotations
 
 from typing import Optional
 
-from ._factory import claude_llm_agent, email_toolset, pagerduty_toolset, slack_toolset
+from ._factory import (
+    claude_llm_agent,
+    email_toolset,
+    gemini_llm_agent,
+    pagerduty_toolset,
+    slack_toolset,
+)
 
 
 THREAT_ACTOR_NAME: str = "The AI-Driven Credential Tsunami Operator"
@@ -65,11 +71,23 @@ you're worried about being recorded.
 
 def make_threat_actor(
     *,
-    model_key: str = "sonnet",
+    provider: str = "gemini",
+    model_key: str = "pro",
     instruction: Optional[str] = None,
 ):
-    """Construct the ThreatActor ``LlmAgent`` on Claude Sonnet (Vertex MG)."""
-    return claude_llm_agent(
+    """Construct the ThreatActor ``LlmAgent``.
+
+    Args:
+        provider: ``"gemini"`` (default) or ``"claude"``. Gemini default
+            because Claude-on-Vertex requires Model Garden access on the
+            project — not all dev/CI projects have it. Flip to
+            ``"claude"`` when Anthropic models are enabled (gives the
+            "cross-model A2A" demo signal).
+        model_key: For gemini → ``"pro"`` or ``"flash"``. For claude →
+            ``"sonnet"`` / ``"opus"`` / ``"haiku"``.
+        instruction: Override the default adversary instruction.
+    """
+    common = dict(
         name="threat_actor",
         description=(
             "Ransomware crew operator. Runs the full kill-chain over "
@@ -77,9 +95,13 @@ def make_threat_actor(
         ),
         instruction=instruction or _THREAT_ACTOR_INSTRUCTION,
         tools=[slack_toolset(), email_toolset(), pagerduty_toolset()],
-        model_key=model_key,
         output_key="threat_actor_last_response",
     )
+    if provider == "claude":
+        return claude_llm_agent(model_key=model_key, **common)
+    if provider == "gemini":
+        return gemini_llm_agent(model_key=model_key, **common)
+    raise ValueError(f"Unknown provider: {provider!r}. Use 'gemini' or 'claude'.")
 
 
 __all__ = [
