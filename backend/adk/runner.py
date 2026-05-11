@@ -37,20 +37,57 @@ class AdkSimulationRunner:
 
     async def run(self) -> dict[str, Any]:
         """Drive all configured rounds via the orchestrator."""
+        from adk.sinks.actions_jsonl import ActionsJsonlSink
+        from adk.sinks.summary_json import SummaryJsonSink
+
         if self._orchestrator is None:
             self._orchestrator = self._build_orchestrator()
 
-        for round_num in range(1, self.total_rounds + 1):
-            report = await self._orchestrator.run_round(round_num)
-            logger.info(
-                "[runner] round %d/%d complete phases=%s",
-                round_num, self.total_rounds, report.phases,
-            )
+        actions_sink = ActionsJsonlSink(output_dir=self.output_dir)
+        summary_sink = SummaryJsonSink(output_dir=self.output_dir)
+
+        action_count = 0
+        rounds_completed = 0
+
+        try:
+            for round_num in range(1, self.total_rounds + 1):
+                report = await self._orchestrator.run_round(round_num)
+                logger.info(
+                    "[runner] round %d/%d complete phases=%s",
+                    round_num, self.total_rounds, report.phases,
+                )
+                rounds_completed = round_num
+
+                # Write adversary action if present
+                if report.adversary_action is not None:
+                    actions_sink.write(report.adversary_action)
+                    action_count += 1
+
+                # Write all defender actions
+                for ev in report.defender_actions:
+                    actions_sink.write(ev)
+                    action_count += 1
+
+                # Check for early halt flag
+                halt_requested = getattr(report, "halt_requested", False)
+                if halt_requested:
+                    logger.info("[runner] early halt requested at round %d", round_num)
+                    break
+        finally:
+            actions_sink.close()
+
+        summary_sink.finalize(
+            simulation_id=self.simulation_id,
+            rounds_completed=rounds_completed,
+            total_rounds_configured=self.total_rounds,
+            action_count=action_count,
+        )
 
         return {
             "simulation_id": self.simulation_id,
-            "rounds_completed": self.total_rounds,
+            "rounds_completed": rounds_completed,
             "total_rounds_configured": self.total_rounds,
+            "action_count": action_count,
         }
 
     def _build_orchestrator(self):

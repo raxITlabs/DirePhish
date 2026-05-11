@@ -125,6 +125,32 @@ def test_build_orchestrator_returns_real_orchestrator(tmp_path, vertex_env):
     assert orch.simulation_id == cfg["simulation_id"]
 
 
+@pytest.mark.asyncio
+async def test_runner_writes_actions_jsonl(tmp_path):
+    cfg = json.loads(_minimal_config(tmp_path).read_text())
+    cfg["total_rounds"] = 1
+    runner = AdkSimulationRunner(config=cfg, output_dir=tmp_path)
+
+    class _StubOrch:
+        async def run_round(self, n):
+            from adk.orchestrator import RoundReport
+            from crucible.events import ActionEvent
+            ae = lambda agent: ActionEvent(
+                round=n, timestamp="2026-05-11T00:00:00+00:00",
+                simulation_id=cfg["simulation_id"], agent=agent, role="defender",
+                world="slack", action="send_message",
+                args={"channel": "war-room", "content": "hi"}, result={"success": True},
+            )
+            return RoundReport(round=n, phases=["pressure","adversary","defender","judge"],
+                              defender_actions=[ae("Marcus Thorne"), ae("Dane Stuckey")])
+
+    runner._orchestrator = _StubOrch()
+    await runner.run()
+    lines = (tmp_path / "actions.jsonl").read_text().strip().split("\n")
+    assert len(lines) == 2
+    assert (tmp_path / "summary.json").exists()
+
+
 def test_build_orchestrator_reads_pressure_configs_from_config(tmp_path, vertex_env):
     """Pressure configs from config dict are passed into PressureEngineAgent."""
     cfg = json.loads(_minimal_config(tmp_path).read_text())
