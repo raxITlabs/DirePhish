@@ -36,11 +36,30 @@ class AdkSimulationRunner:
         self._orchestrator = None  # lazy; populated in A3
 
     async def run(self) -> dict[str, Any]:
-        """Drive all rounds; returns a summary dict.
+        """Drive all configured rounds via the orchestrator."""
+        if self._orchestrator is None:
+            self._orchestrator = self._build_orchestrator()
 
-        Filled in Task A3+ — this skeleton raises so callers know it's not ready.
+        for round_num in range(1, self.total_rounds + 1):
+            report = await self._orchestrator.run_round(round_num)
+            logger.info(
+                "[runner] round %d/%d complete phases=%s",
+                round_num, self.total_rounds, report.phases,
+            )
+
+        return {
+            "simulation_id": self.simulation_id,
+            "rounds_completed": self.total_rounds,
+            "total_rounds_configured": self.total_rounds,
+        }
+
+    def _build_orchestrator(self):
+        """Construct the per-round Orchestrator with personas + sinks.
+
+        Filled in Task A4 — this stub raises so the caller can detect
+        the gap explicitly.
         """
-        raise NotImplementedError("A3 implements round driving")
+        raise NotImplementedError("Task A4 wires personas")
 
 
 def main(dry_run: bool = False) -> int:

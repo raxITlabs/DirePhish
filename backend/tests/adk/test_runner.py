@@ -62,3 +62,52 @@ def test_cli_main_parses_args_dry_run(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, "argv", ["runner", "--config", str(cfg_path), "--output", str(out_dir)])
     rc = main(dry_run=True)
     assert rc == 0
+
+
+@pytest.mark.asyncio
+async def test_run_drives_total_rounds(tmp_path):
+    """Runner must call orchestrator.run_round for each configured round."""
+    cfg = json.loads(_minimal_config(tmp_path).read_text())
+    cfg["total_rounds"] = 3
+    runner = AdkSimulationRunner(config=cfg, output_dir=tmp_path)
+
+    calls = []
+
+    class _StubOrch:
+        async def run_round(self, n):
+            calls.append(n)
+            from adk.orchestrator import RoundReport
+            return RoundReport(
+                round=n,
+                phases=["pressure", "adversary", "defender", "judge"],
+            )
+
+    runner._orchestrator = _StubOrch()
+    summary = await runner.run()
+
+    assert calls == [1, 2, 3], f"expected rounds 1-3, got {calls}"
+    assert summary["rounds_completed"] == 3
+    assert summary["simulation_id"] == cfg["simulation_id"]
+
+
+@pytest.mark.asyncio
+async def test_run_calls_build_orchestrator_when_none_injected(tmp_path, monkeypatch):
+    """If no orchestrator is injected, runner builds one via _build_orchestrator."""
+    cfg = json.loads(_minimal_config(tmp_path).read_text())
+    cfg["total_rounds"] = 1
+    runner = AdkSimulationRunner(config=cfg, output_dir=tmp_path)
+
+    built = {"called": False}
+
+    class _StubOrch:
+        async def run_round(self, n):
+            from adk.orchestrator import RoundReport
+            return RoundReport(round=n, phases=["pressure"])
+
+    def _stub_build(self):
+        built["called"] = True
+        return _StubOrch()
+
+    monkeypatch.setattr(AdkSimulationRunner, "_build_orchestrator", _stub_build)
+    await runner.run()
+    assert built["called"]
