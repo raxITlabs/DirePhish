@@ -45,7 +45,10 @@ DirePhish runs on Google's [Agent Development Kit](https://adk.dev). The
 simulation core, judge, refinement loop, and threat actor are all
 `BaseAgent` / `LlmAgent` instances composed via `SequentialAgent` +
 `ParallelAgent`. Worlds (Slack, Email, PagerDuty) are exposed as
-[MCP](https://modelcontextprotocol.io) servers. The Containment Judge
+[MCP](https://modelcontextprotocol.io) servers — Slack + Email are wired
+to every defender; the PagerDuty world is implemented but intentionally
+disabled pending an upstream Crucible `apply_action` fix (one-line
+re-enable via `get_pagerduty_toolset()`). The Containment Judge
 is also available as a stand-alone
 [A2A](https://a2a-protocol.org) service.
 
