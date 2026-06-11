@@ -1,4 +1,6 @@
-const API_BASE = process.env.FLASK_API_URL || "http://localhost:5001";
+import { backendBaseUrl, backendAuthHeaders } from "@/lib/backend";
+
+const API_BASE = backendBaseUrl();
 
 export async function fetchApi<T>(
   path: string,
@@ -9,6 +11,7 @@ export async function fetchApi<T>(
       ...options,
       headers: {
         "Content-Type": "application/json",
+        ...(await backendAuthHeaders()),
         ...options?.headers,
       },
     });
@@ -31,6 +34,7 @@ export async function fetchMultipart<T>(
       method: "POST",
       body: formData,
       // Do NOT set Content-Type — browser sets it with multipart boundary
+      headers: await backendAuthHeaders(),
     });
     const json = await res.json();
     if (!res.ok || json.error) {

@@ -22,9 +22,13 @@ export type ActionEventDto = {
   result: Record<string, unknown> | null;
 };
 
-const API_BASE = (typeof window !== "undefined"
-  ? (process.env.NEXT_PUBLIC_API_URL ?? `${window.location.protocol}//api.${window.location.hostname}:${window.location.port}`)
-  : "https://api.direphish.localhost:1355");
+// Backend base URL. In prod this is baked at build time via NEXT_PUBLIC_API_URL
+// (or NEXT_PUBLIC_FLASK_API_URL). Falls back to localhost for local dev — never
+// the old "api.<host>:<port>" guess, which is unresolvable on Cloud Run.
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ??
+  process.env.NEXT_PUBLIC_FLASK_API_URL ??
+  "http://localhost:5001";
 
 export async function postSmokeRound(simId: string, roundNum: number, mode: "live" | "fake" = "live"): Promise<RoundReport> {
   const r = await fetch(`${API_BASE}/api/adk/smoke`, {

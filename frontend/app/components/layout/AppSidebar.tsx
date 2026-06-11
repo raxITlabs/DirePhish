@@ -59,6 +59,12 @@ export default function AppSidebar() {
         <SheetContent side="left" className="w-[17rem] p-0 bg-card border-border/20">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <div className="flex-1 overflow-y-auto p-2 pt-4">
+            <a
+              href="/adk-demo"
+              className="mb-3 flex items-center gap-2 rounded-lg border border-sidebar-border/40 px-3 py-2 font-mono text-[11px] uppercase tracking-widest text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 transition-colors"
+            >
+              ▸ War Room — ADK Live
+            </a>
             <RunHistoryContent runs={runs} onDelete={handleDelete} />
           </div>
         </SheetContent>
@@ -74,6 +80,12 @@ export default function AppSidebar() {
           {/* Sidebar content */}
           {!collapsed && (
             <div className="flex-1 overflow-y-auto p-2">
+              <a
+                href="/adk-demo"
+                className="mb-3 flex items-center gap-2 rounded-lg border border-sidebar-border/40 px-3 py-2 font-mono text-[11px] uppercase tracking-widest text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 transition-colors"
+              >
+                ▸ War Room — ADK Live
+              </a>
               <RunHistoryContent runs={runs} onDelete={handleDelete} />
             </div>
           )}

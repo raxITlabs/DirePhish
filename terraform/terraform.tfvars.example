@@ -1,0 +1,12 @@
+project_id            = "raxit-ai"
+region                = "us-central1"
+vertex_location       = "global"
+cloudflare_account_id = "your-cloudflare-account-id"
+
+# Set when applying the Cloud Run services (built via cloudbuild.*.yaml):
+# backend_image  = "us-central1-docker.pkg.dev/raxit-ai/direphish/backend:GITSHA"
+# frontend_image = "us-central1-docker.pkg.dev/raxit-ai/direphish/frontend:GITSHA"
+
+# After the FIRST apply, copy the `judge_uri` output here and re-apply so the
+# AgentCard at /.well-known/agent.json publishes the real endpoint:
+# judge_public_url = "https://direphish-judge-xxxx.us-central1.run.app"

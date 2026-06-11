@@ -1,0 +1,27 @@
+# Build + push the frontend image. Context = frontend/ (the SOURCE arg).
+# Submit (NEXT_PUBLIC_* baked in at build time → must pass the backend URL):
+#   gcloud builds submit --config cloudbuild.frontend.yaml \
+#     --substitutions=_IMAGE=REGION-docker.pkg.dev/PROJECT/direphish/frontend:TAG,_BACKEND=https://backend-url \
+#     frontend/
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - NEXT_PUBLIC_FLASK_API_URL=${_BACKEND}
+      - --build-arg
+      - NEXT_PUBLIC_API_URL=${_BACKEND}
+      - -t
+      - ${_IMAGE}
+      - -f
+      - Dockerfile
+      - .
+  - name: gcr.io/cloud-builders/docker
+    args: ["push", "${_IMAGE}"]
+images: ["${_IMAGE}"]
+options:
+  machineType: E2_HIGHCPU_8
+substitutions:
+  _IMAGE: ""
+  _BACKEND: ""
+timeout: 1800s

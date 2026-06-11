@@ -9,8 +9,9 @@
  * Progress streamed via getWritable() inside step functions (WDK requirement).
  */
 import { getWritable, createHook } from "workflow";
+import { backendBaseUrl, backendAuthHeaders } from "@/lib/backend";
 
-const API_BASE = process.env.FLASK_API_URL || "http://localhost:5001";
+const API_BASE = backendBaseUrl();
 
 // --- Types ---
 
@@ -86,7 +87,11 @@ async function flaskApi<T>(path: string, options?: RequestInit): Promise<T> {
   "use step";
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", ...options?.headers },
+    headers: {
+      "Content-Type": "application/json",
+      ...(await backendAuthHeaders()),
+      ...options?.headers,
+    },
   });
   const json = await res.json();
   if (!res.ok || json.error) {

@@ -181,8 +181,9 @@ export async function chatWithReport(
 }
 
 export async function getReportDownloadUrl(reportId: string): Promise<string> {
-  const base = process.env.FLASK_API_URL || "http://localhost:5001";
-  return `${base}/api/report/${reportId}/download`;
+  // Same-origin proxy path — the browser can't reach the private backend
+  // directly; /api/be/* forwards with an OIDC token (see app/api/be/[...path]).
+  return `/api/be/api/report/${reportId}/download`;
 }
 
 // --- Attack-path playbook types ---

@@ -1,0 +1,10 @@
+# Local state holds resource refs — never commit.
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# tfvars may carry account ids / image refs — commit only the example.
+*.tfvars
+!*.tfvars.example

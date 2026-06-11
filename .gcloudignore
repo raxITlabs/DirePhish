@@ -1,0 +1,40 @@
+# Controls what `gcloud builds submit` uploads as the build context.
+# Keeps the backend (repo-root) source upload small.
+.git
+.github
+.gitignore
+.DS_Store
+.env
+*.env
+!.env.example
+
+node_modules
+**/node_modules
+.venv
+backend/.venv
+.python-version
+
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Frontend builds from the frontend/ context separately.
+frontend
+
+backend/uploads
+backend/logs
+data
+.next
+
+terraform/.terraform
+*.tfstate
+*.tfstate.*
+
+.claude
+.superpowers
+.cursor
+.stitch
+.gstack

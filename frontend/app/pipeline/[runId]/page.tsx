@@ -139,7 +139,8 @@ export default function PipelinePage({
     setMcSimId(`${mcBatchId}_iter_0000`);
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`http://localhost:5001/api/crucible/monte-carlo/${mcBatchId}/status`);
+        const API = process.env.NEXT_PUBLIC_FLASK_API_URL || "http://localhost:5001";
+        const res = await fetch(`${API}/api/crucible/monte-carlo/${mcBatchId}/status`);
         if (!res.ok) return;
         const json = await res.json();
         const d = json.data;
