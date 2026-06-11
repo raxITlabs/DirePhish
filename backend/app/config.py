@@ -27,11 +27,16 @@ class Config:
     # JSON configuration - disable ASCII escaping so non-ASCII characters display directly (instead of \uXXXX format)
     JSON_AS_ASCII = False
     
-    # LLM configuration (unified OpenAI format)
+    # LLM configuration.
+    # Primary paths (report/judge/research/config/embeddings) use the unified
+    # google-genai SDK on Vertex AI via ADC — no key needed.
+    # LLM_API_KEY / LLM_BASE_URL are used ONLY by the legacy Monte-Carlo
+    # statistical-rerun layer (CAMEL sim runner), which talks to Gemini through
+    # the OpenAI-compatible endpoint. Default base_url stays on Gemini (never OpenAI).
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
-    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
-    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
-    LLM_PRO_MODEL = os.environ.get('LLM_PRO_MODEL') or LLM_MODEL_NAME
+    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai/')
+    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gemini-3.5-flash')
+    LLM_PRO_MODEL = os.environ.get('LLM_PRO_MODEL') or os.environ.get('GEMINI_PRO_MODEL_NAME') or 'gemini-3.1-pro-preview'
     LLM_JUDGE_MODEL = os.environ.get('LLM_JUDGE_MODEL') or LLM_MODEL_NAME
 
 
@@ -80,9 +85,21 @@ class Config:
     
     @classmethod
     def validate(cls):
-        """Validate required configuration"""
-        errors = []
+        """Validate required configuration.
+
+        The ADK simulation core runs entirely on Vertex AI via ADC and does
+        not need ``LLM_API_KEY``. The legacy research/report/Monte-Carlo
+        pipeline constructs its LLM client lazily and raises only when
+        actually called, so a missing key is a warning — not a fatal boot
+        error. This lets ADK-only deploys (e.g. Cloud Run) start cleanly.
+        """
+        import sys
+
         if not cls.LLM_API_KEY:
-            errors.append("LLM_API_KEY is not configured")
-        return errors
+            print(
+                "[config] LLM_API_KEY not set — legacy (non-ADK) pipeline "
+                "routes will be unavailable; ADK simulation runs via Vertex/ADC.",
+                file=sys.stderr,
+            )
+        return []
 

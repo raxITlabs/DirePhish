@@ -1,0 +1,9 @@
+# Generated eval outputs are transient; commit only the curated Track-2 artifacts.
+*
+!.gitignore
+!README.md
+!eval_report.html
+!track2_noobserve_flashlite.json
+!track2_observe_flashlite.json
+!ir_lead_20260611_061253
+!ir_lead_20260611_061253/**

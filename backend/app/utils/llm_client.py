@@ -1,12 +1,22 @@
 """
-LLM Client Wrapper
-Unified calls using OpenAI format. Instrumented with OpenTelemetry.
+LLM Client Wrapper — unified Google Gen AI SDK on Vertex AI.
+
+Migrated from the deprecated OpenAI-compatible client to the unified
+``google-genai`` SDK routed through Vertex AI (Application Default
+Credentials). The public ``chat()`` / ``chat_json()`` surface is unchanged
+so callers (research_agent, monte_carlo_engine, report generation) are
+untouched. OpenAI-style message dicts (role/content) are converted to
+Gen AI ``Content`` objects; ``system`` messages become a system instruction.
+Instrumented with OpenTelemetry.
 """
 
 import json
+import os
 import re
 from typing import Optional, Dict, Any, List
-from openai import OpenAI
+
+from google import genai
+from google.genai import types
 
 from ..config import Config
 
@@ -18,58 +28,69 @@ except ImportError:
     _tracer = None
 
 
+def _to_genai(messages: List[Dict[str, str]]):
+    """Convert OpenAI-style messages → (system_instruction, contents).
+
+    ``system`` roles are concatenated into a single system instruction;
+    ``assistant`` maps to the Gen AI ``model`` role; everything else maps
+    to ``user``.
+    """
+    system_parts: List[str] = []
+    contents: List[types.Content] = []
+    for m in messages:
+        role = m.get("role", "user")
+        text = m.get("content", "") or ""
+        if role == "system":
+            if text:
+                system_parts.append(text)
+            continue
+        genai_role = "model" if role == "assistant" else "user"
+        contents.append(
+            types.Content(role=genai_role, parts=[types.Part.from_text(text=text)])
+        )
+    system_instruction = "\n\n".join(system_parts) or None
+    return system_instruction, contents
+
+
 class LLMClient:
-    """LLM Client"""
-    
+    """LLM Client (Gemini via Vertex AI / google-genai)."""
+
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        model: Optional[str] = None
+        api_key: Optional[str] = None,  # accepted for backward compat; unused on Vertex
+        base_url: Optional[str] = None,  # accepted for backward compat; unused on Vertex
+        model: Optional[str] = None,
     ):
-        self.api_key = api_key or Config.LLM_API_KEY
-        self.base_url = base_url or Config.LLM_BASE_URL
         self.model = model or Config.LLM_MODEL_NAME
-        
-        if not self.api_key:
-            raise ValueError("LLM_API_KEY is not configured")
-        
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url
+        # Vertex routing via ADC. project/location come from env
+        # (GOOGLE_CLOUD_PROJECT / GOOGLE_CLOUD_LOCATION); passing them
+        # explicitly keeps behaviour deterministic if only one is set.
+        self.client = genai.Client(
+            vertexai=True,
+            project=Config.GCP_PROJECT_ID or None,
+            location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
         )
         self.last_usage: Optional[Dict[str, int]] = None
-    
+
     def chat(
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        response_format: Optional[Dict] = None
+        response_format: Optional[Dict] = None,
     ) -> str:
-        """
-        Send chat request
-        
-        Args:
-            messages: List of messages
-            temperature: Temperature parameter
-            max_tokens: Maximum number of tokens
-            response_format: Response format (e.g., JSON mode)
-            
-        Returns:
-            Model response text
-        """
-        kwargs = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
+        """Send a chat request, return the model's text response."""
+        system_instruction, contents = _to_genai(messages)
 
-        if response_format:
-            kwargs["response_format"] = response_format
+        config = types.GenerateContentConfig(
+            temperature=temperature,
+            max_output_tokens=max_tokens,
+            system_instruction=system_instruction,
+        )
+        json_mode = bool(response_format and response_format.get("type") == "json_object")
+        if json_mode:
+            config.response_mime_type = "application/json"
 
-        # Wrap in OpenTelemetry span
         span_ctx = _tracer.start_as_current_span(
             "llm.chat",
             attributes={
@@ -77,7 +98,7 @@ class LLMClient:
                 "llm.temperature": temperature,
                 "llm.max_tokens": max_tokens,
                 "llm.message_count": len(messages),
-                "llm.has_json_mode": response_format is not None,
+                "llm.has_json_mode": json_mode,
             },
         ) if _tracer else None
 
@@ -85,15 +106,20 @@ class LLMClient:
             if span_ctx:
                 span_ctx.__enter__()
 
-            response = self.client.chat.completions.create(**kwargs)
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=contents,
+                config=config,
+            )
+
             # Capture token usage for cost tracking
-            if response.usage:
+            usage = getattr(response, "usage_metadata", None)
+            if usage:
                 self.last_usage = {
-                    "input_tokens": response.usage.prompt_tokens or 0,
-                    "output_tokens": response.usage.completion_tokens or 0,
-                    "cached_tokens": getattr(response.usage, "cached_prompt_tokens", 0) or 0,
+                    "input_tokens": getattr(usage, "prompt_token_count", 0) or 0,
+                    "output_tokens": getattr(usage, "candidates_token_count", 0) or 0,
+                    "cached_tokens": getattr(usage, "cached_content_token_count", 0) or 0,
                 }
-                # Record token usage in span
                 if span_ctx and _tracer:
                     span = trace.get_current_span()
                     span.set_attribute("llm.input_tokens", self.last_usage["input_tokens"])
@@ -101,8 +127,9 @@ class LLMClient:
                     span.set_attribute("llm.cached_tokens", self.last_usage["cached_tokens"])
             else:
                 self.last_usage = None
-            content = response.choices[0].message.content
-            # Some models (e.g., MiniMax M2.5) include <think> content in the response, which needs to be removed
+
+            content = response.text or ""
+            # Some models include <think> content in the response — strip it.
             content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
             return content
         except Exception as e:
@@ -114,29 +141,19 @@ class LLMClient:
         finally:
             if span_ctx:
                 span_ctx.__exit__(None, None, None)
-    
+
     def chat_json(
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.3,
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
     ) -> Dict[str, Any]:
-        """
-        Send chat request and return JSON
-        
-        Args:
-            messages: List of messages
-            temperature: Temperature parameter
-            max_tokens: Maximum number of tokens
-            
-        Returns:
-            Parsed JSON object
-        """
+        """Send a chat request and return parsed JSON."""
         response = self.chat(
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
         )
         # Clean markdown code block markers
         cleaned_response = response.strip()
@@ -147,9 +164,7 @@ class LLMClient:
         try:
             return json.loads(cleaned_response)
         except json.JSONDecodeError:
-            # Recovery: LLM sometimes appends trailing garbage after valid JSON
-            # (common when json_object mode conflicts with array-returning prompts).
-            # Try to extract the outermost balanced JSON structure.
+            # Recovery: extract the outermost balanced JSON structure.
             extracted = self._extract_json(cleaned_response)
             if extracted is not None:
                 return extracted
@@ -162,8 +177,6 @@ class LLMClient:
         Handles trailing tokens the LLM appends after the valid JSON body.
         Returns the parsed value or ``None`` if nothing could be recovered.
         """
-        # Try whichever bracket appears first in the text so we don't
-        # accidentally match a later `{` when the real payload starts with `[`.
         pairs = [("{", "}"), ("[", "]")]
         positions = [(text.find(s), s, e) for s, e in pairs]
         positions = [(p, s, e) for p, s, e in positions if p != -1]
@@ -198,4 +211,3 @@ class LLMClient:
                         except json.JSONDecodeError:
                             break
         return None
-

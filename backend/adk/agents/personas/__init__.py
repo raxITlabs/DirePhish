@@ -67,6 +67,27 @@ PERSONA_BY_AGENT_NAME: dict[str, str] = {
 }
 
 
+# Observe-then-act protocol. Reads (read_channel / check_inbox) now return real
+# world state (crucible serves observation_actions), but under the one-write-
+# action-per-round budget a defender that *reads instead of acts* wastes its
+# turn. This protocol tells defenders to OBSERVE FIRST (free — reads don't
+# consume the action) and THEN take their single informed write, so situational
+# awareness raises coordination without costing containment actions. Toggle with
+# DIREPHISH_OBSERVE_THEN_ACT=0 (used for A/B baselines).
+_OBSERVE_THEN_ACT = """
+
+OBSERVE-THEN-ACT PROTOCOL (follow every round):
+1. OBSERVE FIRST. Before acting, call `slack_read_channel` for the
+   "incident-war-room" channel to see what teammates have already done this
+   incident (and `email_check_inbox` if you work over email). These are reads
+   — they do NOT use up your action for the round.
+2. ACT ONCE. Then take EXACTLY ONE write action (e.g. `slack_send_message`)
+   that builds on what you observed — do not duplicate a step a teammate has
+   already taken; cover the most important open gap for the current state.
+3. End your turn with the line: ROUND COMPLETE.
+"""
+
+
 def make_defender_team(*, model_key: str = "flash"):
     """Construct all 5 defenders as ``LlmAgent`` instances.
 
@@ -75,6 +96,10 @@ def make_defender_team(*, model_key: str = "flash"):
     ``ParallelAgent`` (or SequentialAgent under tight quota) when
     assembling the orchestrator's defender branch.
 
+    Each defender gets the observe-then-act protocol appended (unless
+    ``DIREPHISH_OBSERVE_THEN_ACT=0``) so they read shared world state before
+    spending their single action.
+
     Args:
         model_key: ``"flash"`` (default) or ``"pro"``. Flash is the
             default because new GCP projects ship with ~5 RPM of Pro
@@ -82,13 +107,19 @@ def make_defender_team(*, model_key: str = "flash"):
             exceeds that. Flip strategic personas (CISO, IR Lead) back
             to Pro after a quota lift if you want deeper reasoning.
     """
-    return [
+    import os
+
+    team = [
         make_ciso(model_key=model_key),
         make_ir_lead(model_key=model_key),
         make_soc_analyst(model_key=model_key),
         make_legal(model_key=model_key),
         make_ceo(model_key=model_key),
     ]
+    if os.environ.get("DIREPHISH_OBSERVE_THEN_ACT", "1") != "0":
+        for defender in team:
+            defender.instruction = (defender.instruction or "") + _OBSERVE_THEN_ACT
+    return team
 
 
 __all__ = [

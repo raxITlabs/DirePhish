@@ -16,11 +16,17 @@ from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
-from openai import OpenAI
+from ..utils.llm_client import LLMClient
 
 from ..config import Config
 from ..utils.logger import get_logger
-from .zep_entity_reader import EntityNode, ZepEntityReader
+try:
+    # Zep was removed in the Firestore migration; these are used only as
+    # type annotations / optional helpers, so degrade gracefully if absent.
+    from .zep_entity_reader import EntityNode, ZepEntityReader
+except ImportError:  # pragma: no cover
+    EntityNode = Any  # type: ignore[assignment,misc]
+    ZepEntityReader = None  # type: ignore[assignment]
 
 logger = get_logger('direphish.simulation_config')
 
@@ -230,14 +236,9 @@ class SimulationConfigGenerator:
         self.api_key = api_key or Config.LLM_API_KEY
         self.base_url = base_url or Config.LLM_BASE_URL
         self.model_name = model_name or Config.LLM_MODEL_NAME
-        
-        if not self.api_key:
-            raise ValueError("LLM_API_KEY is not configured")
-        
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url
-        )
+
+        # Gemini via Vertex AI (google-genai) through the shared wrapper — no key needed.
+        self.client = LLMClient(model=self.model_name)
     
     def generate_config(
         self,
@@ -439,25 +440,17 @@ class SimulationConfigGenerator:
         
         for attempt in range(max_attempts):
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
+                content = self.client.chat(
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt}
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.7 - (attempt * 0.1)  # Lower temperature on each retry
-                    # Do not set max_tokens, let LLM generate freely
+                    temperature=0.7 - (attempt * 0.1),  # Lower temperature on each retry
+                    max_tokens=16384,  # generous ceiling; large configs can be lengthy
                 )
-                
-                content = response.choices[0].message.content
-                finish_reason = response.choices[0].finish_reason
-                
-                # Check if truncated
-                if finish_reason == 'length':
-                    logger.warning(f"LLM output truncated (attempt {attempt+1})")
-                    content = self._fix_truncated_json(content)
-                
+                # On JSONDecodeError below, _try_fix_config_json() repairs truncation.
+
                 # Try to parse JSON
                 try:
                     return json.loads(content)

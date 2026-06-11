@@ -332,11 +332,16 @@ def _web_search_gemini(company_name: str, cost_tracker: CostTracker = None) -> s
     Uses rich natural-language prompts so the model generates optimal search
     queries itself (Google's recommended approach).
     """
+    import os
+
     from google import genai
     from google.genai import types
 
+    # Vertex AI via ADC — no AI Studio key required.
     client = genai.Client(
-        api_key=Config.LLM_API_KEY,
+        vertexai=True,
+        project=Config.GCP_PROJECT_ID or None,
+        location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
         http_options={"timeout": 120_000},  # 120 seconds in milliseconds
     )
 

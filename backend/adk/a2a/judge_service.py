@@ -11,12 +11,17 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 logger = logging.getLogger("direphish.adk.a2a.judge")
+
+# A2A protocol version this service speaks (Linux Foundation A2A v1.0.1).
+A2A_PROTOCOL_VERSION = "1.0.1"
 
 _CARD_PATH = Path(__file__).resolve().parent / "judge_agent_card.json"
 
@@ -78,12 +83,39 @@ def _invoke_judge(payload: dict) -> dict:
 
 
 def create_app() -> FastAPI:
+    # Retry-with-backoff around Gemini so DSQ 429s don't fail judge scoring.
+    try:
+        from adk.quota_guard import install as install_quota_guard
+        install_quota_guard()
+    except Exception:  # noqa: BLE001 - guard is best-effort
+        pass
+
     app = FastAPI(title="DirePhish ContainmentJudge A2A")
+    # Demo posture: open CORS so a browser/other agent can fetch the card.
+    # Production-correct path is Cloud Run service-to-service OIDC (Bearer ID
+    # token in JudgeA2aClient) — see judge_client.py.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     card = json.loads(_CARD_PATH.read_text())
+    # Publish the deployed (Cloud Run) URL instead of the localhost default so
+    # the AgentCard at /.well-known/agent.json is resolvable cross-process.
+    public_url = os.environ.get("A2A_PUBLIC_URL", "").rstrip("/")
+    if public_url:
+        card["endpoint"] = f"{public_url}/a2a"
+    card["protocolVersion"] = A2A_PROTOCOL_VERSION
 
     @app.get("/.well-known/agent.json")
     def agent_card() -> dict[str, Any]:
         return card
+
+    @app.get("/healthz")
+    def healthz() -> dict[str, str]:
+        return {"status": "ok"}
 
     @app.post("/a2a/score_round")
     def score_round(body: dict[str, Any]) -> dict[str, Any]:

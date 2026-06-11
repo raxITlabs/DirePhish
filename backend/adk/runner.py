@@ -62,6 +62,8 @@ class AdkSimulationRunner:
 
         action_count = 0
         rounds_completed = 0
+        # Track 2: per-round containment for the eval-report headline metric.
+        containment_by_round: list[dict[str, Any]] = []
 
         try:
             for round_num in range(1, self.total_rounds + 1):
@@ -71,6 +73,14 @@ class AdkSimulationRunner:
                     round_num, self.total_rounds, report.phases,
                 )
                 rounds_completed = round_num
+
+                # Capture the judge's containment score for this round.
+                _c = (report.judge_score or {}).get("containment")
+                try:
+                    _c = float(_c) if _c is not None else 0.0
+                except (TypeError, ValueError):
+                    _c = 0.0
+                containment_by_round.append({"round": round_num, "containment": _c})
 
                 round_actions: list[Any] = []
 
@@ -108,12 +118,46 @@ class AdkSimulationRunner:
             action_count=action_count,
         )
 
+        # Track 2: write the eval-report input (containment-time + cost) so
+        # scripts/eval_report.py can render the headline before/after metric.
+        self._write_eval_result(containment_by_round, rounds_completed)
+
         return {
             "simulation_id": self.simulation_id,
             "rounds_completed": rounds_completed,
             "total_rounds_configured": self.total_rounds,
             "action_count": action_count,
         }
+
+    def _write_eval_result(
+        self, rounds: list[dict[str, Any]], rounds_completed: int
+    ) -> None:
+        """Write evals/results/<sim_id>.json for the Track-2 eval report.
+
+        Shape matches ``scripts/eval_report.compute_business_metrics``:
+        ``{"simulation_id", "rounds":[{"round","containment"}], "total_rounds",
+        "total_cost_usd"}``. Cost is best-effort from the sim's costs.json.
+        """
+        total_cost = 0.0
+        try:
+            from app.utils.cost_tracker import CostTracker
+            data = CostTracker.load(self.simulation_id)
+            if data:
+                total_cost = float(data.get("total_cost_usd", 0.0) or 0.0)
+        except Exception:  # noqa: BLE001 - cost is secondary to containment-time
+            total_cost = 0.0
+
+        payload = {
+            "simulation_id": self.simulation_id,
+            "rounds": rounds,
+            "total_rounds": rounds_completed or self.total_rounds,
+            "total_cost_usd": total_cost,
+        }
+        results_dir = Path(__file__).resolve().parents[1] / "evals" / "results"
+        results_dir.mkdir(parents=True, exist_ok=True)
+        out = results_dir / f"{self.simulation_id}.json"
+        out.write_text(json.dumps(payload, indent=2))
+        logger.info("[runner] eval result written: %s", out)
 
     def _build_orchestrator(self):
         """Construct the per-round Orchestrator with W2 personas + adversary + judge.
@@ -146,10 +190,24 @@ class AdkSimulationRunner:
         )
 
         defenders = make_defender_team()  # 5 LlmAgents in canonical order
-        defender_team = ParallelAgent(name="defender_team", sub_agents=defenders)
+        # ParallelAgent fires all 5 defenders at once — a burst that trips the
+        # DSQ per-pool quota on low-tier projects. DIREPHISH_SERIAL_DEFENDERS=1
+        # runs them one at a time (slower, but survives the quota). Default on.
+        if os.environ.get("DIREPHISH_SERIAL_DEFENDERS", "1") != "0":
+            from google.adk.agents import SequentialAgent
+            defender_team = SequentialAgent(name="defender_team", sub_agents=defenders)
+            logger.info("[runner] defenders run sequentially (DSQ-safe)")
+        else:
+            defender_team = ParallelAgent(name="defender_team", sub_agents=defenders)
 
-        adversary = make_threat_actor(
-            provider=os.environ.get("THREAT_ACTOR_PROVIDER", "gemini"),
+        provider = (os.environ.get("THREAT_ACTOR_PROVIDER", "gemini").strip().lower()
+                    or "gemini")
+        # Gemini → Pro tier; Claude (dormant) → Sonnet. Keeps the model_key
+        # valid for whichever provider is selected.
+        adversary_model_key = "sonnet" if provider == "claude" else "pro"
+        adversary = make_threat_actor(provider=provider, model_key=adversary_model_key)
+        logger.info(
+            "[runner] adversary: provider=%s model_key=%s", provider, adversary_model_key
         )
 
         remote_judge = JudgeA2aClient()
@@ -182,6 +240,13 @@ def main(dry_run: bool = False) -> int:
     parser.add_argument("--config", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
+
+    # Retry-with-backoff around Gemini so DSQ 429s don't kill the sim.
+    try:
+        from adk.quota_guard import install as install_quota_guard
+        install_quota_guard()
+    except Exception as e:
+        logger.warning("[runner] quota guard skipped: %s", e)
 
     # Wire OpenTelemetry (no-op unless CLOUD_TRACE_ENABLED=true)
     try:

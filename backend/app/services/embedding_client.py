@@ -27,10 +27,16 @@ class GeminiEmbeddingClient:
     """Generates vector embeddings via the Gemini Embedding API."""
 
     def __init__(self, api_key: Optional[str] = None, cost_tracker: Optional[CostTracker] = None):
-        self.api_key = api_key or Config.LLM_API_KEY
+        import os
+
         self.cost_tracker = cost_tracker
-        self.client = genai.Client(api_key=self.api_key)
-        logger.info(f"GeminiEmbeddingClient initialised (model={MODEL}, dims={OUTPUT_DIMENSIONALITY})")
+        # Vertex AI via ADC — no AI Studio key required.
+        self.client = genai.Client(
+            vertexai=True,
+            project=Config.GCP_PROJECT_ID or None,
+            location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
+        )
+        logger.info(f"GeminiEmbeddingClient initialised (model={MODEL}, dims={OUTPUT_DIMENSIONALITY}, vertex=True)")
 
     def embed_document(self, text: str) -> list[float]:
         """Embed a single text for storage (RETRIEVAL_DOCUMENT)."""

@@ -1,7 +1,9 @@
 {
   "name": "DirePhish ContainmentJudge",
   "description": "Round-by-round evaluator scoring containment, evidence, communication, business_impact on a 0-10 scale. Emits structured JSON.",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "protocolVersion": "1.0.1",
+  "provider": {"organization": "raxIT Labs", "url": "https://raxit.ai"},
   "endpoint": "http://localhost:8003/a2a",
   "capabilities": [
     {

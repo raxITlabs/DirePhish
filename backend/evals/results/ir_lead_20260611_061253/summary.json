@@ -1,0 +1,8 @@
+{
+  "persona": "ir_lead",
+  "iterations": 3,
+  "batch_size": 5,
+  "final_validation_score": 0.41250000000000003,
+  "evalset_cases": 26,
+  "optimizer_model": "gemini-3.1-pro-preview"
+}

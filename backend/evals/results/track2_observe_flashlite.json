@@ -1,0 +1,27 @@
+{
+  "simulation_id": "track2_baseline",
+  "rounds": [
+    {
+      "round": 1,
+      "containment": 9.0
+    },
+    {
+      "round": 2,
+      "containment": 9.0
+    },
+    {
+      "round": 3,
+      "containment": 9.5
+    },
+    {
+      "round": 4,
+      "containment": 6.0
+    },
+    {
+      "round": 5,
+      "containment": 7.0
+    }
+  ],
+  "total_rounds": 5,
+  "total_cost_usd": 0.0
+}

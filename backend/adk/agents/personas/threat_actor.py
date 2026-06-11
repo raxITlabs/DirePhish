@@ -1,15 +1,15 @@
-"""ThreatActor adversary persona — Claude Sonnet via Vertex Model Garden.
+"""ThreatActor adversary persona — Gemini Pro via Vertex Model Garden.
 
-The adversary runs on Claude (not Gemini) deliberately:
-- Stronger adversarial reasoning in our internal tests.
-- Demonstrates the cross-model A2A story the challenge brief rewards
-  (one team on Anthropic, the other on Google).
-- Forces ``LLMRegistry.register(Claude)`` to be wired (already done in
-  ``adk.models.init_models``).
+The adversary runs on **Gemini Pro** by default: adversarial multi-step
+kill-chain reasoning is the one role where the Pro tier earns its cost.
+A Claude-on-Vertex adversary remains a one-flag option
+(``provider="claude"`` / ``THREAT_ACTOR_PROVIDER=claude``) for the
+cross-model demo story, but it is dormant unless Anthropic Model Garden
+is enabled on the project.
 
 Persona is intentionally generic — a ransomware operator who runs the
 full kill-chain over ~15 rounds. Real personas can be hot-swapped via
-the threat-library YAML files (W3 work).
+the threat-library YAML files.
 """
 
 from __future__ import annotations
@@ -72,7 +72,7 @@ recorded.
 def make_threat_actor(
     *,
     provider: str = "gemini",
-    model_key: str = "flash",
+    model_key: str = "pro",
     instruction: Optional[str] = None,
 ):
     """Construct the ThreatActor ``LlmAgent``.

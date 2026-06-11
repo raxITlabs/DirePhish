@@ -140,6 +140,28 @@ def identify_weakest_rubric(scores: dict[str, float], exclude: tuple[str, ...] =
     return min(eligible.items(), key=lambda kv: kv[1])[0]
 
 
+def aggregate_rubric_score(rubric_scores: dict[str, float]) -> float:
+    """Collapse the 4 judge rubrics (0–10) into a single 0–1 quality signal.
+
+    The optimizer maximizes this. Pure function → unit-testable without Vertex.
+    """
+    rubrics = ("containment", "evidence", "communication", "business_impact")
+    vals = [float(rubric_scores.get(r, 0.0) or 0.0) for r in rubrics]
+    return (sum(vals) / len(vals)) / 10.0 if vals else 0.0
+
+
+def _case_scenario(case: dict[str, Any]) -> str:
+    """Extract the round-scenario user text from an evalset case."""
+    try:
+        return case["conversation"][0]["user_content"]["parts"][0]["text"]
+    except (KeyError, IndexError, TypeError):
+        return ""
+
+
+def _case_uid(case: dict[str, Any], idx: int) -> str:
+    return str(case.get("eval_id") or f"case_{idx}")
+
+
 async def run_refinement_loop(persona: str, rounds: int, strategy: str) -> Path:
     """Execute the LoopAgent-based refinement loop.
 
@@ -154,13 +176,19 @@ async def run_refinement_loop(persona: str, rounds: int, strategy: str) -> Path:
             current_instruction = winner_instr  # promote
             persist(iter=i, weak=weak, before=scores[weak], after=winner_scores[weak])
 
-    Returns the run directory containing iteration logs + final HTML report.
+    Returns the run directory containing the optimized instruction + a
+    before/after validation score.
 
-    NOTE: The actual score_persona_against_evalset and
-    propose_variants_via_meta_agent helpers require live Vertex. They
-    are stubbed to raise NotImplementedError unless RUN_LIVE_VERTEX=1 —
-    pure-logic tests (pick_winner_by_target_rubric, identify_weakest_rubric)
-    are sufficient for CI; the live loop runs manually for the demo.
+    Implementation: ADK's ``SimplePromptOptimizer`` (Gemini Pro proposer)
+    drives prompt variants; a custom ``ContainmentJudgeSampler`` scores each
+    variant by running it (tool-less) over the ransomware evalset and grading
+    the output with our own ``ContainmentJudge`` rubrics. No ``vertexai``/gcp
+    extra and no deprecated SDK — pure ADK ``LlmAgent`` + ``google-genai``.
+
+    Gated on RUN_LIVE_VERTEX=1 (needs Vertex Pro quota + ~$1-2/run); without it
+    a dry-run plan is written so CI / no-cred environments stay hermetic. The
+    pure-logic seams (aggregate_rubric_score, pick_winner_by_target_rubric,
+    identify_weakest_rubric) are unit-tested separately.
     """
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     run_dir = RESULTS_ROOT / f"{persona}_{timestamp}"
@@ -175,12 +203,144 @@ async def run_refinement_loop(persona: str, rounds: int, strategy: str) -> Path:
         )
         return run_dir
 
-    # Live mode — implementations follow. For W2 we ship the framework;
-    # live execution is exercised manually for the demo.
-    raise NotImplementedError(
-        "Live refinement requires Vertex Pro quota + ~$2/run. "
-        "Run with RUN_LIVE_VERTEX=1 + manual oversight."
+    # ---- Live mode: ADK SimplePromptOptimizer + judge-backed sampler --------
+    from google.adk.optimization.sampler import Sampler
+    from google.adk.optimization.data_types import UnstructuredSamplingResult
+    from google.adk.optimization.simple_prompt_optimizer import (
+        SimplePromptOptimizer,
+        SimplePromptOptimizerConfig,
     )
+    from google.adk.runners import InMemoryRunner
+    from google.genai import types as gtypes
+
+    from adk.agents.personas._factory import gemini_llm_agent
+    from adk.agents.personas.containment_judge import (
+        make_containment_judge,
+        parse_judge_output,
+    )
+    from adk.models import GEMINI_MODELS, init_models
+
+    init_models()
+
+    evalset = load_evalset()
+    cases = evalset["eval_cases"]
+    pairs = [(_case_uid(c, i), _case_scenario(c)) for i, c in enumerate(cases)]
+    pairs = [(u, t) for u, t in pairs if t]  # drop cases with no scenario text
+
+    base_instruction = _persona_base_instruction(persona)
+    initial_agent = gemini_llm_agent(
+        name=f"opt_{persona}",
+        description=f"Tool-less {persona} candidate for prompt optimization.",
+        instruction=base_instruction,
+        tools=[],
+        model_key="flash",
+    )
+    judge = make_containment_judge()  # Gemini Pro, our 4 rubrics
+
+    async def _run_text(agent, prompt: str) -> str:
+        runner = InMemoryRunner(agent=agent, app_name="opt")
+        session = await runner.session_service.create_session(
+            app_name="opt", user_id="opt",
+            state={"round_num": 0, "simulation_id": "opt"},
+        )
+        out: list[str] = []
+        async for ev in runner.run_async(
+            user_id="opt", session_id=session.id,
+            new_message=gtypes.Content(role="user", parts=[gtypes.Part(text=prompt)]),
+        ):
+            if ev.content and ev.content.parts:
+                out += [p.text for p in ev.content.parts if getattr(p, "text", None)]
+        return "\n".join(out).strip()
+
+    async def _score_candidate(candidate, scenario: str) -> float:
+        defender_out = await _run_text(candidate, scenario)
+        judge_prompt = (
+            f"Round scenario:\n{scenario}\n\n"
+            f"Defender response:\n{defender_out}\n\n"
+            "Score this defender response on the 4 rubrics."
+        )
+        judged = await _run_text(judge, judge_prompt)
+        return aggregate_rubric_score(parse_judge_output(judged))
+
+    class ContainmentJudgeSampler(Sampler[UnstructuredSamplingResult]):
+        """Scores candidate prompts via DirePhish's ContainmentJudge."""
+
+        def __init__(self, items: list[tuple[str, str]]):
+            self._text = dict(items)
+            uids = [u for u, _ in items]
+            cut = max(1, int(len(uids) * 0.8))
+            self._train = uids[:cut]
+            self._val = uids[cut:] or uids[:1]
+
+        def get_train_example_ids(self) -> list[str]:
+            return list(self._train)
+
+        def get_validation_example_ids(self) -> list[str]:
+            return list(self._val)
+
+        async def sample_and_score(
+            self, candidate, example_set=Sampler.VALIDATION_SET,
+            batch=None, capture_full_eval_data=False,
+        ) -> UnstructuredSamplingResult:
+            ids = batch or (
+                self._train if example_set == Sampler.TRAIN_SET else self._val
+            )
+            scores: dict[str, float] = {}
+            for uid in ids:
+                try:
+                    scores[uid] = await _score_candidate(candidate, self._text[uid])
+                except Exception as exc:  # noqa: BLE001 - one bad case shouldn't abort
+                    logger.warning("score failed for %s: %s", uid, exc)
+                    scores[uid] = 0.0
+            return UnstructuredSamplingResult(scores=scores)
+
+    sampler = ContainmentJudgeSampler(pairs)
+    config = SimplePromptOptimizerConfig(
+        optimizer_model=GEMINI_MODELS["pro"],
+        model_configuration=gtypes.GenerateContentConfig(temperature=0.7),
+        num_iterations=max(1, rounds),
+        batch_size=min(5, len(pairs)),
+    )
+    result = await SimplePromptOptimizer(config).optimize(initial_agent, sampler)
+    best = result.optimized_agents[0]
+
+    (run_dir / "optimized_instruction.txt").write_text(best.optimized_agent.instruction)
+    (run_dir / "summary.json").write_text(json.dumps({
+        "persona": persona,
+        "iterations": config.num_iterations,
+        "batch_size": config.batch_size,
+        "final_validation_score": best.overall_score,
+        "evalset_cases": len(pairs),
+        "optimizer_model": config.optimizer_model,
+    }, indent=2))
+    logger.info(
+        "[refine] %s: final validation score=%.4f → %s",
+        persona, best.overall_score or 0.0, run_dir / "optimized_instruction.txt",
+    )
+    return run_dir
+
+
+def _persona_base_instruction(persona: str) -> str:
+    """Read a persona's base instruction by constructing its factory agent.
+
+    Falls back to a generic instruction if the factory can't be resolved.
+    """
+    import importlib
+
+    mod = importlib.import_module(PERSONAS[persona])
+    factory = getattr(mod, f"make_{persona}", None)
+    if factory is None:
+        return f"You are the {persona} defender in an incident-response simulation."
+    try:
+        agent = factory()
+        return getattr(agent, "instruction", "") or ""
+    except Exception:  # noqa: BLE001 - factory may need MCP; fall back to module const
+        for attr in dir(mod):
+            if attr.upper().endswith("_INSTRUCTION"):
+                val = getattr(mod, attr)
+                if isinstance(val, str) and val.strip():
+                    return val
+        return f"You are the {persona} defender in an incident-response simulation."
 
 
 def main() -> int:

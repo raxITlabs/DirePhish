@@ -23,12 +23,14 @@ dependencies = [
     "chardet>=5.0.0",
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",
-    "crucible-sim @ git+https://github.com/raxITlabs/crucible.git@feature/adk-hooks",
-    "google-adk>=1.32.0",
+    "crucible-sim @ git+https://github.com/raxITlabs/crucible.git@2ebe7da3f2084928c4063f7933a80da5b61da603",
+    "google-adk~=2.2",
     "anthropic[vertex]>=0.98.0",
     "opentelemetry-api>=1.40.0",
     "opentelemetry-sdk>=1.40.0",
     "opentelemetry-exporter-otlp-proto-http>=1.40.0",
+    # Cloud Trace exporter so CLOUD_TRACE_ENABLED=true actually exports spans.
+    "opentelemetry-exporter-gcp-trace>=1.9.0",
     # Firestore Vector Search (replaces Graphiti + Zep for simulation memory)
     "google-cloud-firestore>=2.16.0",
     "google-genai>=1.0.0",
