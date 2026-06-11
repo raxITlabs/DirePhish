@@ -16,6 +16,13 @@ set -e
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJECT_DIR"
 
+# macOS: the research/sim pipeline forks subprocesses (web search, MCP world
+# servers, the ADK runner) from the multi-threaded Flask process. macOS's
+# Objective-C runtime kills such forks ("+[NSNumber initialize] ... fork()").
+# Disable that fork-safety check so the bare-metal dev backend survives.
+# No effect on Linux/Docker.
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+
 MODE="${1:-dev}"
 
 # Ensure portless proxy is running and clear stale aliases

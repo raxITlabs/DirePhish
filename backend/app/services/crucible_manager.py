@@ -170,11 +170,23 @@ def launch_simulation(config: dict, callback_token: str | None = None) -> str:
     stderr_log = sim_dir / "stderr.log"
     stdout_fh = open(stdout_log, "w")
     stderr_fh = open(stderr_log, "w")
+    # The runner is launched as `python -m backend.adk.runner` from the backend/
+    # dir, so the repo root (parent of backend/) must be on PYTHONPATH for the
+    # `backend` package to resolve. Set it explicitly so the spawn is
+    # self-sufficient regardless of how the parent was started (start.sh,
+    # gunicorn, Cloud Run) — and keep OBJC fork-safety disabled on macOS.
+    repo_root = str(Path(__file__).resolve().parents[3])
+    child_env = {**os.environ}
+    child_env["PYTHONPATH"] = repo_root + (
+        os.pathsep + child_env["PYTHONPATH"] if child_env.get("PYTHONPATH") else ""
+    )
+    child_env.setdefault("OBJC_DISABLE_INITIALIZE_FORK_SAFETY", "YES")
     proc = subprocess.Popen(
         ["uv", "run", "python", "-m", "backend.adk.runner", "--config", str(config_path), "--output", str(sim_dir)],
         cwd=str(Path(__file__).parent.parent.parent),
         stdout=stdout_fh,
         stderr=stderr_fh,
+        env=child_env,
     )
     _processes[sim_id] = proc
     _simulations[sim_id]["status"] = "running"
