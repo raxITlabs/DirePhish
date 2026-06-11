@@ -583,6 +583,13 @@ class FirestoreMemory:
                 )
 
             extraction = _json.loads(response_text)
+            # The model occasionally returns a bare array instead of the
+            # {entities, relationships} object — treat a top-level list as the
+            # entities list rather than crashing on .get (graph is non-fatal).
+            if isinstance(extraction, list):
+                extraction = {"entities": extraction, "relationships": []}
+            elif not isinstance(extraction, dict):
+                raise ValueError(f"graph extraction returned non-object JSON ({type(extraction).__name__})")
             entities = extraction.get("entities", [])
             relationships = extraction.get("relationships", [])
 

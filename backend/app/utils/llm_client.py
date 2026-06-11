@@ -11,6 +11,7 @@ Instrumented with OpenTelemetry.
 """
 
 import json
+import logging
 import os
 import re
 from typing import Optional, Dict, Any, List
@@ -19,6 +20,8 @@ from google import genai
 from google.genai import types
 
 from ..config import Config
+
+logger = logging.getLogger("direphish.llm")
 
 # OpenTelemetry tracing
 try:
@@ -175,27 +178,45 @@ class LLMClient:
         temperature: float = 0.3,
         max_tokens: int = 4096,
     ) -> Dict[str, Any]:
-        """Send a chat request and return parsed JSON."""
-        response = self.chat(
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            response_format={"type": "json_object"},
-        )
-        # Clean markdown code block markers
-        cleaned_response = response.strip()
-        cleaned_response = re.sub(r'^```(?:json)?\s*\n?', '', cleaned_response, flags=re.IGNORECASE)
-        cleaned_response = re.sub(r'\n?```\s*$', '', cleaned_response)
-        cleaned_response = cleaned_response.strip()
+        """Send a chat request and return parsed JSON.
 
-        try:
-            return json.loads(cleaned_response)
-        except json.JSONDecodeError:
-            # Recovery: extract the outermost balanced JSON structure.
-            extracted = self._extract_json(cleaned_response)
-            if extracted is not None:
-                return extracted
-            raise ValueError(f"Invalid JSON format returned by LLM: {cleaned_response}")
+        Retries on empty/degenerate/truncated responses (e.g. a lone "{") — the
+        model occasionally returns malformed JSON under load; a re-call almost
+        always succeeds, which keeps the multi-call config/threat stages robust.
+        """
+        last_bad: Optional[str] = None
+        for attempt in range(3):
+            try:
+                response = self.chat(
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    response_format={"type": "json_object"},
+                )
+            except RuntimeError as exc:  # empty response surfaced by chat()
+                last_bad = str(exc)
+                logger.warning("chat_json empty response (attempt %d/3): %s", attempt + 1, exc)
+                continue
+
+            # Clean markdown code block markers
+            cleaned_response = response.strip()
+            cleaned_response = re.sub(r'^```(?:json)?\s*\n?', '', cleaned_response, flags=re.IGNORECASE)
+            cleaned_response = re.sub(r'\n?```\s*$', '', cleaned_response)
+            cleaned_response = cleaned_response.strip()
+
+            try:
+                return json.loads(cleaned_response)
+            except json.JSONDecodeError:
+                # Recovery: extract the outermost balanced JSON structure.
+                extracted = self._extract_json(cleaned_response)
+                if extracted is not None:
+                    return extracted
+                last_bad = cleaned_response
+                logger.warning(
+                    "chat_json invalid JSON (attempt %d/3): %.100s", attempt + 1, cleaned_response
+                )
+
+        raise ValueError(f"Invalid JSON format returned by LLM after 3 attempts: {last_bad}")
 
     @staticmethod
     def _extract_json(text: str):
