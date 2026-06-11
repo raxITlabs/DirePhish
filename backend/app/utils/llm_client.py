@@ -87,7 +87,11 @@ class LLMClient:
             max_output_tokens=max_tokens,
             system_instruction=system_instruction,
         )
-        json_mode = bool(response_format and response_format.get("type") == "json_object")
+        # Any response_format (json_object OR a json_schema) means the caller
+        # wants JSON — treat all of them as JSON mode so thinking is disabled and
+        # the budget produces the answer. (Graph extraction passes a json_schema,
+        # which previously slipped through with thinking ON -> empty/MAX_TOKENS.)
+        json_mode = bool(response_format)
         if json_mode:
             config.response_mime_type = "application/json"
             # Gemini 3.x flash is a thinking model: in JSON mode a tight output

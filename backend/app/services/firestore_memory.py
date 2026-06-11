@@ -567,7 +567,7 @@ class FirestoreMemory:
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.1,
-                max_tokens=12288,
+                max_tokens=32768,  # large entity+relationship graph; thinking disabled in JSON mode
                 response_format=self._GRAPH_SCHEMA,
             )
 
