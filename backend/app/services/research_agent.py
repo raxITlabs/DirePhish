@@ -26,18 +26,26 @@ logger = get_logger("research_agent")
 
 
 def run_research(project_id: str, callback_token: str | None = None) -> None:
-    """Run the full research pipeline in a background thread with a 5-minute watchdog."""
+    """Run the full research pipeline in a background thread with a watchdog.
+
+    Timeout is env-configurable (RESEARCH_TIMEOUT_SECONDS, default 900s). On
+    hosted Gemini under Dynamic Shared Quota, the grounded-search stage can take
+    several minutes (429 backoff), so the old 5-minute cap tripped even when the
+    dossier completed seconds later.
+    """
+    import os
+    timeout_s = int(os.environ.get("RESEARCH_TIMEOUT_SECONDS", "900"))
     thread = threading.Thread(target=_research_pipeline, args=(project_id,), kwargs={"callback_token": callback_token}, daemon=True)
     thread.start()
 
     def _watchdog():
-        thread.join(timeout=300)
+        thread.join(timeout=timeout_s)
         if thread.is_alive():
-            logger.error(f"Research timeout for {project_id} (>5min)")
+            logger.error(f"Research timeout for {project_id} (>{timeout_s}s)")
             try:
                 project_manager.update_project(
                     project_id, status="failed",
-                    error_message="Research timed out after 5 minutes",
+                    error_message=f"Research timed out after {timeout_s // 60} minutes",
                     progress_message="Research timed out.",
                 )
             except Exception:
