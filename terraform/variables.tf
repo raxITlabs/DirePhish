@@ -52,6 +52,12 @@ variable "cloudflare_account_id" {
   default     = ""
 }
 
+variable "frontend_url" {
+  type        = string
+  description = "Deployed frontend URL. Set on apply so the backend can resume Workflow hooks (POST /api/pipeline/resume). A var, not a resource ref, to avoid a backend<->frontend cycle."
+  default     = ""
+}
+
 variable "frontend_public" {
   type        = bool
   description = "Grant allUsers invoker on the frontend (the only public service). Requires a Domain-Restricted-Sharing exception for this service/project; set false to deploy everything else first."

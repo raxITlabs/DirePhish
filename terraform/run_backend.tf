@@ -50,6 +50,13 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "THREAT_ACTOR_PROVIDER"
         value = "gemini"
       }
+      # Frontend URL so the backend can resume Workflow hooks when research /
+      # sims finish (POST /api/pipeline/resume). Without it, workflow_callback
+      # falls back to the local-dev host (direphish.localhost:1355) and fails.
+      env {
+        name  = "FRONTEND_URL"
+        value = var.frontend_url
+      }
       # Demo on raxit-ai's current DSQ tier: the Pro pool is token-exhausted, so
       # map the "pro" tier (adversary + judge) to flash. Lift this once a higher
       # tier is available. Defenders are already flash.

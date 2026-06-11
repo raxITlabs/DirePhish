@@ -90,6 +90,16 @@ class LLMClient:
         json_mode = bool(response_format and response_format.get("type") == "json_object")
         if json_mode:
             config.response_mime_type = "application/json"
+            # Gemini 3.x flash is a thinking model: in JSON mode a tight output
+            # budget gets consumed by thinking, leaving response.text EMPTY
+            # (finish_reason=MAX_TOKENS). Disable thinking for structured
+            # extraction and give the answer ample room so the JSON always lands.
+            try:
+                config.thinking_config = types.ThinkingConfig(thinking_budget=0)
+            except Exception:  # noqa: BLE001 - older SDK/model without the field
+                pass
+            if max_tokens < 16384:
+                config.max_output_tokens = 16384
 
         span_ctx = _tracer.start_as_current_span(
             "llm.chat",
@@ -129,6 +139,19 @@ class LLMClient:
                 self.last_usage = None
 
             content = response.text or ""
+            # Surface empty responses (safety block / MAX_TOKENS) with the
+            # finish_reason instead of silently returning "" — which downstream
+            # JSON parsing turned into an opaque "Invalid JSON" error.
+            if not content.strip():
+                finish_reason = None
+                try:
+                    finish_reason = response.candidates[0].finish_reason
+                except Exception:  # noqa: BLE001
+                    pass
+                raise RuntimeError(
+                    f"Empty LLM response (model={self.model}, "
+                    f"finish_reason={finish_reason}, max_tokens={max_tokens})"
+                )
             # Some models include <think> content in the response — strip it.
             content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
             return content
