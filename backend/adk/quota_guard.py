@@ -26,7 +26,8 @@ _installed = False
 
 
 def install() -> None:
-    """Monkeypatch google.genai AsyncModels.generate_content with 429 backoff."""
+    """Add 429 retry-with-backoff to BOTH the async (ADK) and sync (Flask
+    research/report/montecarlo via llm_client) genai generate_content paths."""
     global _installed
     if _installed:
         return
@@ -39,33 +40,39 @@ def install() -> None:
         logger.warning("quota_guard: google.genai unavailable: %s", exc)
         return
 
-    throttle = float(os.environ.get("DIREPHISH_GEMINI_THROTTLE", "0"))
-    orig = _gm.AsyncModels.generate_content
-    gate = {"last": 0.0}
-    lock = asyncio.Lock()
+    # --- async path (ADK agents) ---
+    _orig_async = _gm.AsyncModels.generate_content
 
-    async def guarded(self, *args, **kwargs):
+    async def guarded_async(self, *args, **kwargs):
         for attempt in range(6):
-            if throttle > 0:
-                async with lock:
-                    delta = time.monotonic() - gate["last"]
-                    if delta < throttle:
-                        await asyncio.sleep(throttle - delta)
-                    gate["last"] = time.monotonic()
             try:
-                return await orig(self, *args, **kwargs)
+                return await _orig_async(self, *args, **kwargs)
             except Exception as exc:  # noqa: BLE001
                 if "RESOURCE_EXHAUSTED" in str(exc) and attempt < 5:
                     backoff = 10.0 * (attempt + 1)
-                    logger.warning(
-                        "quota_guard: 429 -> backoff %.0fs (try %d)", backoff, attempt + 1
-                    )
+                    logger.warning("quota_guard(async): 429 -> backoff %.0fs (try %d)", backoff, attempt + 1)
                     await asyncio.sleep(backoff)
                     continue
                 raise
 
-    _gm.AsyncModels.generate_content = guarded
+    _gm.AsyncModels.generate_content = guarded_async
+
+    # --- sync path (Flask llm_client: research, dossier, graph, reports) ---
+    _orig_sync = _gm.Models.generate_content
+
+    def guarded_sync(self, *args, **kwargs):
+        for attempt in range(6):
+            try:
+                return _orig_sync(self, *args, **kwargs)
+            except Exception as exc:  # noqa: BLE001
+                if "RESOURCE_EXHAUSTED" in str(exc) and attempt < 5:
+                    backoff = 10.0 * (attempt + 1)
+                    logger.warning("quota_guard(sync): 429 -> backoff %.0fs (try %d)", backoff, attempt + 1)
+                    time.sleep(backoff)
+                    continue
+                raise
+
+    _gm.Models.generate_content = guarded_sync
+
     _installed = True
-    logger.info(
-        "quota_guard installed (throttle=%.1fs, max 6 tries, 10-50s backoff)", throttle
-    )
+    logger.info("quota_guard installed (sync+async, max 6 tries, 10-50s backoff)")

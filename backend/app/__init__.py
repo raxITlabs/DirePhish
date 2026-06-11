@@ -40,7 +40,15 @@ def create_app(config_class=Config):
     """Flask application factory function"""
     app = Flask(__name__)
     app.config.from_object(config_class)
-    
+
+    # Retry-with-backoff around Gemini (sync + async) so DSQ 429s don't fail
+    # research / dossier / graph-extraction / report calls. Best-effort.
+    try:
+        from adk.quota_guard import install as _install_quota_guard
+        _install_quota_guard()
+    except Exception:  # noqa: BLE001
+        pass
+
     # Set JSON encoding: ensure non-ASCII characters display directly (instead of \uXXXX format)
     # Flask >= 2.3 uses app.json.ensure_ascii, older versions use JSON_AS_ASCII config
     if hasattr(app, 'json') and hasattr(app.json, 'ensure_ascii'):
