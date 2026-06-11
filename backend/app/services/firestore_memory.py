@@ -603,17 +603,25 @@ class FirestoreMemory:
             batch = self.db.batch()
             node_count = 0
             for entity in entities:
-                if entity["name"] in existing_names:
+                # Tolerate malformed entities (model occasionally omits fields)
+                # — skip them rather than crash the whole graph build.
+                if not isinstance(entity, dict):
+                    continue
+                name = entity.get("name")
+                etype = entity.get("entity_type")
+                if not name or not etype:
+                    continue
+                if name in existing_names:
                     continue  # Skip duplicate
                 doc_ref = graph_nodes.document()
                 batch.set(doc_ref, {
                     "sim_id": sim_id,
-                    "name": entity["name"],
-                    "entity_type": entity["entity_type"],
+                    "name": name,
+                    "entity_type": etype,
                     "summary": entity.get("summary", ""),
                 })
                 node_count += 1
-                existing_names.add(entity["name"])
+                existing_names.add(name)
                 if node_count % 500 == 0:
                     batch.commit()
                     batch = self.db.batch()
@@ -631,15 +639,22 @@ class FirestoreMemory:
             batch = self.db.batch()
             edge_count = 0
             for rel in relationships:
-                edge_key = (rel["source"], rel["target"], rel["label"])
+                if not isinstance(rel, dict):
+                    continue
+                source = rel.get("source")
+                target = rel.get("target")
+                label = rel.get("label")
+                if not source or not target or not label:
+                    continue  # skip malformed edge
+                edge_key = (source, target, label)
                 if edge_key in existing_edges:
                     continue
                 doc_ref = graph_edges.document()
                 batch.set(doc_ref, {
                     "sim_id": sim_id,
-                    "source": rel["source"],
-                    "target": rel["target"],
-                    "label": rel["label"],
+                    "source": source,
+                    "target": target,
+                    "label": label,
                 })
                 edge_count += 1
                 existing_edges.add(edge_key)
